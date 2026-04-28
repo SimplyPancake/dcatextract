@@ -9,7 +9,14 @@ export default defineNuxtConfig({
   vite: {
     plugins: [
       tailwindcss()
-    ]
+    ],
+    optimizeDeps: {
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        '@lucide/vue',
+      ]
+    }
   },
   css: ['./app/assets/css/main.css'],
   modules: ["@primevue/nuxt-module"],

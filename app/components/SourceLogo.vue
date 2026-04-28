@@ -1,22 +1,15 @@
 <template>
     <div class="w-10">
-        <img v-if="props.type == 'CKAN'" src="/ckanlogo.svg" />
-        <FileArchive v-else-if="props.type == 'Local'" />
-        <img v-else-if="props.type == 'HuggingFace'" src="/hf-logo.svg" />
+        <img v-if="props.type == 'CKAN'" src="/logos/ckan.svg" />
+        <img v-else-if="props.type == 'HuggingFace'" src="/logos/huggingface.svg" />
+        <img v-else-if="props.type == 'Kaggle'" src="/logos/kaggle.svg" />
     </div>
 </template>
 
 <script lang="ts" setup>
-import { FileArchive } from '@lucide/vue';
-
-// TODO: Move this to .d.ts file
-export type SourceType = "CKAN" | "Local" | "HuggingFace" | "Kaggle"
-
 const props = defineProps<{
-    type: SourceType
+    type: URLSourceType
 }>()
 </script>
 
-<style>
-
-</style>
+<style></style>

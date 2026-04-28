@@ -36,28 +36,66 @@
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <div class="flex flex-col">
                     <div class="flex flex-row gap-4 w-full">
-                      <Fieldset legend="Local Source"
-                        class="w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40">
+                      <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
+                        @keydown.enter="selectedSource = 'local'" @keydown.space.prevent="selectedSource = 'local'"
+                        :class="[
+                          'w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40',
+                          selectedSource === 'local' ? 'ring-2 ring-[var(--p-primary-color)] bg-sky-50/40 dark:bg-slate-800/50' : 'ring-1 ring-transparent'
+                        ]">
                         <Tag class="mb-2">
                           <FileArchive :size="35" />
                         </Tag> <br />
                         Upload a ZIP file containing your datasets for processing
                       </Fieldset>
-                      <Fieldset legend="Data Repository"
-                        class="w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40">
-                        <Tag class="mb-2">
-                          <Server :size="35" />
-                        </Tag> <br />
-                        Link to datasets from kaggle, Hugging Face, CKAN, GitHub, Zenodo, or other enterprise
+                      <Fieldset legend="Data Repository" role="button" tabindex="0" @click="selectedSource = 'repo'"
+                        @keydown.enter="selectedSource = 'repo'" @keydown.space.prevent="selectedSource = 'repo'"
+                        :class="[
+                          'w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40',
+                          selectedSource === 'repo' ? 'ring-2 ring-[var(--p-primary-color)] bg-sky-50/40 dark:bg-slate-800/50' : 'ring-1 ring-transparent'
+                        ]">
+                        <div class="flex flex-row">
+                          <Tag class="mb-2">
+                            <Server :size="35" />
+                          </Tag>
+                          <!-- <SourceLogo type="CKAN" />
+                          <SourceLogo type="HuggingFace" />
+                          <SourceLogo type="Kaggle" /> -->
+                        </div>
+                        Link to datasets from kaggle, Hugging Face, CKAN, GitHub, Zenodo,
+                        or other
+                        enterprise/government
                         repositories via URL.
                       </Fieldset>
                     </div>
-                    <div>
-                      <Divider class="py-4" />
-                      <div class="h-20">
-                        hallo
+                    <Transition enter-active-class="transition duration-300 ease-out"
+                      enter-from-class="opacity-0 translate-y-2" enter-to-class="opacity-100 translate-y-0"
+                      leave-active-class="transition duration-200 ease-in" leave-from-class="opacity-100 translate-y-0"
+                      leave-to-class="opacity-0 -translate-y-1">
+                      <div v-if="selectedSource">
+                        <Divider class="pt-2" />
+                        <div v-if="selectedSource === 'local'">
+                          <div class="mb-2">
+                            Files will be stored as short as needed and will be attached to this
+                            session.
+                          </div>
+                          <!-- TODO: Detect zip bombs, no depth more than 5 will go -->
+                          <FileUpload mode="basic" url="/api/upload" @upload="console.log($event)" :multiple="false"
+                            accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9">
+                          </FileUpload>
+                        </div>
+                        <div v-else>
+                          <label class="mt-3 block text-xs font-medium" for="repo-url">Repository
+                            URL</label>
+                          <div class="flex flex-row">
+                            <div class="w-10 bg-gray-200 rounded-sm">
+                              <Loader2 />
+                            </div>
+                            <input id="repo-url" type="url" placeholder="https://example.com/dataset"
+                              class="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </Transition>
                   </div>
                   <div class="flex pt-6 justify-end">
                     <Button label="Next" icon="pi pi-arrow-right" @click="activateCallback('2')" />
@@ -79,14 +117,13 @@
 </template>
 
 <script lang="ts" setup>
-import { FileArchive, Server } from '@lucide/vue'
-import { Card, Divider, Fieldset, Step, StepList, StepPanel, Stepper, Tag } from 'primevue'
+import { FileArchive, Loader2, Server } from '@lucide/vue'
+import { Card, Divider, Fieldset, FileUpload, Step, StepList, StepPanel, Stepper, Tag } from 'primevue'
 import { ref } from 'vue'
 import Hero from '~/components/Hero.vue'
-import type { SourceType } from '~/components/SourceLogo.vue'
 
-const sourceOptions: SourceType[] = ["CKAN", "Local", "HuggingFace"]
-const sourceType = ref<string>(sourceOptions[0]!)
+const selectedSource = ref<'local' | 'repo' | null>(null)
+const fileupload = ref();
 
 </script>
 
