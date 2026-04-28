@@ -12,21 +12,6 @@
               <div class="text-2xl font-semibold tracking-tight flex flex-row gap-2">Source type</div>
             </template>
             <template #content>
-              <!-- <div class="space-y-4">
-                <SelectButton v-model="sourceType" :options="so urceOptions" aria-label="Source type"
-                  class="w-full sm:w-auto">
-                  <template #option="slotProps">
-                    <div class="flex items-center gap-3">
-                      <SourceLogo :type="slotProps.option" />
-                      <span class="text-sm font-medium">{{ slotProps.option }}</span>
-                    </div>
-                  </template>
-</SelectButton>
-
-<p class="text-sm text-slate-500 dark:text-slate-400">Selected source: <span
-    class="font-medium text-slate-900 dark:text-slate-100">{{ sourceType }}</span></p>
-</div>
-</template> -->
               <Stepper value="1" linear>
                 <StepList>
                   <Step value="1">Select data</Step>
