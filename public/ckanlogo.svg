@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 240 135" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g>
+        <path d="M239.152,29.512L177.591,124.102L74.166,92.572L239.152,29.512Z" style="fill:rgb(212,229,241);fill-rule:nonzero;"/>
+        <path d="M93.583,134.7L74.166,93.08L177.85,124.028L93.583,134.7Z" style="fill:rgb(202,219,233);fill-rule:nonzero;"/>
+        <path d="M0,22.701L74.168,92.318L54.053,105.941L0,22.701Z" style="fill:rgb(171,193,215);fill-rule:nonzero;"/>
+        <path d="M93.087,134.7L73.574,93.08L53.732,106.536L93.087,134.7Z" style="fill:rgb(149,176,196);fill-rule:nonzero;"/>
+        <path d="M62.059,81.885L105.954,0L99.155,83.302L73.715,93.077L62.059,81.885Z" style="fill:rgb(234,231,53);fill-rule:nonzero;"/>
+        <path d="M152.122,62.996L106.034,0L99.144,83.24L152.122,62.996Z" style="fill:rgb(237,82,72);fill-rule:nonzero;"/>
+        <path d="M239.156,29.512L145.311,53.206L152.454,62.807L239.156,29.512Z" style="fill:rgb(222,234,245);fill-rule:nonzero;"/>
+        <path d="M82.493,43.387L0,22.701L61.681,80.969L82.493,43.387Z" style="fill:rgb(224,233,245);fill-rule:nonzero;"/>
+        <path d="M71.997,40.859L62.059,80.966L82.493,43.518L71.997,40.859Z" style="fill-opacity:0.1;fill-rule:nonzero;"/>
+        <path d="M149.164,52.211L152.122,62.805L145.311,53.213L149.164,52.211Z" style="fill-opacity:0.1;fill-rule:nonzero;"/>
+        <path d="M105.933,0L109.74,79.134L99.144,83.24L105.933,0Z" style="fill-opacity:0.1;fill-rule:nonzero;"/>
+        <path d="M93.846,84.753L105.955,0L99.141,82.736L93.846,84.753Z" style="fill-opacity:0.1;fill-rule:nonzero;"/>
+        <path d="M73.171,93.077L0,23.358L0.609,22.701L73.359,91.998L238.826,29.547L239.154,30.39L73.171,93.077Z" style="fill:white;fill-rule:nonzero;"/>
+    </g>
+</svg>
