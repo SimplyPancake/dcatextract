@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { DataProvider } from '~~/shared/types/url'
 
 const bodySchema = z.object({
-	url: z.string().url()
+	url: z.httpUrl()
 })
 
 export default defineEventHandler(async (event) => {
@@ -16,6 +16,13 @@ export default defineEventHandler(async (event) => {
 	const hostname = new URL(url).hostname.toLowerCase()
 
 	const provider = getProviderFromHostname(hostname)
+	if (provider == 'Unknown') {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Unknown provider',
+			message: `No supported provider found for URL: ${url}`
+		})
+	}
 
 	return {
 		sourceType: provider

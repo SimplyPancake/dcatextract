@@ -42,9 +42,6 @@
                           <Tag class="mb-2">
                             <Server :size="35" />
                           </Tag>
-                          <!-- <SourceLogo type="CKAN" />
-                          <SourceLogo type="HuggingFace" />
-                          <SourceLogo type="Kaggle" /> -->
                         </div>
                         Link to datasets from kaggle, Hugging Face, CKAN, GitHub, Zenodo,
                         or other
@@ -72,12 +69,28 @@
                           <label class="mt-3 block text-xs font-medium" for="repo-url">Repository
                             URL</label>
                           <div class="flex flex-row">
-                            <div class="w-10 bg-gray-200 rounded-sm">
-                              <Loader2 />
-                            </div>
-                            <input id="repo-url" type="url" placeholder="https://example.com/dataset"
-                              class="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200" />
+                            <InputGroup>
+                              <InputGroupAddon>
+                                <Scan v-if="status == 'idle'" />
+                                <Loader2 v-else-if="status == 'pending'" class="animate-spin" />
+                                <TriangleAlert v-else-if="status == 'error'" />
+                                <SourceLogo v-else-if="status == 'success'" :type="urlScanResult?.sourceType!" />
+                              </InputGroupAddon>
+                              <InputText v-model="urlInput" placeholder="https://example.com/dataset" type="url" />
+                              <InputGroupAddon>
+                                <Button @click="execute()" severity="secondary">
+                                  Search
+                                  <DatabaseSearch />
+                                </Button>
+                              </InputGroupAddon>
+                            </InputGroup>
                           </div>
+                          <ProviderFeedback
+                            v-if="showProviderFeedback"
+                            class="mt-3"
+                            :type="feedbackProvider"
+                            :is-error="status === 'error'"
+                            :message="feedbackErrorMessage" />
                         </div>
                       </div>
                     </Transition>
@@ -102,13 +115,33 @@
 </template>
 
 <script lang="ts" setup>
-import { FileArchive, Loader2, Server } from '@lucide/vue'
-import { Card, Divider, Fieldset, FileUpload, Step, StepList, StepPanel, Stepper, Tag } from 'primevue'
-import { ref } from 'vue'
+import { DatabaseSearch, FileArchive, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
+import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Step, StepList, StepPanel, Stepper, Tag } from 'primevue'
+import { computed, ref } from 'vue'
 import Hero from '~/components/Hero.vue'
+import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
+import SourceLogo from '~/components/providers/SourceLogo.vue'
 
 const selectedSource = ref<'local' | 'repo' | null>(null)
 const fileupload = ref();
+
+const urlInput = ref('')
+const requestBody = computed(() => ({
+  url: urlInput.value
+}))
+
+const {status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
+    method: "POST",
+    body: requestBody,
+    immediate: false
+});
+
+const showProviderFeedback = computed(() => status.value === 'success' || status.value === 'error')
+const feedbackProvider = computed(() => urlScanResult.value?.sourceType ?? 'Unknown')
+const feedbackErrorMessage = computed(() => {
+  const data = (error.value as { data?: { message?: string; statusMessage?: string } } | null)?.data
+  return data?.message || data?.statusMessage || error.value?.message
+})
 
 </script>
 
