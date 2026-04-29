@@ -6,3 +6,7 @@
     <ThemeToggleButton />
   </div>
 </template>
+
+<script setup lang="ts">
+const presence = usePresenceSocket()
+</script>

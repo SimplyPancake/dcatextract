@@ -1,13 +1,13 @@
 <template>
   <div
-    class="min-h-screen bg-[radial-gradient(circle_at_top,_#e2e8f0_0%,_#f8fafc_38%,_#eef2ff_100%)] px-6 py-16 text-slate-900 dark:bg-[radial-gradient(circle_at_top,_#1e293b_0%,_#020617_48%,_#020617_100%)] dark:text-slate-50">
+    class="min-h-screen bg-surface-ground px-6 py-16 text-slate-900 dark:text-slate-50">
     <div class="mx-auto w-full max-w-5xl">
       <Hero />
 
       <main class="mx-auto mt-8 px-4">
         <section class="mx-auto max-w-3xl">
           <Card
-            class="border border-white/60 bg-white/85 shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-black/30">
+            class="border border-surface-200 bg-surface-card shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-surface-700 dark:shadow-black/30">
             <template #title>
               <div class="text-2xl font-semibold tracking-tight flex flex-row gap-2">Source type</div>
             </template>
@@ -96,13 +96,13 @@
                     </Transition>
                   </div>
                   <div class="flex pt-6 justify-end">
-                    <Button label="Next" icon="pi pi-arrow-right" @click="activateCallback('2')" />
+                    <Button label="Next" @click="activateCallback('2')" />
                   </div>
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
                   <div class="flex pt-6 justify-between">
-                    <Button label="Back" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
-                    <Button label="Next" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+                    <Button label="Back" severity="secondary" @click="activateCallback('1')" />
+                    <Button label="Next" @click="activateCallback('3')" />
                   </div>
                 </StepPanel>
               </Stepper>
