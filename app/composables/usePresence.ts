@@ -7,7 +7,14 @@ export const usePresenceSocket = () => {
   let socket: WebSocket | null = null
   let heartbeat: any = null
 
+
+  // Set sessionId cookie
+  const setSessionCookie = () => {
+    document.cookie = `sessionId=${sessionId.value}; path=/; SameSite=Lax;`;
+  }
+
   const connect = () => {
+    setSessionCookie()
     socket = new WebSocket('ws://localhost:3000/_ws')
 
     socket.onopen = () => {

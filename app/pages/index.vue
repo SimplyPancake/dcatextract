@@ -60,10 +60,10 @@
                             Files will be stored as short as needed and will be attached to this
                             session.
                           </div>
-                          <!-- TODO: Detect zip bombs, no depth more than 5 will go -->
-                          <FileUpload mode="basic" url="/api/upload" @upload="console.log($event)" :multiple="false"
-                            accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9">
-                          </FileUpload>
+                          <ProgressBar class="my-2" :value="progressBar"></ProgressBar>
+                          <FileUpload name="files[]" ref="fileUpload" mode="basic" url="/api/upload" @select="progressBar = 0"
+                          accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="false" @progress="progress($event)" />
+                          <Button label="Upload" severity="secondary" @click="upload()"></Button>
                         </div>
                         <div v-else>
                           <label class="mt-3 block text-xs font-medium" for="repo-url">Repository
@@ -115,20 +115,29 @@
 </template>
 
 <script lang="ts" setup>
-import { DatabaseSearch, FileArchive, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
-import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Step, StepList, StepPanel, Stepper, Tag } from 'primevue'
+import { DatabaseSearch, FileArchive, FolderUp, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
+import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Step, StepList, StepPanel, Stepper, Tag, type FileUploadProgressEvent } from 'primevue'
 import { computed, ref } from 'vue'
 import Hero from '~/components/Hero.vue'
 import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
 import SourceLogo from '~/components/providers/SourceLogo.vue'
 
 const selectedSource = ref<'local' | 'repo' | null>(null)
-const fileupload = ref();
 
 const urlInput = ref('')
 const requestBody = computed(() => ({
   url: urlInput.value
 }))
+
+const fileUpload = ref();
+const upload = () => {
+  fileUpload.value?.upload();
+};
+const progressBar = ref(0)
+
+function progress(event: FileUploadProgressEvent) {
+  progressBar.value = event.progress
+}
 
 const {status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
     method: "POST",

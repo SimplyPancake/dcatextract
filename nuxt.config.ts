@@ -6,6 +6,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  runtimeConfig: {
+    redisUrl: process.env.REDIS_URL,
+  },
   nitro: {
     experimental: {
       websocket: true
@@ -38,5 +41,8 @@ export default defineNuxtConfig({
         },
       }
     }
+  },
+  fileStorage: {
+    mount: process.env.FILES_MOUNT
   }
 })
