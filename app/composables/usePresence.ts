@@ -1,32 +1,47 @@
+function getSessionIdFromLocalStorage() {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem('sessionId')
+}
+
+function setSessionIdToLocalStorage(id: string) {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem('sessionId', id)
+  }
+}
+
 export const usePresenceSocket = () => {
-  const sessionId = useState(
-    'session-id',
-    () => crypto.randomUUID()
-  )
+  let sessionId = getSessionIdFromLocalStorage()
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    setSessionIdToLocalStorage(sessionId)
+  }
 
   let socket: WebSocket | null = null
   let heartbeat: any = null
 
 
-  // Set sessionId cookie
+  // Always set sessionId as cookie so backend can read it
   const setSessionCookie = () => {
-    document.cookie = `sessionId=${sessionId.value}; path=/; SameSite=Lax;`;
+    if (typeof document === 'undefined') return;
+    const id = getSessionIdFromLocalStorage() || sessionId
+    document.cookie = `sessionId=${id}; path=/; SameSite=Lax;`;
   }
 
   const connect = () => {
+    setSessionIdToLocalStorage(sessionId)
     setSessionCookie()
     socket = new WebSocket('ws://localhost:3000/_ws')
 
     socket.onopen = () => {
       socket?.send(JSON.stringify({
         type: 'identify',
-        sessionId: sessionId.value
+        sessionId: sessionId
       }))
 
       heartbeat = setInterval(() => {
         socket?.send(JSON.stringify({
           type: 'heartbeat',
-          sessionId: sessionId.value
+          sessionId: sessionId
         }))
       }, 30_000)
     }

@@ -1,87 +1,51 @@
-import { sessions } from '../utils/session-registry'
+import { getRedis } from "../utils/redis"
+
 
 export default defineWebSocketHandler({
-  open(peer) {
+
+  async open(peer) {
     console.log('socket opened')
   },
 
   async message(peer, message) {
     const data = JSON.parse(message.text())
 
+
     if (data.type === 'identify') {
       const sessionId = data.sessionId
-
-      let session = sessions.get(sessionId)
-
-      if (!session) {
-        session = {
-          sessionId,
-          connected: true,
-          lastSeen: Date.now(),
-          files: []
-        }
-
-        sessions.set(sessionId, session)
-      }
-
-      session.connected = true
-      session.lastSeen = Date.now()
-
-      // cancel pending cleanup
-      if (session.cleanupTimeout) {
-        clearTimeout(session.cleanupTimeout)
-      }
-
+      const redis = getRedis()
+      await redis.set(
+        `session:${sessionId}`,
+        JSON.stringify({ connected: true, lastSeen: Date.now() }),
+        'EX',
+        120
+      )
       peer.context.sessionId = sessionId
-
       console.log(`User connected: ${sessionId}`)
     }
 
     if (data.type === 'heartbeat') {
-      const session = sessions.get(data.sessionId)
-
-      if (session) {
-        session.lastSeen = Date.now()
-      }
+      const sessionId = data.sessionId
+      const redis = getRedis()
+      await redis.expire(`session:${sessionId}`, 120)
     }
   },
 
-  close(peer) {
-    const sessionId = peer.context.sessionId as (string | undefined)
-
+  async close(peer) {
+    const sessionId = peer.context.sessionId as string | undefined
     if (!sessionId) return
 
-    const session = sessions.get(sessionId)
+    await cleanupQueue.add(
+      'cleanup-session',
 
-    if (!session) return
+      {
+        sessionId
+      },
 
-    session.connected = false
-
-    console.log(`Disconnected: ${sessionId}`)
-
-    // GRACE PERIOD
-    session.cleanupTimeout = setTimeout(async () => {
-      const latest = sessions.get(sessionId)
-
-      if (!latest?.connected) {
-        console.log(`Cleaning session: ${sessionId}`)
-
-        await deleteFilesForSession(sessionId)
-
-        sessions.delete(sessionId)
+      {
+        delay: 181_000
       }
-    }, 60_000)
+    )
+    console.log(`Disconnected: ${sessionId} (cleanup scheduled)`)
   }
 })
-
-async function deleteFilesForSession(sessionId: string) {
-  const session = sessions.get(sessionId)
-
-  if (!session) return
-
-  for (const file of session.files) {
-    console.log('Deleting file:', file)
-
-    // fs.unlinkSync(file)
-  }
-}
