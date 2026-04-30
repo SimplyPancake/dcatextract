@@ -29,15 +29,25 @@ export function startCleanupWorker() {
       for (const file of files) {
         try {
           await fs.unlink(file)
+          await redis.srem(
+            `session:${sessionId}:files`,
+            file
+          )
         }
         catch (e) {
           console.error(e)
         }
       }
 
-      await redis.del(
+      const remaining = await redis.scard(
         `session:${sessionId}:files`
       )
+
+      if (remaining === 0) {
+        await redis.del(
+          `session:${sessionId}:files`
+        )
+      }
 
       console.log(
         '[CLEANUP]Cleaned session:',
