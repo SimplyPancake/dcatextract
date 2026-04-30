@@ -22,7 +22,6 @@
                   <div class="flex flex-col">
                     <div class="flex flex-row gap-4 w-full">
                       <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
-                        @keydown.enter="selectedSource = 'local'" @keydown.space.prevent="selectedSource = 'local'"
                         :class="[
                           'w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40',
                           selectedSource === 'local' ? 'ring-2 ring-[var(--p-primary-color)] bg-sky-50/40 dark:bg-slate-800/50' : 'ring-1 ring-transparent'
@@ -33,7 +32,6 @@
                         Upload a ZIP file containing your datasets for processing
                       </Fieldset>
                       <Fieldset legend="Data Repository" role="button" tabindex="0" @click="selectedSource = 'repo'"
-                        @keydown.enter="selectedSource = 'repo'" @keydown.space.prevent="selectedSource = 'repo'"
                         :class="[
                           'w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40',
                           selectedSource === 'repo' ? 'ring-2 ring-[var(--p-primary-color)] bg-sky-50/40 dark:bg-slate-800/50' : 'ring-1 ring-transparent'
@@ -60,10 +58,15 @@
                             Files will be stored as short as needed and will be attached to this
                             session.
                           </div>
-                          <ProgressBar class="my-2" :value="progressBar"></ProgressBar>
-                          <FileUpload name="files[]" ref="fileUpload" mode="basic" url="/api/upload" @select="progressBar = 0"
-                          accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="false" @progress="progress($event)" />
-                          <Button label="Upload" severity="secondary" @click="upload()"></Button>
+                          <ProgressBar class="my-2 h-2" v-if="progressBar != 0 && progressBar != 100" mode="indeterminate" :value="progressBar"></ProgressBar>
+                          <div class="flex flex-row">
+                            <div class="flex-auto">
+                              <FileUpload :disabled="uploadFinished" name="uploadedZip" ref="fileUpload" mode="basic" url="/api/upload" @select="uploadFinished = false" @upload="finishUpload()"
+                              accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="false" @progress="progress($event)" />
+                            </div>
+                            <Button class="ml-2" :disabled="uploadFinished" label="Upload" severity="secondary" @click="upload()"></Button>
+                          </div>
+                          <Message class="mt-2" v-if="uploadFinished" severity="success">Upload finished!</Message>
                         </div>
                         <div v-else>
                           <label class="mt-3 block text-xs font-medium" for="repo-url">Repository
@@ -96,13 +99,13 @@
                     </Transition>
                   </div>
                   <div class="flex pt-6 justify-end">
-                    <Button label="Next" @click="activateCallback('2')" />
+                    <Button label="Next" :disabled="!mayContinue" @click="activateCallback('2')" />
                   </div>
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
-                  <div class="flex pt-6 justify-between">
-                    <Button label="Back" severity="secondary" @click="activateCallback('1')" />
-                    <Button label="Next" @click="activateCallback('3')" />
+                  <div class="flex pt-6 justify-end">
+                    <!-- <Button label="Back" :di severity="secondary" @click="activateCallback('1')" /> -->
+                    <Button label="Next" @click="activateCallback('3')" :disabled="true" />
                   </div>
                 </StepPanel>
               </Stepper>
@@ -116,7 +119,7 @@
 
 <script lang="ts" setup>
 import { DatabaseSearch, FileArchive, FolderUp, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
-import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Step, StepList, StepPanel, Stepper, Tag, type FileUploadProgressEvent } from 'primevue'
+import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Message, Step, StepList, StepPanel, Stepper, Tag, type FileUploadProgressEvent } from 'primevue'
 import { computed, ref } from 'vue'
 import Hero from '~/components/Hero.vue'
 import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
@@ -139,6 +142,11 @@ function progress(event: FileUploadProgressEvent) {
   progressBar.value = event.progress
 }
 
+const uploadFinished = ref(false)
+function finishUpload() {
+  uploadFinished.value = true
+}
+
 const {status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
     method: "POST",
     body: requestBody,
@@ -151,6 +159,14 @@ const feedbackErrorMessage = computed(() => {
   const data = (error.value as { data?: { message?: string; statusMessage?: string } } | null)?.data
   return data?.message || data?.statusMessage || error.value?.message
 })
+
+const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFinished.value)
+ || 
+(
+  selectedSource.value == 'repo' &&
+  status.value == 'success' && feedbackProvider.value != 'Unknown' 
+))
+
 
 </script>
 

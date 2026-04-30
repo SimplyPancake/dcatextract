@@ -2,6 +2,8 @@ type UploadedFile = {
   id: string
   path: string
   uploadedAt: number
+  filename: string,
+  size: number
 }
 
 export type Session = {

@@ -20,5 +20,11 @@ export default defineEventHandler(async (event) => {
     // Move or process the file as needed
     console.log(files)
 
+    const redis = useNitroApp().redis
+    // Use lpush and rpop for FIFO
+    // 'jobs:fileprocess' push 'userSession:filepath'
+    redis.lPush('jobs:fileprocess', ``)
+    // Then let redis know where the file is
+
     return { success: true, files };
 })
