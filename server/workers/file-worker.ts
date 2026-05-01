@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq'
 import { getRedis } from '../utils/redis'
+import { inferDcat } from './file-processor'
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -15,7 +16,13 @@ export function startFileWorker() {
                 sessionId
             )
 
-            // process file here
+            // Process the zip file to infer DCAT metadata
+            const catalog = inferDcat(filepath, { verbose: true })
+            
+            // Store the inferred catalog in Redis for the session
+            await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
+            
+            return catalog
         },
 
         {

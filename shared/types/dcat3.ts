@@ -365,4 +365,16 @@ export interface Catalog extends Dataset {
   record?: CatalogRecord | CatalogRecord[];
   /** dcat:themeTaxonomy – knowledge organization system used to classify resources. */
   themeTaxonomy?: IRI | IRI[];
+  /** _meta */
+  _meta?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// InferOptions
+// ---------------------------------------------------------------------------
+
+export interface InferOptions {
+    baseUri?: string;
+    outPath?: string;
+    verbose?: boolean;
 }
