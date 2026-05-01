@@ -46,7 +46,7 @@ function summarizeInputs(filePaths: string[]) {
 }
 
 export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}): Catalog {
-    const baseUri = (opts.baseUri ?? "https://example.org/datasets/").replace(/\/$/, "/");
+    const baseUri = (opts.baseUri ?? "file:///").replace(/\/$/, "/");
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
 
@@ -92,7 +92,7 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     // ── 5. Catalog-level README ───────────────────────────────────────────────
     const rootReadme = readReadme(tmpDir);
     const primaryStem = filePaths.length === 1
-        ? path.basename(filePaths[0], path.extname(filePaths[0]))
+        ? path.basename(filePaths[0]!, path.extname(filePaths[0]!))
         : "dataset";
     const catalogTitle = (rootReadme && mdTitle(rootReadme)) ?? titleFromStem(primaryStem);
     const catalogDesc = rootReadme ? mdDescription(rootReadme) : null;
@@ -168,9 +168,9 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
             // if (Object.keys(inferred).length) dist._inferred = inferred;
 
             // Promote PDF title
-            if (ext === ".pdf" && typeof inferred.Title === "string") {
-                dist.title = inferred.Title;
-                dist.description = typeof inferred.Subject === "string" ? inferred.Subject : undefined;
+            if (ext === ".pdf" && typeof inferred.title === "string") {
+                dist.title = inferred.title;
+                dist.description = typeof inferred.description === "string" ? inferred.description : undefined;
             }
 
             distributions.push(dist);

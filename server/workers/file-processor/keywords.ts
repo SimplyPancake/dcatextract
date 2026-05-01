@@ -1,12 +1,31 @@
 import * as path from "node:path";
+import type { Distribution } from "../../../shared/types/dcat3.js";
 
-export function extractKeywords(inferred: Record<string, unknown>, ext: string, filename: string): string[] {
+function normalizeDescription(description?: string | string[]): string {
+    if (!description) return "";
+    return Array.isArray(description) ? description.join(" ") : description;
+}
+
+function parseDescriptionList(description: string, label: string): string[] {
+    const match = description.match(new RegExp(`${label}:\\s*([^;]+)`, "i"));
+    if (!match) return [];
+    return match[1].split(",").map(item => item.trim()).filter(Boolean);
+}
+
+function parseDescriptionValue(description: string, label: string): string | null {
+    const match = description.match(new RegExp(`${label}:\\s*([^;]+)`, "i"));
+    return match ? match[1].trim() : null;
+}
+
+export function extractKeywords(inferred: Distribution, ext: string, filename: string): string[] {
     const kws = new Set<string>();
+    const description = normalizeDescription(inferred.description);
+    const jsonType = parseDescriptionValue(description, "JSON type");
 
     // Format-based
     if ([".csv", ".tsv"].includes(ext)) kws.add("tabular data");
     if (ext === ".json") kws.add("json");
-    if (ext === ".geojson" || inferred.jsonType === "GeoJSON FeatureCollection") {
+    if (ext === ".geojson" || jsonType === "GeoJSON FeatureCollection") {
         kws.add("geospatial"); kws.add("vector");
     }
     if ([".ttl", ".n3", ".rdf", ".nt", ".jsonld"].includes(ext)) {
@@ -20,10 +39,10 @@ export function extractKeywords(inferred: Record<string, unknown>, ext: string, 
 
     // Column / key based
     const cols = [
-        ...(inferred.columns as string[] ?? []),
-        ...(inferred.keys as string[] ?? []),
-        ...(inferred.properties as string[] ?? []),
-        ...(inferred.geoColumns as string[] ?? []),
+        ...parseDescriptionList(description, "Columns"),
+        ...parseDescriptionList(description, "Keys"),
+        ...parseDescriptionList(description, "Properties"),
+        ...parseDescriptionList(description, "Geo columns"),
     ];
     for (const col of cols) {
         if (/^(lat|latitude|lon|longitude|lng|x|y|geometry|geom|wkt|bbox)$/i.test(col)) kws.add("geospatial");
