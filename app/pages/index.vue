@@ -29,7 +29,7 @@
                         <Tag class="mb-2">
                           <FileArchive :size="35" />
                         </Tag> <br />
-                        Upload a ZIP file containing your datasets for processing
+                        Upload one or more files (ZIPs or individual datasets) for processing
                       </Fieldset>
                       <Fieldset legend="Data Repository" role="button" tabindex="0" @click="selectedSource = 'repo'"
                         :class="[
@@ -61,10 +61,10 @@
                           <ProgressBar class="my-2 h-2" v-if="progressBar != 0 && progressBar != 100" mode="indeterminate" :value="progressBar"></ProgressBar>
                           <div class="flex flex-row">
                             <div class="flex-auto">
-                              <FileUpload :disabled="uploadFinished" name="uploadedZip" ref="fileUpload" mode="basic" url="/api/upload" @select="uploadFinished = false" @upload="finishUpload()"
-                              accept=".zip,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="false" @progress="progress($event)" />
+                              <FileUpload :disabled="uploadFinished" name="uploadedFiles" ref="fileUpload" mode="advanced" url="/api/upload" @select="uploadFinished = false" @upload="finishUpload()"
+                              accept=".zip,.csv,.tsv,.json,.jsonld,.geojson,.xml,.rdf,.ttl,.n3,.nt,.xlsx,.xls,.ods,.pdf,.png,.jpg,.jpeg,.tif,.tiff,.parquet,.txt,.md,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="true" @progress="progress($event)" />
                             </div>
-                            <Button class="ml-2" :disabled="uploadFinished" label="Upload" severity="secondary" @click="upload()"></Button>
+                            <!-- <Button class="ml-2" :disabled="uploadFinished" label="Upload" severity="secondary" @click="upload()"></Button> -->
                           </div>
                           <Message class="mt-2" v-if="uploadFinished" severity="success">Upload finished!</Message>
                         </div>
@@ -118,7 +118,7 @@
 </template>
 
 <script lang="ts" setup>
-import { DatabaseSearch, FileArchive, FolderUp, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
+import { DatabaseSearch, FileArchive, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
 import { Button, Card, Divider, Fieldset, FileUpload, InputGroup, Message, Step, StepList, StepPanel, Stepper, Tag, type FileUploadProgressEvent } from 'primevue'
 import { computed, ref } from 'vue'
 import Hero from '~/components/Hero.vue'

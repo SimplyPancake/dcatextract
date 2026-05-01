@@ -7,7 +7,7 @@ import { getRedis } from '../utils/redis';
 export default defineEventHandler(async (event) => {
     const req = event.node.req as IncomingMessage;
     const form = formidable({
-        multiples: false,
+        multiples: true,
         maxFileSize: 2 * 1024 * 1024 * 1024, // 2GB
         allowEmptyFiles: false,
         keepExtensions: true
@@ -19,16 +19,15 @@ export default defineEventHandler(async (event) => {
             else resolve(files);
         });
     });
-    const userFiles = files['uploadedZip'] as formidable.File[] | undefined
-    if (!userFiles) {
+    const uploaded = files['uploadedFiles'] as formidable.File[] | formidable.File | undefined
+    const userFiles = Array.isArray(uploaded) ? uploaded : uploaded ? [uploaded] : []
+    if (userFiles.length === 0) {
         throw createError({
             statusCode: 500,
             statusMessage: 'No files provided',
             message: `No files were provided`
         })
     }
-
-    const file = userFiles[0]!
 
     const redis = getRedis()
     const sessionId = event.context.sessionId
@@ -42,12 +41,11 @@ export default defineEventHandler(async (event) => {
     // Store file ownership in Redis
     await redis.sadd(
         `session:${sessionId}:files`,
-        file.filepath
+        ...userFiles.map((file) => file.filepath)
     )
 
-    await fileQueue.add('process-file', {
-        sessionId,
-        filepath: file.filepath
+    await fileQueue.add('process-session', {
+        sessionId
     })
 
     return { success: true, files };

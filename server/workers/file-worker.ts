@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq'
 import { getRedis } from '../utils/redis'
-import { inferDcat } from './file-processor'
+import { inferDcat, inferDcatFromFiles } from './file-processor'
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -8,19 +8,28 @@ export function startFileWorker() {
         'file-processing',
 
         async (job) => {
-            const { filepath, sessionId } = job.data
+            const { filepath, filepaths, sessionId } = job.data
 
-            console.log(
-                'Processing:',
-                filepath,
-                sessionId
-            )
+            console.log('Processing:', { filepath, filepaths, sessionId })
 
-            // Process the zip file to infer DCAT metadata
-            const catalog = inferDcat(filepath, { verbose: true })
+            let paths: string[] = Array.isArray(filepaths) ? filepaths : []
+            if (paths.length === 0 && filepath) paths = [filepath]
+            if (paths.length === 0 && sessionId) {
+                paths = await redis.smembers(`session:${sessionId}:files`)
+            }
+            if (paths.length === 0) {
+                throw new Error('No files found for processing')
+            }
+
+            // Process all files (zips are extracted) to infer DCAT metadata
+            const catalog = paths.length === 1
+                ? inferDcat(paths[0], { verbose: true })
+                : inferDcatFromFiles(paths, { verbose: true })
             
             // Store the inferred catalog in Redis for the session
-            await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
+            if (sessionId) {
+                await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
+            }
             
             return catalog
         },

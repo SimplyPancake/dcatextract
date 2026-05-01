@@ -8,19 +8,55 @@ import { inspectFile } from "./inspectors.js";
 import { extractKeywords } from "./keywords.js";
 import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
 
-export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
+function stageInputs(filePaths: string[], tmpDir: string, log: (msg: string) => void): void {
+    const isSingleZip = filePaths.length === 1 && path.extname(filePaths[0]!).toLowerCase() === ".zip";
+    const maxZipDepth = 5;
+
+    for (const [index, filePath] of filePaths.entries()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const baseName = path.basename(filePath);
+
+        if (ext === ".zip") {
+            const targetDir = isSingleZip ? tmpDir : path.join(tmpDir, `zip-${index}`);
+            if (!isSingleZip) fs.mkdirSync(targetDir, { recursive: true });
+            log(`Extracting ${filePath} → ${targetDir}`);
+            try {
+                execSync(`unzip -q -o "${filePath}" -d "${targetDir}" --maxdepth ${maxZipDepth}`, { stdio: "pipe" });
+            } catch (e: any) {
+                throw new Error(`Failed to extract zip: ${e.message}`);
+            }
+            continue;
+        }
+
+        const targetDir = filePaths.length === 1 ? tmpDir : path.join(tmpDir, `file-${index}`);
+        fs.mkdirSync(targetDir, { recursive: true });
+        const targetPath = path.join(targetDir, baseName);
+        fs.copyFileSync(filePath, targetPath);
+    }
+}
+
+function summarizeInputs(filePaths: string[]) {
+    const stats = filePaths.map((filePath) => fs.statSync(filePath));
+    const totalBytes = stats.reduce((sum, stat) => sum + stat.size, 0);
+    const newestModified = stats
+        .map((stat) => stat.mtime.toISOString())
+        .sort()
+        .at(-1);
+    return { totalBytes, newestModified };
+}
+
+export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}): Catalog {
     const baseUri = (opts.baseUri ?? "https://example.org/datasets/").replace(/\/$/, "/");
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
 
-    // ── 1. Extract ────────────────────────────────────────────────────────────
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
-    log(`Extracting ${zipPath} → ${tmpDir}`);
-    try {
-        execSync(`unzip -q -o "${zipPath}" -d "${tmpDir}"`, { stdio: "pipe" });
-    } catch (e: any) {
-        throw new Error(`Failed to extract zip: ${e.message}`);
+    if (filePaths.length === 0) {
+        throw new Error("No files provided for inference");
     }
+
+    // ── 1. Stage inputs ──────────────────────────────────────────────────────
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
+    stageInputs(filePaths, tmpDir, log);
 
     // ── 2. Enumerate all relative paths ───────────────────────────────────────
     const allFiles = walk(tmpDir);
@@ -55,10 +91,12 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
 
     // ── 5. Catalog-level README ───────────────────────────────────────────────
     const rootReadme = readReadme(tmpDir);
-    const zipStem = path.basename(zipPath, path.extname(zipPath));
-    const catalogTitle = (rootReadme && mdTitle(rootReadme)) ?? titleFromStem(zipStem);
+    const primaryStem = filePaths.length === 1
+        ? path.basename(filePaths[0], path.extname(filePaths[0]))
+        : "dataset";
+    const catalogTitle = (rootReadme && mdTitle(rootReadme)) ?? titleFromStem(primaryStem);
     const catalogDesc = rootReadme ? mdDescription(rootReadme) : null;
-    const zipStats = fs.statSync(zipPath);
+    const { totalBytes, newestModified } = summarizeInputs(filePaths);
 
     // ── 6. Build datasets from shapefile groups ───────────────────────────────
     const datasets: Dataset[] = [];
@@ -88,7 +126,6 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
             keyword: ["geospatial", "shapefile", "vector"],
             distribution: distributions,
             modified: shpStats?.mtime.toISOString(),
-            _inferred: { format: "ESRI Shapefile", companions },
         });
     }
 
@@ -96,7 +133,7 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
     for (const [dir, files] of dirGroups) {
         const dirAbs = path.join(tmpDir, dir === "." ? "" : dir);
         const dirReadme = readReadme(dir === "." ? tmpDir : dirAbs);
-        const dirLabel = dir === "." ? zipStem : path.basename(dir);
+        const dirLabel = dir === "." ? primaryStem : path.basename(dir);
         const datasetTitle = (dirReadme && mdTitle(dirReadme)) ?? titleFromStem(dirLabel);
         const datasetDesc = dirReadme ? mdDescription(dirReadme) : null;
 
@@ -128,7 +165,7 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
             };
 
             if (DCAT_FORMAT_IRIS[ext]) dist.format = DCAT_FORMAT_IRIS[ext];
-            if (Object.keys(inferred).length) dist._inferred = inferred;
+            // if (Object.keys(inferred).length) dist._inferred = inferred;
 
             // Promote PDF title
             if (ext === ".pdf" && typeof inferred.Title === "string") {
@@ -142,25 +179,27 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
         if (distributions.length === 0) continue;
 
         datasets.push({
-            uri: `${baseUri}${dir === "." ? zipStem : dir}/`,
+            uri: `${baseUri}${dir === "." ? primaryStem : dir}/`,
             title: datasetTitle,
             description: datasetDesc ?? undefined,
             keyword: [...allKeywords],
             distribution: distributions,
             modified: newestModified || undefined,
-            _inferred: { fileCount: files.length, directory: dir },
         });
     }
 
     // ── 8. Assemble catalog ───────────────────────────────────────────────────
+    const sourceFiles = filePaths.map((filePath) => path.basename(filePath));
     const catalog: Catalog = {
-        uri: `${baseUri}${zipStem}/catalog`,
+        uri: `${baseUri}${primaryStem}/catalog`,
         title: catalogTitle,
         description: catalogDesc ?? undefined,
-        issued: zipStats.mtime.toISOString(),
+        issued: newestModified ?? new Date().toISOString(),
         dataset: datasets,
         _meta: {
-            sourceFile: path.basename(zipPath),
+            sourceFile: sourceFiles[0],
+            sourceFiles,
+            totalBytes,
             totalFiles: allFiles.length,
             dataFiles: dataFiles.length,
             skippedFiles: skipSet.size,
@@ -172,4 +211,8 @@ export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
     // ── 9. Cleanup ────────────────────────────────────────────────────────────
     fs.rmSync(tmpDir, { recursive: true, force: true });
     return catalog;
+}
+
+export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
+    return inferDcatFromFiles([zipPath], opts);
 }
