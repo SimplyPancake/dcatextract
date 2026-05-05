@@ -103,7 +103,7 @@
                     </Transition>
                   </div>
                   <div class="flex pt-6 justify-end">
-                    <Button label="Next" :disabled="!mayContinue" @click="activateCallback('2')" />
+                    <Button label="Next" :disabled="!mayContinue" @click="activateCallback('2'); startProcess();" />
                   </div>
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
@@ -156,6 +156,10 @@ const { status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlsc
   body: requestBody,
   immediate: false
 });
+
+const { execute: startProcess } = useLazyFetch('/api/startprocess', {
+  immediate: false
+})
 
 const showProviderFeedback = computed(() => status.value === 'success' || status.value === 'error')
 const feedbackProvider = computed(() => urlScanResult.value?.sourceType ?? 'Unknown')

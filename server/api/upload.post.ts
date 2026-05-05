@@ -46,10 +46,5 @@ export default defineEventHandler(async (event) => {
         ...filepaths
     )
 
-    await fileQueue.add('process-session', {
-        sessionId,
-        filepaths
-    })
-
     return { success: true, files };
 })

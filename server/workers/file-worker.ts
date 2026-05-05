@@ -8,18 +8,20 @@ export function startFileWorker() {
         'file-processing',
 
         async (job) => {
-            const { filepath, filepaths, sessionId } = job.data
+            const { sessionId } = job.data
 
-            console.log('Processing:', { filepath, filepaths, sessionId })
-
-            let paths: string[] = Array.isArray(filepaths) ? filepaths : []
-            if (paths.length === 0 && filepath) paths = [filepath]
-            if (paths.length === 0 && sessionId) {
-                paths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+            if (!sessionId) {
+                console.log("[FILE_PROC] No sessionID. Exiting")
+                return
             }
+            const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+
+            
+            let paths: string[] = Array.isArray(filepaths) ? filepaths : []
             if (paths.length === 0) {
                 throw new Error('No files found for processing')
             }
+            console.log('Processing:', { filepaths, sessionId })
 
             // Process all files (zips are extracted) to infer DCAT metadata
             const catalog = inferDcatFromFiles(paths, { verbose: true })
