@@ -1,16 +1,26 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { Catalog, Dataset, Distribution, InferOptions } from "../../../shared/types/dcat3.js";
 import { MEDIA_TYPES, SHAPEFILE_EXTS, SKIP_FILES, DCAT_FORMAT_IRIS } from "./constants.js";
 import { inspectFile } from "./inspectors.js";
 import { extractKeywords } from "./keywords.js";
 import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
+import { assertZipEntriesSafe, assertZipMaxDepth } from "./security.js";
 
-function stageInputs(filePaths: string[], tmpDir: string, log: (msg: string) => void): void {
+/**
+ * Puts inputs in a temp folder to extract and work with them
+ * @param filePaths The files to analyse
+ * @param tmpDir The temporary directory to put the files into
+ * @param log Log function with a message parameter
+ */
+function stageInputs(
+    filePaths: string[],
+    tmpDir: string,
+    log: (msg: string) => void
+): void {
     const isSingleZip = filePaths.length === 1 && path.extname(filePaths[0]!).toLowerCase() === ".zip";
-    const maxZipDepth = 5;
 
     for (const [index, filePath] of filePaths.entries()) {
         const ext = path.extname(filePath).toLowerCase();
@@ -21,7 +31,13 @@ function stageInputs(filePaths: string[], tmpDir: string, log: (msg: string) => 
             if (!isSingleZip) fs.mkdirSync(targetDir, { recursive: true });
             log(`Extracting ${filePath} → ${targetDir}`);
             try {
-                execSync(`unzip -q -o "${filePath}" -d "${targetDir}" --maxdepth ${maxZipDepth}`, { stdio: "pipe" });
+                assertZipEntriesSafe(filePath);
+                assertZipMaxDepth(filePath, 5);
+                execFileSync(
+                    "unzip",
+                    ["-q", "-o", filePath, "-d", targetDir],
+                    { stdio: "pipe" }
+                );
             } catch (e: any) {
                 throw new Error(`Failed to extract zip: ${e.message}`);
             }
@@ -45,7 +61,7 @@ function summarizeInputs(filePaths: string[]) {
     return { totalBytes, newestModified };
 }
 
-export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}): Catalog {
+export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}) {
     const baseUri = (opts.baseUri ?? "file:///").replace(/\/$/, "/");
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
@@ -62,155 +78,157 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     const allFiles = walk(tmpDir);
     log(`Found ${allFiles.length} total files`);
 
-    // ── 3. Partition: skip meta-only files, separate shapefile companions ──────
-    const skipSet = new Set(allFiles.filter(f => SKIP_FILES.has(path.basename(f).toLowerCase())));
-    const dataFiles = allFiles.filter(f => !skipSet.has(f));
+    // Assemble Distribution for each file
 
-    // Find shapefile groups (stem → companions)
-    const shapeGroups = new Map<string, string[]>();
-    const nonShapeFiles: string[] = [];
+    // // ── 3. Partition: skip meta-only files, separate shapefile companions ──────
+    // const skipSet = new Set(allFiles.filter(f => SKIP_FILES.has(path.basename(f).toLowerCase())));
+    // const dataFiles = allFiles.filter(f => !skipSet.has(f));
 
-    for (const f of dataFiles) {
-        const ext = path.extname(f).toLowerCase();
-        const stem = f.slice(0, f.length - ext.length);
-        if (SHAPEFILE_EXTS.has(ext)) {
-            if (!shapeGroups.has(stem)) shapeGroups.set(stem, []);
-            shapeGroups.get(stem)!.push(f);
-        } else {
-            nonShapeFiles.push(f);
-        }
-    }
+    // // Find shapefile groups (stem → companions)
+    // const shapeGroups = new Map<string, string[]>();
+    // const nonShapeFiles: string[] = [];
 
-    // ── 4. Group remaining files by their parent directory ────────────────────
-    const dirGroups = new Map<string, string[]>();
-    for (const f of nonShapeFiles) {
-        const dir = path.dirname(f);  // "." for root files
-        if (!dirGroups.has(dir)) dirGroups.set(dir, []);
-        dirGroups.get(dir)!.push(f);
-    }
+    // for (const f of dataFiles) {
+    //     const ext = path.extname(f).toLowerCase();
+    //     const stem = f.slice(0, f.length - ext.length);
+    //     if (SHAPEFILE_EXTS.has(ext)) {
+    //         if (!shapeGroups.has(stem)) shapeGroups.set(stem, []);
+    //         shapeGroups.get(stem)!.push(f);
+    //     } else {
+    //         nonShapeFiles.push(f);
+    //     }
+    // }
 
-    // ── 5. Catalog-level README ───────────────────────────────────────────────
-    const rootReadme = readReadme(tmpDir);
-    const primaryStem = filePaths.length === 1
-        ? path.basename(filePaths[0]!, path.extname(filePaths[0]!))
-        : "dataset";
-    const catalogTitle = (rootReadme && mdTitle(rootReadme)) ?? titleFromStem(primaryStem);
-    const catalogDesc = rootReadme ? mdDescription(rootReadme) : null;
-    const { totalBytes, newestModified } = summarizeInputs(filePaths);
+    // // ── 4. Group remaining files by their parent directory ────────────────────
+    // const dirGroups = new Map<string, string[]>();
+    // for (const f of nonShapeFiles) {
+    //     const dir = path.dirname(f);  // "." for root files
+    //     if (!dirGroups.has(dir)) dirGroups.set(dir, []);
+    //     dirGroups.get(dir)!.push(f);
+    // }
 
-    // ── 6. Build datasets from shapefile groups ───────────────────────────────
-    const datasets: Dataset[] = [];
+    // // ── 5. Catalog-level README ───────────────────────────────────────────────
+    // const rootReadme = readReadme(tmpDir);
+    // const primaryStem = filePaths.length === 1
+    //     ? path.basename(filePaths[0]!, path.extname(filePaths[0]!))
+    //     : "dataset";
+    // const catalogTitle = (rootReadme && mdTitle(rootReadme)) ?? titleFromStem(primaryStem);
+    // const catalogDesc = rootReadme ? mdDescription(rootReadme) : null;
+    // const { totalBytes, newestModified } = summarizeInputs(filePaths);
 
-    for (const [stem, companions] of shapeGroups) {
-        log(`  Shapefile group: ${stem}`);
-        const title = titleFromStem(path.basename(stem));
-        const shpAbs = path.join(tmpDir, stem + ".shp");
-        const shpStats = fs.existsSync(shpAbs) ? fs.statSync(shpAbs) : null;
+    // // ── 6. Build datasets from shapefile groups ───────────────────────────────
+    // const datasets: Dataset[] = [];
 
-        const distributions: Distribution[] = companions.map(rel => {
-            const ext = path.extname(rel).toLowerCase();
-            const stats = fs.statSync(path.join(tmpDir, rel));
-            return {
-                uri: `${baseUri}${rel}`,
-                title: `${title} (${ext.slice(1).toUpperCase()})`,
-                accessURL: `${baseUri}${rel}`,
-                mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
-                byteSize: stats.size,
-                modified: stats.mtime.toISOString(),
-            };
-        });
+    // for (const [stem, companions] of shapeGroups) {
+    //     log(`  Shapefile group: ${stem}`);
+    //     const title = titleFromStem(path.basename(stem));
+    //     const shpAbs = path.join(tmpDir, stem + ".shp");
+    //     const shpStats = fs.existsSync(shpAbs) ? fs.statSync(shpAbs) : null;
 
-        datasets.push({
-            uri: `${baseUri}${stem}`,
-            title,
-            keyword: ["geospatial", "shapefile", "vector"],
-            distribution: distributions,
-            modified: shpStats?.mtime.toISOString(),
-        });
-    }
+    //     const distributions: Distribution[] = companions.map(rel => {
+    //         const ext = path.extname(rel).toLowerCase();
+    //         const stats = fs.statSync(path.join(tmpDir, rel));
+    //         return {
+    //             uri: `${baseUri}${rel}`,
+    //             title: `${title} (${ext.slice(1).toUpperCase()})`,
+    //             accessURL: `${baseUri}${rel}`,
+    //             mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
+    //             byteSize: stats.size,
+    //             modified: stats.mtime.toISOString(),
+    //         };
+    //     });
 
-    // ── 7. Build datasets from directory groups ───────────────────────────────
-    for (const [dir, files] of dirGroups) {
-        const dirAbs = path.join(tmpDir, dir === "." ? "" : dir);
-        const dirReadme = readReadme(dir === "." ? tmpDir : dirAbs);
-        const dirLabel = dir === "." ? primaryStem : path.basename(dir);
-        const datasetTitle = (dirReadme && mdTitle(dirReadme)) ?? titleFromStem(dirLabel);
-        const datasetDesc = dirReadme ? mdDescription(dirReadme) : null;
+    //     datasets.push({
+    //         uri: `${baseUri}${stem}`,
+    //         title,
+    //         keyword: ["geospatial", "shapefile", "vector"],
+    //         distribution: distributions,
+    //         modified: shpStats?.mtime.toISOString(),
+    //     });
+    // }
 
-        const allKeywords = new Set<string>();
-        const distributions: Distribution[] = [];
-        let newestModified = "";
+    // // ── 7. Build datasets from directory groups ───────────────────────────────
+    // for (const [dir, files] of dirGroups) {
+    //     const dirAbs = path.join(tmpDir, dir === "." ? "" : dir);
+    //     const dirReadme = readReadme(dir === "." ? tmpDir : dirAbs);
+    //     const dirLabel = dir === "." ? primaryStem : path.basename(dir);
+    //     const datasetTitle = (dirReadme && mdTitle(dirReadme)) ?? titleFromStem(dirLabel);
+    //     const datasetDesc = dirReadme ? mdDescription(dirReadme) : null;
 
-        for (const relFile of files) {
-            const absFile = path.join(tmpDir, relFile);
-            const ext = path.extname(relFile).toLowerCase();
-            const stats = fs.statSync(absFile);
+    //     const allKeywords = new Set<string>();
+    //     const distributions: Distribution[] = [];
+    //     let newestModified = "";
 
-            log(`  Inspecting: ${relFile}`);
-            const inferred = inspectFile(absFile);
-            const keywords = extractKeywords(inferred, ext, relFile);
-            keywords.forEach(k => allKeywords.add(k));
+    //     for (const relFile of files) {
+    //         const absFile = path.join(tmpDir, relFile);
+    //         const ext = path.extname(relFile).toLowerCase();
+    //         const stats = fs.statSync(absFile);
 
-            if (stats.mtime.toISOString() > newestModified) {
-                newestModified = stats.mtime.toISOString();
-            }
+    //         log(`  Inspecting: ${relFile}`);
+    //         const inferred = inspectFile(absFile);
+    //         const keywords = extractKeywords(inferred, ext, relFile);
+    //         keywords.forEach(k => allKeywords.add(k));
 
-            const dist: Distribution = {
-                uri: `${baseUri}${relFile}`,
-                title: titleFromStem(path.basename(relFile, ext)),
-                accessURL: `${baseUri}${relFile}`,
-                mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
-                byteSize: stats.size,
-                modified: stats.mtime.toISOString(),
-            };
+    //         if (stats.mtime.toISOString() > newestModified) {
+    //             newestModified = stats.mtime.toISOString();
+    //         }
 
-            if (DCAT_FORMAT_IRIS[ext]) dist.format = DCAT_FORMAT_IRIS[ext];
-            // if (Object.keys(inferred).length) dist._inferred = inferred;
+    //         const dist: Distribution = {
+    //             uri: `${baseUri}${relFile}`,
+    //             title: titleFromStem(path.basename(relFile, ext)),
+    //             accessURL: `${baseUri}${relFile}`,
+    //             mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
+    //             byteSize: stats.size,
+    //             modified: stats.mtime.toISOString(),
+    //         };
 
-            // Promote PDF title
-            if (ext === ".pdf" && typeof inferred.title === "string") {
-                dist.title = inferred.title;
-                dist.description = typeof inferred.description === "string" ? inferred.description : undefined;
-            }
+    //         if (DCAT_FORMAT_IRIS[ext]) dist.format = DCAT_FORMAT_IRIS[ext];
+    //         // if (Object.keys(inferred).length) dist._inferred = inferred;
 
-            distributions.push(dist);
-        }
+    //         // Promote PDF title
+    //         if (ext === ".pdf" && typeof inferred.title === "string") {
+    //             dist.title = inferred.title;
+    //             dist.description = typeof inferred.description === "string" ? inferred.description : undefined;
+    //         }
 
-        if (distributions.length === 0) continue;
+    //         distributions.push(dist);
+    //     }
 
-        datasets.push({
-            uri: `${baseUri}${dir === "." ? primaryStem : dir}/`,
-            title: datasetTitle,
-            description: datasetDesc ?? undefined,
-            keyword: [...allKeywords],
-            distribution: distributions,
-            modified: newestModified || undefined,
-        });
-    }
+    //     if (distributions.length === 0) continue;
 
-    // ── 8. Assemble catalog ───────────────────────────────────────────────────
-    const sourceFiles = filePaths.map((filePath) => path.basename(filePath));
-    const catalog: Catalog = {
-        uri: `${baseUri}${primaryStem}/catalog`,
-        title: catalogTitle,
-        description: catalogDesc ?? undefined,
-        issued: newestModified ?? new Date().toISOString(),
-        dataset: datasets,
-        _meta: {
-            sourceFile: sourceFiles[0],
-            sourceFiles,
-            totalBytes,
-            totalFiles: allFiles.length,
-            dataFiles: dataFiles.length,
-            skippedFiles: skipSet.size,
-            shapefileGroups: shapeGroups.size,
-            inferredWith: "fileprocesser.ts",
-        },
-    };
+    //     datasets.push({
+    //         uri: `${baseUri}${dir === "." ? primaryStem : dir}/`,
+    //         title: datasetTitle,
+    //         description: datasetDesc ?? undefined,
+    //         keyword: [...allKeywords],
+    //         distribution: distributions,
+    //         modified: newestModified || undefined,
+    //     });
+    // }
 
-    // ── 9. Cleanup ────────────────────────────────────────────────────────────
+    // // ── 8. Assemble catalog ───────────────────────────────────────────────────
+    // const sourceFiles = filePaths.map((filePath) => path.basename(filePath));
+    // const catalog: Catalog = {
+    //     uri: `${baseUri}${primaryStem}/catalog`,
+    //     title: catalogTitle,
+    //     description: catalogDesc ?? undefined,
+    //     issued: newestModified ?? new Date().toISOString(),
+    //     dataset: datasets,
+    //     _meta: {
+    //         sourceFile: sourceFiles[0],
+    //         sourceFiles,
+    //         totalBytes,
+    //         totalFiles: allFiles.length,
+    //         dataFiles: dataFiles.length,
+    //         skippedFiles: skipSet.size,
+    //         shapefileGroups: shapeGroups.size,
+    //         inferredWith: "fileprocesser.ts",
+    //     },
+    // };
+
+    // Cleanup 
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    return catalog;
+    // return catalog;
 }
 
 export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {

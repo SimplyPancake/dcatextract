@@ -36,12 +36,15 @@ export function mdDescription(md: string): string | null {
     return out.length > 10 ? out.slice(0, 500) : null;
 }
 
-export function walk(dir: string, relative = ""): string[] {
+export function walk(dir: string, relative = "", maxDepth = 5): string[] {
+    if (maxDepth <= 0) {
+        return []
+    }
     const results: string[] = [];
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const rel = relative ? `${relative}/${entry.name}` : entry.name;
         const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) results.push(...walk(full, rel));
+        if (entry.isDirectory()) results.push(...walk(full, rel, maxDepth - 1));
         else results.push(rel);
     }
     return results;

@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "bun test"
   },
   "dependencies": {
     "@lucide/vue": "^1.11.0",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@primevue/nuxt-module": "^4.5.5",
     "@types/formidable": "^3.5.1",
-    "@types/node": "^25.6.0"
+    "@types/node": "^25.6.0",
+    "bun-types": "^1.1.45"
   }
 }
