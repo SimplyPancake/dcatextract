@@ -1,13 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { execFileSync } from "node:child_process";
 import { Catalog, Dataset, Distribution, InferOptions } from "../../../shared/types/dcat3.js";
 import { MEDIA_TYPES, SHAPEFILE_EXTS, SKIP_FILES, DCAT_FORMAT_IRIS } from "./constants.js";
 import { inspectFile } from "./inspectors.js";
 import { extractKeywords } from "./keywords.js";
+import * as builders from "../../../shared/types/utils/builder"
 import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
-import { assertZipEntriesSafe, assertZipMaxDepth } from "./security.js";
+import { getAI } from "~~/server/utils/ai.js";
 
 /**
  * Puts inputs in a temp folder to extract and work with them
@@ -20,29 +20,8 @@ function stageInputs(
     tmpDir: string,
     log: (msg: string) => void
 ): void {
-    const isSingleZip = filePaths.length === 1 && path.extname(filePaths[0]!).toLowerCase() === ".zip";
-
     for (const [index, filePath] of filePaths.entries()) {
-        const ext = path.extname(filePath).toLowerCase();
         const baseName = path.basename(filePath);
-
-        if (ext === ".zip") {
-            const targetDir = isSingleZip ? tmpDir : path.join(tmpDir, `zip-${index}`);
-            if (!isSingleZip) fs.mkdirSync(targetDir, { recursive: true });
-            log(`Extracting ${filePath} → ${targetDir}`);
-            try {
-                assertZipEntriesSafe(filePath);
-                assertZipMaxDepth(filePath, 5);
-                execFileSync(
-                    "unzip",
-                    ["-q", "-o", filePath, "-d", targetDir],
-                    { stdio: "pipe" }
-                );
-            } catch (e: any) {
-                throw new Error(`Failed to extract zip: ${e.message}`);
-            }
-            continue;
-        }
 
         const targetDir = filePaths.length === 1 ? tmpDir : path.join(tmpDir, `file-${index}`);
         fs.mkdirSync(targetDir, { recursive: true });
@@ -79,6 +58,37 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     log(`Found ${allFiles.length} total files`);
 
     // Assemble Distribution for each file
+    // Then assemble into a dcat:Dataset
+    const distributions: Distribution[] = filePaths.map(rel => {
+            const title = titleFromStem(path.basename(rel));
+            const ext = path.extname(rel).toLowerCase();
+            const stats = fs.statSync(rel);
+            const inspectInfo = inspectFile(rel)
+
+
+            const derivedInfo = {
+                ...inspectInfo,
+                uri: `${baseUri}${rel}`,
+                title: `${title} (${ext.slice(1).toUpperCase()})`,
+                accessURL: `${baseUri}${rel}`,
+                mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
+                byteSize: stats.size,
+                modified: stats.mtime.toISOString(),
+            };
+
+            // Then try to derive by LLM-based context about the file itself?
+            return derivedInfo
+        });
+
+    const datasetBuilder = new builders.DatasetBuilder()
+    
+    distributions.forEach(dis => {
+        datasetBuilder.distribution(dis)
+    });
+
+    console.log(datasetBuilder.build())
+    const aiclient = getAI()
+    // Then assemble the Dataset and DataSeries
 
     // // ── 3. Partition: skip meta-only files, separate shapefile companions ──────
     // const skipSet = new Set(allFiles.filter(f => SKIP_FILES.has(path.basename(f).toLowerCase())));
@@ -231,6 +241,6 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     // return catalog;
 }
 
-export function inferDcat(zipPath: string, opts: InferOptions = {}): Catalog {
+export function inferDcat(zipPath: string, opts: InferOptions = {}) {
     return inferDcatFromFiles([zipPath], opts);
 }

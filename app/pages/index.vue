@@ -1,6 +1,5 @@
 <template>
-  <div
-    class="min-h-screen bg-surface-ground px-6 py-16 text-slate-900 dark:text-slate-50">
+  <div class="min-h-screen bg-surface-ground px-6 py-16 text-slate-900 dark:text-slate-50">
     <div class="mx-auto w-full max-w-5xl">
       <Hero />
 
@@ -29,7 +28,7 @@
                         <Tag class="mb-2">
                           <FileArchive :size="35" />
                         </Tag> <br />
-                        Upload one or more files (ZIPs or individual datasets) for processing
+                        Upload a folder with files to process.
                       </Fieldset>
                       <Fieldset legend="Data Repository" role="button" tabindex="0" @click="selectedSource = 'repo'"
                         :class="[
@@ -58,11 +57,20 @@
                             Files will be stored as short as needed and will be attached to this
                             session.
                           </div>
-                          <ProgressBar class="my-2 h-2" v-if="progressBar != 0 && progressBar != 100" mode="indeterminate" :value="progressBar"></ProgressBar>
+                          <ProgressBar class="my-2 h-2" v-if="progressBar != 0 && progressBar != 100"
+                            mode="indeterminate" :value="progressBar"></ProgressBar>
                           <div class="flex flex-row">
                             <div class="flex-auto">
-                              <FileUpload :disabled="uploadFinished" name="uploadedFiles" ref="fileUpload" mode="advanced" url="/api/upload" @select="uploadFinished = false" @upload="finishUpload()"
-                              accept=".zip,.csv,.tsv,.json,.jsonld,.geojson,.xml,.rdf,.ttl,.n3,.nt,.xlsx,.xls,.ods,.pdf,.png,.jpg,.jpeg,.tif,.tiff,.parquet,.txt,.md,application/zip,application/x-zip-compressed" :max-file-size="2e9" :multiple="true" @progress="progress($event)" />
+                              <FileUpload :disabled="uploadFinished" name="uploadedFiles" ref="fileUpload"
+                                mode="advanced" url="/api/upload" @select="uploadFinished = false"
+                                @upload="finishUpload()" accept=".csv,.xml,.json,.pdf,.xlsx" :max-file-size="2e9"
+                                :multiple="true" @progress="progress($event)" :pt="{
+                                  input: {
+                                    directory: true,
+                                    webkitdirectory: true,
+                                    multiple: true
+                                  }
+                                }" />
                             </div>
                             <!-- <Button class="ml-2" :disabled="uploadFinished" label="Upload" severity="secondary" @click="upload()"></Button> -->
                           </div>
@@ -88,12 +96,8 @@
                               </InputGroupAddon>
                             </InputGroup>
                           </div>
-                          <ProviderFeedback
-                            v-if="showProviderFeedback"
-                            class="mt-3"
-                            :type="feedbackProvider"
-                            :is-error="status === 'error'"
-                            :message="feedbackErrorMessage" />
+                          <ProviderFeedback v-if="showProviderFeedback" class="mt-3" :type="feedbackProvider"
+                            :is-error="status === 'error'" :message="feedbackErrorMessage" />
                         </div>
                       </div>
                     </Transition>
@@ -147,10 +151,10 @@ function finishUpload() {
   uploadFinished.value = true
 }
 
-const {status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
-    method: "POST",
-    body: requestBody,
-    immediate: false
+const { status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
+  method: "POST",
+  body: requestBody,
+  immediate: false
 });
 
 const showProviderFeedback = computed(() => status.value === 'success' || status.value === 'error')
@@ -161,13 +165,15 @@ const feedbackErrorMessage = computed(() => {
 })
 
 const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFinished.value)
- || 
-(
-  selectedSource.value == 'repo' &&
-  status.value == 'success' && feedbackProvider.value != 'Unknown' 
-))
+  ||
+  (
+    selectedSource.value == 'repo' &&
+    status.value == 'success' && feedbackProvider.value != 'Unknown'
+  ))
 
-
+onMounted(() => {
+  console.log(fileUpload.value)
+})
 </script>
 
 <style></style>

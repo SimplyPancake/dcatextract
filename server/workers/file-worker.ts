@@ -22,9 +22,7 @@ export function startFileWorker() {
             }
 
             // Process all files (zips are extracted) to infer DCAT metadata
-            const catalog = paths.length === 1
-                ? inferDcat(paths[0], { verbose: true })
-                : inferDcatFromFiles(paths, { verbose: true })
+            const catalog = inferDcatFromFiles(paths, { verbose: true })
             
             // Store the inferred catalog in Redis for the session
             if (sessionId) {

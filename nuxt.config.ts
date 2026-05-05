@@ -8,6 +8,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     redisUrl: process.env.REDIS_URL,
+    llmUrl: process.env.LLM_URL,
+    llmToken: process.env.LLM_TOKEN,
   },
   nitro: {
     experimental: {
@@ -27,7 +29,7 @@ export default defineNuxtConfig({
     }
   },
   css: ['./app/assets/css/main.css'],
-  modules: ["@primevue/nuxt-module", '@pinia/nuxt'],
+  modules: ["@primevue/nuxt-module", '@pinia/nuxt', '@nuxt/test-utils/module'],
   primevue: {
     options: {
       theme: {

@@ -553,77 +553,77 @@ export class CatalogBuilder extends ResourceBuilder<CatalogBuilder, Catalog> {
 // Example usage
 // ===========================================================================
 
-const csvDistribution = new DistributionBuilder(
-  "https://data.example.org/air-quality/2024.csv",
-)
-  .title("Air quality 2024 - CSV")
-  .mediaType("text/csv")
-  .byteSize(4_200_000)
-  .downloadURL("https://data.example.org/air-quality/2024.csv")
-  .build();
+// const csvDistribution = new DistributionBuilder(
+//   "https://data.example.org/air-quality/2024.csv",
+// )
+//   .title("Air quality 2024 - CSV")
+//   .mediaType("text/csv")
+//   .byteSize(4_200_000)
+//   .downloadURL("https://data.example.org/air-quality/2024.csv")
+//   .build();
 
-const apiDistribution = new DistributionBuilder(
-  "https://api.example.org/air-quality",
-)
-  .title("Air quality - REST API")
-  .mediaType("application/json")
-  .build();
+// const apiDistribution = new DistributionBuilder(
+//   "https://api.example.org/air-quality",
+// )
+//   .title("Air quality - REST API")
+//   .mediaType("application/json")
+//   .build();
 
-const temporalCoverage = new PeriodOfTimeBuilder()
-  .startDate("2024-01-01")
-  .endDate("2024-12-31")
-  .build();
+// const temporalCoverage = new PeriodOfTimeBuilder()
+//   .startDate("2024-01-01")
+//   .endDate("2024-12-31")
+//   .build();
 
-const publisher = new AgentBuilder()
-  .uri("https://example.org/org/env-agency")
-  .name("Environmental Agency")
-  .homepage("https://example.org")
-  .build();
+// const publisher = new AgentBuilder()
+//   .uri("https://example.org/org/env-agency")
+//   .name("Environmental Agency")
+//   .homepage("https://example.org")
+//   .build();
 
-const airQualityDataset = new DatasetBuilder()
-  .uri("https://data.example.org/datasets/air-quality-2024")
-  .title("Air Quality Measurements 2024")
-  .description("Hourly air quality readings from 50 monitoring stations.")
-  .issued("2024-01-15")
-  .modified("2024-12-31")
-  .publisher(publisher)
-  .keyword("air quality")
-  .keyword("environment")
-  .keyword("pollution")
-  .theme({ uri: "http://eurovoc.europa.eu/2467", prefLabel: "Air quality" })
-  .license("https://creativecommons.org/licenses/by/4.0/")
-  .temporal(temporalCoverage)
-  .accrualPeriodicity("http://purl.org/cld/freq/hourly")
-  .distribution(csvDistribution)
-  .distribution(apiDistribution)
-  .build();
+// const airQualityDataset = new DatasetBuilder()
+//   .uri("https://data.example.org/datasets/air-quality-2024")
+//   .title("Air Quality Measurements 2024")
+//   .description("Hourly air quality readings from 50 monitoring stations.")
+//   .issued("2024-01-15")
+//   .modified("2024-12-31")
+//   .publisher(publisher)
+//   .keyword("air quality")
+//   .keyword("environment")
+//   .keyword("pollution")
+//   .theme({ uri: "http://eurovoc.europa.eu/2467", prefLabel: "Air quality" })
+//   .license("https://creativecommons.org/licenses/by/4.0/")
+//   .temporal(temporalCoverage)
+//   .accrualPeriodicity("http://purl.org/cld/freq/hourly")
+//   .distribution(csvDistribution)
+//   .distribution(apiDistribution)
+//   .build();
 
-const sparqlService = new DataServiceBuilder(
-  "https://sparql.example.org/endpoint",
-)
-  .uri("https://data.example.org/services/sparql")
-  .title("SPARQL endpoint")
-  .description("Query all datasets in the catalog using SPARQL 1.1.")
-  .endpointDescription("https://sparql.example.org/endpoint?service")
-  .servesDataset(airQualityDataset)
-  .build();
+// const sparqlService = new DataServiceBuilder(
+//   "https://sparql.example.org/endpoint",
+// )
+//   .uri("https://data.example.org/services/sparql")
+//   .title("SPARQL endpoint")
+//   .description("Query all datasets in the catalog using SPARQL 1.1.")
+//   .endpointDescription("https://sparql.example.org/endpoint?service")
+//   .servesDataset(airQualityDataset)
+//   .build();
 
-const record = new CatalogRecordBuilder(airQualityDataset)
-  .uri("https://data.example.org/records/air-quality-2024")
-  .issued("2024-01-15")
-  .modified("2024-12-31")
-  .build();
+// const record = new CatalogRecordBuilder(airQualityDataset)
+//   .uri("https://data.example.org/records/air-quality-2024")
+//   .issued("2024-01-15")
+//   .modified("2024-12-31")
+//   .build();
 
-const catalog = new CatalogBuilder()
-  .uri("https://data.example.org/catalog")
-  .title("Example Open Data Catalog")
-  .description("A catalog of environmental datasets published by the agency.")
-  .publisher(publisher)
-  .license("https://creativecommons.org/licenses/by/4.0/")
-  .themeTaxonomy("http://eurovoc.europa.eu/")
-  .addDataset(airQualityDataset)
-  .addService(sparqlService)
-  .addRecord(record)
-  .build();
+// const catalog = new CatalogBuilder()
+//   .uri("https://data.example.org/catalog")
+//   .title("Example Open Data Catalog")
+//   .description("A catalog of environmental datasets published by the agency.")
+//   .publisher(publisher)
+//   .license("https://creativecommons.org/licenses/by/4.0/")
+//   .themeTaxonomy("http://eurovoc.europa.eu/")
+//   .addDataset(airQualityDataset)
+//   .addService(sparqlService)
+//   .addRecord(record)
+//   .build();
 
-console.log(JSON.stringify(catalog, null, 2));
+// console.log(JSON.stringify(catalog, null, 2));
