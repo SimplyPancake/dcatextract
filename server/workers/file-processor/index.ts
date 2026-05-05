@@ -2,12 +2,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { Catalog, Dataset, Distribution, InferOptions } from "../../../shared/types/dcat3.js";
-import { MEDIA_TYPES, SHAPEFILE_EXTS, SKIP_FILES, DCAT_FORMAT_IRIS } from "./constants.js";
+import { MEDIA_TYPES } from "./constants.js";
 import { inspectFile } from "./inspectors.js";
-import { extractKeywords } from "./keywords.js";
 import * as builders from "../../../shared/types/utils/builder"
 import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
-import { getAI } from "~~/server/utils/ai.js";
+// import { getAI } from "~~/server/utils/ai.js";
+import { getAI } from "../../utils/ai";
 
 /**
  * Puts inputs in a temp folder to extract and work with them
@@ -28,16 +28,6 @@ function stageInputs(
         const targetPath = path.join(targetDir, baseName);
         fs.copyFileSync(filePath, targetPath);
     }
-}
-
-function summarizeInputs(filePaths: string[]) {
-    const stats = filePaths.map((filePath) => fs.statSync(filePath));
-    const totalBytes = stats.reduce((sum, stat) => sum + stat.size, 0);
-    const newestModified = stats
-        .map((stat) => stat.mtime.toISOString())
-        .sort()
-        .at(-1);
-    return { totalBytes, newestModified };
 }
 
 export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}) {

@@ -22,31 +22,33 @@ export function startCleanupWorker() {
         return
       }
 
-      const files = await redis.smembers(
-        `session:${sessionId}:files`
-      )
+      const unprocessedFiles = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+      const processedFiles = await redis.smembers(`session:${sessionId}:files:processed`)
 
-      for (const file of files) {
+      const allFiles = [...unprocessedFiles, ...processedFiles]
+
+      for (const file of allFiles) {
         try {
-          await fs.unlink(file)
-          await redis.srem(
-            `session:${sessionId}:files`,
-            file
-          )
+          // Attempt to delete it from disk
+          await fs.unlink(file).catch(() => {})
+          
+          // Remove from both Redis sets just to be sure
+          await redis.srem(`session:${sessionId}:files:unprocessed`, file)
+          await redis.srem(`session:${sessionId}:files:processed`, file)
         }
         catch (e) {
           console.error(e)
         }
       }
 
-      const remaining = await redis.scard(
-        `session:${sessionId}:files`
-      )
+      const remainingUnprocessed = await redis.scard(`session:${sessionId}:files:unprocessed`)
+      if (remainingUnprocessed === 0) {
+        await redis.del(`session:${sessionId}:files:unprocessed`)
+      }
 
-      if (remaining === 0) {
-        await redis.del(
-          `session:${sessionId}:files`
-        )
+      const remainingProcessed = await redis.scard(`session:${sessionId}:files:processed`)
+      if (remainingProcessed === 0) {
+        await redis.del(`session:${sessionId}:files:processed`)
       }
 
       console.log(

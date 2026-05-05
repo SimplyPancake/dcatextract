@@ -38,14 +38,17 @@ export default defineEventHandler(async (event) => {
             message: 'Session required'
         })
     }
-    // Store file ownership in Redis
+    // Store file ownership in Redis (unprocessed queue)
+    const filepaths = userFiles.map((file) => file.filepath);
+    
     await redis.sadd(
-        `session:${sessionId}:files`,
-        ...userFiles.map((file) => file.filepath)
+        `session:${sessionId}:files:unprocessed`,
+        ...filepaths
     )
 
     await fileQueue.add('process-session', {
-        sessionId
+        sessionId,
+        filepaths
     })
 
     return { success: true, files };

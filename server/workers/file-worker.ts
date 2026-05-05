@@ -15,7 +15,7 @@ export function startFileWorker() {
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
             if (paths.length === 0 && filepath) paths = [filepath]
             if (paths.length === 0 && sessionId) {
-                paths = await redis.smembers(`session:${sessionId}:files`)
+                paths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
             }
             if (paths.length === 0) {
                 throw new Error('No files found for processing')
@@ -27,6 +27,12 @@ export function startFileWorker() {
             // Store the inferred catalog in Redis for the session
             if (sessionId) {
                 await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
+                
+                // Move from unprocessed to processed queue
+                if (paths.length > 0) {
+                    await redis.sadd(`session:${sessionId}:files:processed`, ...paths)
+                    await redis.srem(`session:${sessionId}:files:unprocessed`, ...paths)
+                }
             }
             
             return catalog

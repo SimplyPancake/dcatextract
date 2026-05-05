@@ -66,8 +66,8 @@
                                 @upload="finishUpload()" accept=".csv,.xml,.json,.pdf,.xlsx" :max-file-size="2e9"
                                 :multiple="true" @progress="progress($event)" :pt="{
                                   input: {
-                                    directory: true,
-                                    webkitdirectory: true,
+                                    // directory: true,
+                                    // webkitdirectory: true,
                                     multiple: true
                                   }
                                 }" />
