@@ -1,18 +1,18 @@
-import OpenAI from 'openai';
+import { LMStudioClient } from "@lmstudio/sdk";
 
-let client: OpenAI | undefined
+let client: LMStudioClient | undefined
 
-export function getAI(): OpenAI {
+export function getAI(): LMStudioClient {
 	if (!client) {
 		// @ts-ignore - useRuntimeConfig is available in Nitro context
 		const config = useRuntimeConfig()
-		client = new OpenAI({
-			apiKey: config.llmToken,
-			baseURL: config.llmUrl
+		client = new LMStudioClient({
+			clientIdentifier: config.llmToken,
+			baseUrl: config.llmUrl
 		})
 
 		console.log("Client created!")
-		client.models.list().then(x => console.log(x))
+		client.llm.listLoaded().then(x => console.log(x))
 	}
 	return client
 }

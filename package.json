@@ -11,6 +11,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@lmstudio/sdk": "^1.5.0",
     "@lucide/vue": "^1.11.0",
     "@pinia/nuxt": "0.11.3",
     "@primeuix/themes": "^2.0.3",
@@ -19,7 +20,6 @@
     "formidable": "^3.5.4",
     "ioredis": "^5.10.1",
     "nuxt": "^4.4.2",
-    "openai": "^6.36.0",
     "pinia": "^3.0.4",
     "primevue": "^4.5.5",
     "tailwindcss": "^4.2.4",

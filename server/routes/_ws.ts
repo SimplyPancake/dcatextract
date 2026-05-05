@@ -2,6 +2,7 @@ import { getRedis } from "../utils/redis"
 
 
 export default defineWebSocketHandler({
+  // TODO: On reconnect, remove cleanup
 
   async open(peer) {
     console.log('socket opened')
@@ -18,7 +19,7 @@ export default defineWebSocketHandler({
         `session:${sessionId}`,
         JSON.stringify({ connected: true, lastSeen: Date.now() }),
         'EX',
-        120
+        90
       )
       peer.context.sessionId = sessionId
       console.log(`User connected: ${sessionId}`)
@@ -27,7 +28,7 @@ export default defineWebSocketHandler({
     if (data.type === 'heartbeat') {
       const sessionId = data.sessionId
       const redis = getRedis()
-      await redis.expire(`session:${sessionId}`, 120)
+      await redis.expire(`session:${sessionId}`, 90)
     }
   },
 

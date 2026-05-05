@@ -77,6 +77,7 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     });
 
     console.log(datasetBuilder.build())
+    const ai = getAI()
     // Then assemble the Dataset and DataSeries
 
     // // ── 3. Partition: skip meta-only files, separate shapefile companions ──────
