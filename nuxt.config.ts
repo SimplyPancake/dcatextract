@@ -7,9 +7,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   runtimeConfig: {
-    redisUrl: process.env.REDIS_URL,
-    llmUrl: process.env.LLM_URL,
-    llmToken: process.env.LLM_TOKEN,
+    redisUrl: process.env.NUXT_REDIS_URL || '',
+    llmUrl: process.env.NUXT_LLM_URL || '',
+    llmToken: process.env.NUXT_LLM_TOKEN || '',
   },
   nitro: {
     experimental: {

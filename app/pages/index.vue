@@ -19,6 +19,12 @@
                 </StepList>
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <div class="flex flex-col">
+                    <Message v-if="unprocessedFilesCount > 0" severity="info" class="mb-4">
+                      <div class="flex justify-between items-center">
+                        <span class="">You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
+                        <Button severity="info" variant="outlined" label="Process left-over files" class="ml-4" @click="activateCallback('2'); startProcess()" />
+                      </div>
+                    </Message>
                     <div class="flex flex-row gap-4 w-full">
                       <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
                         :class="[
@@ -130,6 +136,10 @@ import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
 import SourceLogo from '~/components/providers/SourceLogo.vue'
 
 const selectedSource = ref<'local' | 'repo' | null>(null)
+
+const stepper = ref()
+const { data: unprocessedData } = useFetch('/api/unprocessed')
+const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
 
 const urlInput = ref('')
 const requestBody = computed(() => ({
