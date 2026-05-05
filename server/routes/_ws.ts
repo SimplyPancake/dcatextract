@@ -37,13 +37,11 @@ export default defineWebSocketHandler({
 
     await cleanupQueue.add(
       'cleanup-session',
-
       {
         sessionId
       },
-
       {
-        delay: 181_000
+        delay: 121_000
       }
     )
     console.log(`Disconnected: ${sessionId} (cleanup scheduled)`)
