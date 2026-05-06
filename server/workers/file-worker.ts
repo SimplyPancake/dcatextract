@@ -1,6 +1,9 @@
 import { Worker } from 'bullmq'
 import { getRedis } from '../utils/redis'
-import { inferDcat, inferDcatFromFiles } from './file-processor'
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { inferDcatFromFiles } from './file-processor'
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -24,7 +27,10 @@ export function startFileWorker() {
             console.log('Processing:', { filepaths, sessionId })
 
             // Process all files (zips are extracted) to infer DCAT metadata
-            const catalog = inferDcatFromFiles(paths, { verbose: true })
+            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
+            await job.updateData({ ...job.data, tmpDir });
+
+            const catalog = inferDcatFromFiles(paths, { verbose: true }, tmpDir)
             
             // Store the inferred catalog in Redis for the session
             if (sessionId) {
@@ -39,7 +45,6 @@ export function startFileWorker() {
             
             return catalog
         },
-
         {
             connection: redis,
             concurrency: 3
@@ -48,14 +53,24 @@ export function startFileWorker() {
 
     worker.on('completed', (job) => {
         console.log('Completed:', job.id)
+        if (job?.data?.tmpDir) {
+            try {
+                fs.rmSync(job.data.tmpDir, { recursive: true, force: true })
+            } catch (err) {
+                console.error('Failed to remove tmpDir on completion:', err)
+            }
+        }
     })
 
     worker.on('failed', (job, err) => {
-        console.error(
-            'Failed:',
-            job?.id,
-            err
-        )
+        console.error('Failed:', job?.id, err)
+        if (job?.data?.tmpDir) {
+            try {
+                fs.rmSync(job.data.tmpDir, { recursive: true, force: true })
+            } catch (rmErr) {
+                console.error('Failed to remove tmpDir on failure:', rmErr)
+            }
+        }
     })
 
     return worker

@@ -30,7 +30,11 @@ function stageInputs(
     }
 }
 
-export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}) {
+type dcatReturn = {
+    stagedFolder: string
+}
+
+export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}, tmpDir: string) {
     const baseUri = (opts.baseUri ?? "file:///").replace(/\/$/, "/");
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
@@ -40,7 +44,6 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     }
 
     // ── 1. Stage inputs ──────────────────────────────────────────────────────
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
     stageInputs(filePaths, tmpDir, log);
 
     // ── 2. Enumerate all relative paths ───────────────────────────────────────
@@ -226,11 +229,5 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {})
     //     },
     // };
 
-    // Cleanup 
-    fs.rmSync(tmpDir, { recursive: true, force: true });
     // return catalog;
-}
-
-export function inferDcat(zipPath: string, opts: InferOptions = {}) {
-    return inferDcatFromFiles([zipPath], opts);
 }
