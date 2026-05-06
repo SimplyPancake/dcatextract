@@ -35,16 +35,6 @@ export default defineWebSocketHandler({
   async close(peer) {
     const sessionId = peer.context.sessionId as string | undefined
     if (!sessionId) return
-
-    await cleanupQueue.add(
-      'cleanup-session',
-      {
-        sessionId
-      },
-      {
-        delay: 121_000
-      }
-    )
     console.log(`Disconnected: ${sessionId} (cleanup scheduled)`)
   }
 })
