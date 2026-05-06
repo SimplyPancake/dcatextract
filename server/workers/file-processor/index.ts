@@ -5,7 +5,7 @@ import { Catalog, Dataset, Distribution, InferOptions } from "../../../shared/ty
 import { MEDIA_TYPES } from "./constants.js";
 import { inspectFile } from "./inspectors.js";
 import * as builders from "../../../shared/types/utils/builder"
-import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
+import { extractFileText, readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
 // import { getAI } from "~~/server/utils/ai.js";
 import { getAI } from "../../utils/ai";
 import { processDCATDescription } from "./ai-derive.js";
@@ -81,7 +81,7 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
         try {
             // Trim whitespace and limit to the first 4,000 characters to heavily reduce AI context length.
             // When dealing with raw binary tokens (like PDF parsing), characters can equate to many more tokens.
-            const fileContent = fs.readFileSync(filePath, "utf-8").trim().slice(0, 4000);
+            const fileContent = await extractFileText(filePath, 4000);
             const response = await processDCATDescription(fileContent);
             console.log(response)
             derivedInfo.description = response;

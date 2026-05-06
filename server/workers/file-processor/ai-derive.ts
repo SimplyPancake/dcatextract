@@ -7,7 +7,7 @@ const descriptionSchema = z.object({
 
 // TODO: Handle AI refusal etc
 
-export async function processDCATDescription(fileContent: string): Promise<string> {
+export async function processDCATDescription(fileContent: string, filePath?: string): Promise<string> {
   const systemPrompt = "You are an expert data cataloger. Analyze the provided file content or metadata and generate a clear, concise, and informative DCAT description for the dataset.";
   // Approximate 1 token = 3 characters roughly for dense data.
   // To keep total tokens well under the 4096 context window (say ~2000 tokens for text),

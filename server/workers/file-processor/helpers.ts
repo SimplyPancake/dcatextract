@@ -49,3 +49,28 @@ export function walk(dir: string, relative = "", maxDepth = 5): string[] {
     }
     return results;
 }
+
+export async function extractPdfText(filePath: string, maxChars = 4000): Promise<string> {
+    try {
+        const data = fs.readFileSync(filePath);
+        const { default: pdfParse } = await import("pdf-parse");
+        const result = await pdfParse(data);
+        const text = typeof result.text === "string" ? result.text : "";
+        return text.replace(/\s+/g, " ").trim().slice(0, maxChars);
+    } catch {
+        return "";
+    }
+}
+
+export async function extractFileText(filePath: string, maxChars = 4000): Promise<string> {
+    try {
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext === ".pdf") {
+            return await extractPdfText(filePath, maxChars);
+        }
+
+        return fs.readFileSync(filePath, "utf-8").replace(/\s+/g, " ").trim().slice(0, maxChars);
+    } catch {
+        return "";
+    }
+}
