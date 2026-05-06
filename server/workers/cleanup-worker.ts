@@ -1,5 +1,5 @@
 import fs from 'fs/promises'
-import { Worker } from 'bullmq'
+import { Job, Worker } from 'bullmq'
 import { getRedis } from '../utils/redis'
 
 const redis = getRedis()
@@ -32,9 +32,13 @@ export function startCleanupWorker() {
       connection: redis
     }
   )
+  worker.on('failed', (job: Job | undefined, error: Error, prev: string) => {
+    console.log('[CLEAN] Worker failed: ', error.message)
+  });
 
   return worker
 }
+
 
 async function cleanupSession(sessionId: string) {
   const exists = await redis.exists(

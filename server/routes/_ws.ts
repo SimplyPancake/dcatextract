@@ -1,11 +1,11 @@
 import { getRedis } from "../utils/redis"
-
+import { registerPeer, unregisterPeer } from "../utils/wsManager"
 
 export default defineWebSocketHandler({
   // TODO: On reconnect, remove cleanup
 
   async open(peer) {
-    console.log('[WS] socket opened')
+    // console.log('[WS] socket opened')
   },
 
   async message(peer, message) {
@@ -22,7 +22,8 @@ export default defineWebSocketHandler({
         90
       )
       peer.context.sessionId = sessionId
-      console.log(`User connected: ${sessionId}`)
+      registerPeer(sessionId, peer)
+      console.log(`[WS] User connected: ${sessionId}`)
     }
 
     if (data.type === 'heartbeat') {
@@ -35,6 +36,7 @@ export default defineWebSocketHandler({
   async close(peer) {
     const sessionId = peer.context.sessionId as string | undefined
     if (!sessionId) return
+    unregisterPeer(sessionId, peer)
     console.log(`[WS] Disconnected: ${sessionId}`)
   }
 })

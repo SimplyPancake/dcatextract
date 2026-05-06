@@ -1,3 +1,5 @@
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+
 function getSessionIdFromLocalStorage() {
   if (typeof window === 'undefined') return null;
   return window.localStorage.getItem('sessionId')
@@ -9,16 +11,17 @@ function setSessionIdToLocalStorage(id: string) {
   }
 }
 
+// Global state for shared socket connection
+const globalSocket = ref<WebSocket | null>(null)
+let globalHeartbeat: any = null
+let connectionCount = 0
+
 export const usePresenceSocket = () => {
   let sessionId = getSessionIdFromLocalStorage()
   if (!sessionId) {
     sessionId = crypto.randomUUID()
     setSessionIdToLocalStorage(sessionId)
   }
-
-  let socket: WebSocket | null = null
-  let heartbeat: any = null
-
 
   // Always set sessionId as cookie so backend can read it
   const setSessionCookie = () => {
@@ -28,40 +31,58 @@ export const usePresenceSocket = () => {
   }
 
   const connect = () => {
-    setSessionIdToLocalStorage(sessionId)
-    setSessionCookie()
-    socket = new WebSocket('ws://localhost:3000/_ws')
+    if (globalSocket.value && (globalSocket.value.readyState === WebSocket.OPEN || globalSocket.value.readyState === WebSocket.CONNECTING)) {
+      return // Already connected or connecting
+    }
 
-    socket.onopen = () => {
-      socket?.send(JSON.stringify({
+    setSessionIdToLocalStorage(sessionId!)
+    setSessionCookie()
+    globalSocket.value = new WebSocket('ws://localhost:3000/_ws')
+
+    globalSocket.value.onopen = () => {
+      globalSocket.value?.send(JSON.stringify({
         type: 'identify',
         sessionId: sessionId
       }))
 
-      heartbeat = setInterval(() => {
-        socket?.send(JSON.stringify({
+      if (globalHeartbeat) clearInterval(globalHeartbeat)
+      globalHeartbeat = setInterval(() => {
+        globalSocket.value?.send(JSON.stringify({
           type: 'heartbeat',
           sessionId: sessionId
         }))
       }, 30_000)
     }
 
-    socket.onclose = () => {
-      clearInterval(heartbeat)
-
-      // auto reconnect
-      setTimeout(connect, 2000)
+    globalSocket.value.onclose = () => {
+      clearInterval(globalHeartbeat)
+      globalHeartbeat = null
+      
+      // Auto-reconnect if there are still components using it
+      if (connectionCount > 0) {
+        setTimeout(connect, 2000)
+      }
     }
   }
 
-  onMounted(connect)
+  onMounted(() => {
+    connectionCount++
+    connect()
+  })
 
   onBeforeUnmount(() => {
-    clearInterval(heartbeat)
-    socket?.close()
+    connectionCount--
+    if (connectionCount <= 0) {
+      clearInterval(globalHeartbeat)
+      globalHeartbeat = null
+      globalSocket.value?.close()
+      globalSocket.value = null
+      connectionCount = 0
+    }
   })
 
   return {
-    sessionId
+    sessionId,
+    socket: globalSocket
   }
 }

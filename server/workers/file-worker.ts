@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { inferDcatFromFiles } from './file-processor'
+import { notifySession } from '../utils/wsManager'
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -17,21 +18,40 @@ export function startFileWorker() {
                 console.log("[FILE_PROC] No sessionID. Exiting")
                 return
             }
+
+            async function updateProgress(prc: number, message: string) {
+                await job.updateProgress(prc)
+                notifySession(sessionId, { type: 'progress', progress: 10, message })
+            }
+            
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
 
-            
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
             if (paths.length === 0) {
                 throw new Error('No files found for processing')
             }
             console.log('Processing:', { filepaths, sessionId })
 
+            await updateProgress(5, 'Preparing temporary directory...')
+
             // Process all files (zips are extracted) to infer DCAT metadata
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
             await job.updateData({ ...job.data, tmpDir });
 
-            const catalog = inferDcatFromFiles(paths, { verbose: true }, tmpDir)
+            await updateProgress(10, 'Inferring DCAT metadata...')
+            let prevProgress = 10
+            let nextProgress = 95
+            function updateProgressInfer(prc: number, message: string) {
+                let between = nextProgress - prevProgress
+                let result = (prc / 100) * between
+                let updateNum = Math.round(prevProgress + result)
+                updateProgress(updateNum, message)
+            }
+
+            const catalog = inferDcatFromFiles(paths, { verbose: true }, tmpDir, updateProgressInfer)
             
+            await updateProgress(95, 'Saving catalog...')
+
             // Store the inferred catalog in Redis for the session
             if (sessionId) {
                 await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
@@ -43,6 +63,8 @@ export function startFileWorker() {
                 }
             }
             
+            await updateProgress(100, 'Completed')
+            
             return catalog
         },
         {
@@ -53,6 +75,9 @@ export function startFileWorker() {
 
     worker.on('completed', (job) => {
         console.log('Completed:', job.id)
+        if (job?.data?.sessionId) {
+            notifySession(job.data.sessionId, { type: 'completed' })
+        }
         if (job?.data?.tmpDir) {
             try {
                 fs.rmSync(job.data.tmpDir, { recursive: true, force: true })
@@ -64,6 +89,9 @@ export function startFileWorker() {
 
     worker.on('failed', (job, err) => {
         console.error('Failed:', job?.id, err)
+        if (job?.data?.sessionId) {
+            notifySession(job.data.sessionId, { type: 'failed', message: err.message })
+        }
         if (job?.data?.tmpDir) {
             try {
                 fs.rmSync(job.data.tmpDir, { recursive: true, force: true })

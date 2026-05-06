@@ -19,10 +19,10 @@
                 </StepList>
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <div class="flex flex-col">
-                    <Message v-if="unprocessedFilesCount > 0" severity="info" class="mb-4">
+                    <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
                       <div class="flex justify-between items-center">
                         <span class="">You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
-                        <Button severity="info" variant="outlined" label="Process left-over files" class="ml-4" @click="activateCallback('2'); startProcess()" />
+                        <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="activateCallback('2'); startProcess()" />
                       </div>
                     </Message>
                     <div class="flex flex-row gap-4 w-full">
@@ -113,10 +113,7 @@
                   </div>
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
-                  <div class="flex pt-6 justify-end">
-                    <!-- <Button label="Back" :di severity="secondary" @click="activateCallback('1')" /> -->
-                    <Button label="Next" @click="activateCallback('3')" :disabled="true" />
-                  </div>
+                  <DataProcessingStep @next="activateCallback('3')" />
                 </StepPanel>
               </Stepper>
             </template>

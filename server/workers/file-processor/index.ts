@@ -8,6 +8,7 @@ import * as builders from "../../../shared/types/utils/builder"
 import { readReadme, mdTitle, titleFromStem, mdDescription, walk } from "./helpers.js";
 // import { getAI } from "~~/server/utils/ai.js";
 import { getAI } from "../../utils/ai";
+import { processDCATDescription } from "./ai-derive.js";
 
 /**
  * Puts inputs in a temp folder to extract and work with them
@@ -34,7 +35,7 @@ type dcatReturn = {
     stagedFolder: string
 }
 
-export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}, tmpDir: string) {
+export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {}, tmpDir: string, logProgress: (prc: number, message: string) => void) {
     const baseUri = (opts.baseUri ?? "file:///").replace(/\/$/, "/");
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
@@ -52,29 +53,48 @@ export function inferDcatFromFiles(filePaths: string[], opts: InferOptions = {},
 
     // Assemble Distribution for each file
     // Then assemble into a dcat:Dataset
-    const distributions: Distribution[] = filePaths.map(rel => {
-            const title = titleFromStem(path.basename(rel));
-            const ext = path.extname(rel).toLowerCase();
-            const stats = fs.statSync(rel);
-            const inspectInfo = inspectFile(rel)
+    let fileCount = filePaths.length
 
+    const distributions: Distribution[] = []
+    for (let fileIdx = 0; fileIdx < fileCount; fileIdx++) {
+        logProgress((fileIdx + 1) / fileCount, `Scanning file ${fileIdx + 1}/${fileCount}...`)
+        const filePath = filePaths[fileIdx]!;
 
-            const derivedInfo = {
-                ...inspectInfo,
-                uri: `${baseUri}${rel}`,
-                title: `${title} (${ext.slice(1).toUpperCase()})`,
-                accessURL: `${baseUri}${rel}`,
-                mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
-                byteSize: stats.size,
-                modified: stats.mtime.toISOString(),
-            };
+        const title = titleFromStem(path.basename(filePath));
+        const ext = path.extname(filePath).toLowerCase();
+        const stats = fs.statSync(filePath);
+        const inspectInfo = inspectFile(filePath)
+        
+        
+        const derivedInfo: Distribution = {
+            ...inspectInfo,
+            uri: `${baseUri}${filePath}`,
+            title: `${title} (${ext.slice(1).toUpperCase()})`,
+            accessURL: `${baseUri}${filePath}`,
+            mediaType: MEDIA_TYPES[ext] ?? "application/octet-stream",
+            byteSize: stats.size,
+            modified: stats.mtime.toISOString(),
+        };
 
-            // Then try to derive by LLM-based context about the file itself?
-            return derivedInfo
-        });
+        // AI Parsing
+        // TODO: openai api file uploads
+        try {
+            // Trim whitespace and limit to the first 4,000 characters to heavily reduce AI context length.
+            // When dealing with raw binary tokens (like PDF parsing), characters can equate to many more tokens.
+            const fileContent = fs.readFileSync(filePath, "utf-8").trim().slice(0, 4000);
+            const response = await processDCATDescription(fileContent);
+            console.log(response)
+            derivedInfo.description = response;
+        } catch (e: any) {
+            log(`Failed to process AI description for ${filePath}`);
+            log(e)
+        }
+        
+        distributions.push(derivedInfo)
+    }
 
     const datasetBuilder = new builders.DatasetBuilder()
-    
+
     distributions.forEach(dis => {
         datasetBuilder.distribution(dis)
     });
