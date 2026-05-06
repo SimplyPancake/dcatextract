@@ -5,7 +5,7 @@ export default defineWebSocketHandler({
   // TODO: On reconnect, remove cleanup
 
   async open(peer) {
-    console.log('socket opened')
+    console.log('[WS] socket opened')
   },
 
   async message(peer, message) {
@@ -35,6 +35,6 @@ export default defineWebSocketHandler({
   async close(peer) {
     const sessionId = peer.context.sessionId as string | undefined
     if (!sessionId) return
-    console.log(`Disconnected: ${sessionId} (cleanup scheduled)`)
+    console.log(`[WS] Disconnected: ${sessionId}`)
   }
 })
