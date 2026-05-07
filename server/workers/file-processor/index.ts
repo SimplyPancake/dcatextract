@@ -56,8 +56,8 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
     let fileCount = filePaths.length
 
     const distributions: Distribution[] = []
+    logProgress(0, `Scanning file 1/${fileCount}...`)
     for (let fileIdx = 0; fileIdx < fileCount; fileIdx++) {
-        logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 1}/${fileCount}...`)
         const filePath = filePaths[fileIdx]!;
 
         const title = titleFromStem(path.basename(filePath));
@@ -89,7 +89,8 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
             log(`Failed to process AI description for ${filePath}`);
             log(e)
         }
-        
+
+        logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 1}/${fileCount}...`)
         distributions.push(derivedInfo)
     }
 
@@ -99,8 +100,7 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
         datasetBuilder.distribution(dis)
     });
 
-    console.log(datasetBuilder.build())
-    const ai = getAI()
+    return datasetBuilder.build()
     // Then assemble the Dataset and DataSeries
 
     // // ── 3. Partition: skip meta-only files, separate shapefile companions ──────

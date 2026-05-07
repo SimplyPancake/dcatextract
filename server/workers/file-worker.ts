@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { inferDcatFromFiles } from './file-processor'
 import { notifySession } from '../utils/wsManager'
+import { WorkerProgress } from "~~/shared/types/workers"
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -20,8 +21,11 @@ export function startFileWorker() {
             }
 
             async function updateProgress(prc: number, message: string) {
-                await job.updateProgress(prc)
-                notifySession(sessionId, { type: 'progress', progress: 10, message })
+                await job.updateProgress({
+                    progress: prc,
+                    message: message
+                } as WorkerProgress)
+                notifySession(sessionId, { type: 'progress', progress: prc, message })
             }
             
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
@@ -56,19 +60,14 @@ export function startFileWorker() {
 
             await updateProgress(95, 'Saving catalog...')
 
-            // Store the inferred catalog in Redis for the session
-            if (sessionId) {
-                await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
-
-                // Move from processing to processed queue
-                if (paths.length > 0) {
-                    await redis.sadd(`session:${sessionId}:files:processed`, ...paths)
-                    await redis.srem(`session:${sessionId}:files:processing`, ...paths)
-                }
+            // Move from processing to processed queue
+            if (paths.length > 0) {
+                await redis.sadd(`session:${sessionId}:files:processed`, ...paths)
+                await redis.srem(`session:${sessionId}:files:processing`, ...paths)
             }
-
+            
             await updateProgress(100, 'Completed')
-
+            
             return catalog
         },
         {

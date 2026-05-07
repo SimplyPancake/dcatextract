@@ -45,23 +45,11 @@
 
 <script lang="ts" setup>
 import { ref, watch, onMounted } from 'vue'
-const props = defineProps<{ mode: 'processing' | 'pending' }>()
-
-onMounted(() => {
-  if (props.mode === 'processing') {
-    progress.value = 10
-    currentAction.value = 'Processing...'
-    processingDone.value = false
-  } else {
-    progress.value = 0
-    currentAction.value = 'Waiting to start...'
-    processingDone.value = false
-  }
-})
+import type { Job } from 'bullmq';
 import { Loader2, CheckCircle } from '@lucide/vue'
 import { Button, ProgressBar } from 'primevue'
 import { usePresenceSocket } from '~/composables/usePresence'
-
+import { type WorkerProgress } from "@@/shared/types/workers"
 defineEmits(['next'])
 
 const progress = ref(0)
@@ -71,6 +59,27 @@ const processingFailed = ref(false)
 const errorMessage = ref('')
 
 const { socket } = usePresenceSocket()
+
+onMounted(async () => {
+  // Get initial state
+  const { data: initialJob } = await useFetch('/api/job/status');
+  console.log(initialJob)
+  const data = initialJob.value
+  if (data) {
+    const workerProgress = (data.progress as WorkerProgress)
+    progress.value = workerProgress.progress
+    currentAction.value = workerProgress.message
+    
+    processingDone.value = workerProgress.progress == 100
+
+    if (data.failedReason && data.failedReason != '') {
+      processingDone.value = true
+      processingFailed.value = true
+      errorMessage.value = data.failedReason
+    }
+  }
+
+})
 
 watch(socket, (newSocket) => {
   if (!newSocket) return
@@ -108,7 +117,7 @@ async function retryProcessing() {
   progress.value = 0
   currentAction.value = 'Retrying...'
   // Call the API to start processing again
-  await fetch('/api/startprocess')
+  await useFetch('/api/job/start')
 }
 
 </script>
