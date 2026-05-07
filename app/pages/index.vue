@@ -19,13 +19,20 @@
                 </StepList>
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <DataSourceStep
-                    @next="activateCallback('2'); currentStep = '2'"
+                    @next="activateCallback('2'); currentStep = '2'" @goto="(data: Job) => {gotoOverview(data); activateCallback('3')}"
                   />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
                   <DataProcessingStep
                     v-if="currentStep == '2'"
                     @next="activateCallback('3'); currentStep = '3'"
+                  />
+                </StepPanel>
+                <StepPanel v-slot="{ activateCallback }" value="3">
+                  <DataOverviewStep
+                    v-if="currentStep == '3'"
+                    @next=""
+                    :latest-job="latestJob"
                   />
                 </StepPanel>
               </Stepper>
@@ -43,7 +50,14 @@ import { computed } from 'vue'
 import Hero from '~/components/Hero.vue'
 import DataProcessingStep from '~/components/DataProcessingStep.vue'
 import DataSourceStep from '~/components/DataSourceStep.vue'
+import { Job } from 'bullmq'
 const currentStep = ref('1')
+const latestJob = ref<Job>()
+
+function gotoOverview(data: Job) {
+  latestJob.value = data
+  currentStep.value = '3'
+}
 </script>
 
 <style></style>

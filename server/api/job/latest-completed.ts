@@ -1,5 +1,5 @@
 import { fileQueue } from '~~/server/utils/queues';
-
+import { LatestJobDTO} from "~~/shared/types/dto"
 export default defineEventHandler(async (event) => {
   const sessionId = event.context.sessionId;
   if (!sessionId) {
@@ -7,8 +7,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // Check BullMQ for running jobs for this session
-  const lastJob = (await fileQueue.getCompleted())
-    .filter(j => j.data?.sessionId === sessionId)
+  const lastJob: LatestJobDTO = (await fileQueue.getCompleted())
+    .filter(j => j.data?.sessionId == sessionId)
     .sort((a, b) => b.finishedOn! - a.finishedOn! )[0]
+  
+  console.log(lastJob?.returnvalue)
   return lastJob
 });

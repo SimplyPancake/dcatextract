@@ -14,6 +14,12 @@
         <Button class="ml-4" severity="contrast" variant="outlined" label="Go to processing overview" @click="emitNext" />
       </div>
     </Message>
+    <Message v-if="latestFinishedJob">
+      <div class="flex justify-between items-center">
+        <span>Your latest job has finished processing</span>
+        <Button class="ml-4" severity="contrast" variant="outlined" label="Go to data overview" @click="gotoOverview()" />
+      </div>
+    </Message>
     <div class="flex flex-row gap-4 w-full">
       <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
         :class="[
@@ -97,15 +103,21 @@
 
 <script lang="ts" setup>
 import { DatabaseSearch, FileArchive, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
+import type { Job } from 'bullmq'
 import { Button, Divider, Fieldset, FileUpload, InputGroup, InputGroupAddon, InputText, Message, ProgressBar, Tag } from 'primevue'
 import { computed, ref } from 'vue'
 import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
 import SourceLogo from '~/components/providers/SourceLogo.vue'
+import type { LatestJobDTO } from '~~/shared/types/dto'
 
-const emit = defineEmits(['next'])
+const emit = defineEmits<{
+  next: [],
+  goto: [job: Job]
+}>()
 
-const { data: unprocessedData } = useFetch('/api/unprocessed')
-const { data: processingStatus } = useFetch('/api/job/status')
+const { data: unprocessedData } = await useFetch('/api/unprocessed')
+const { data: processingStatus } = await useFetch('/api/job/status')
+const { data: latestFinishedJob } = await useFetch<LatestJobDTO>('/api/job/latest-completed')
 const isProcessing = computed(() => processingStatus.value ?? false)
 const runningJob = computed(() => processingStatus.value ?? false)
 const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
@@ -157,6 +169,10 @@ function emitNextAndMaybeStartProcess() {
     startProcess()
   }
   emit('next')
+}
+
+function gotoOverview() {
+  emit('goto', latestFinishedJob.value as Job)
 }
 </script>
 

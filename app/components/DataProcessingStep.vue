@@ -63,8 +63,7 @@ const { socket } = usePresenceSocket()
 onMounted(async () => {
   // Get initial state
   const { data: initialJob } = await useFetch('/api/job/status');
-  console.log(initialJob)
-  const data = initialJob.value
+  const data = initialJob.value as Job | undefined
   if (data) {
     const workerProgress = (data.progress as WorkerProgress)
     progress.value = workerProgress.progress

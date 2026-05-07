@@ -81,7 +81,7 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
         try {
             // Trim whitespace and limit to the first 4,000 characters to heavily reduce AI context length.
             // When dealing with raw binary tokens (like PDF parsing), characters can equate to many more tokens.
-            const fileContent = await extractFileText(filePath, 4000);
+            const fileContent = await extractFileText(filePath, 5000);
             const response = await processDCATDescription(fileContent);
             console.log(response)
             derivedInfo.description = response;
@@ -90,7 +90,9 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
             log(e)
         }
 
-        logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 1}/${fileCount}...`)
+        if (fileIdx + 1 != fileCount) {
+            logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 2}/${fileCount}...`)
+        }
         distributions.push(derivedInfo)
     }
 
