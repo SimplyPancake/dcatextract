@@ -1,4 +1,4 @@
-import { Worker } from 'bullmq'
+import { Worker, QueueEvents } from 'bullmq'
 import { getRedis } from '../utils/redis'
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -91,10 +91,18 @@ export function startFileWorker() {
         }
     })
 
-    worker.on('failed', (job, err) => {
+
+    worker.on('failed', async (job, err) => {
         console.error('Failed:', job?.id, err)
         if (job?.data?.sessionId) {
-            notifySession(job.data.sessionId, { type: 'failed', message: err.message })
+            // Move files back to unprocessed
+            const sessionId = job.data.sessionId;
+            const processingFiles = await redis.smembers(`session:${sessionId}:files:processing`);
+            if (processingFiles.length > 0) {
+                await redis.sadd(`session:${sessionId}:files:unprocessed`, ...processingFiles);
+                await redis.srem(`session:${sessionId}:files:processing`, ...processingFiles);
+            }
+            notifySession(sessionId, { type: 'failed', message: err.message });
         }
         if (job?.data?.tmpDir) {
             try {

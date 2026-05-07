@@ -205,27 +205,6 @@ const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFin
     selectedSource.value == 'repo' &&
     status.value == 'success' && feedbackProvider.value != 'Unknown'
   ))
-
-onMounted(() => {
-  // If processing, automatically go to processing step
-  watch(isProcessing, (val, _, onCleanup) => {
-    if (val) {
-      // Wait for DOM to be ready and Stepper slot to be available
-      setTimeout(() => {
-        // Try to find the Stepper and activate step 2
-        const stepper = document.querySelector('[data-p-stepper]')
-        if (stepper) {
-          // Simulate clicking "Next" or call the Stepper API if available
-          // Fallback: reload to step 2 if possible
-          // This is a placeholder; ideally, you should call activateCallback('2')
-          // If you have access to the Stepper ref, use that instead
-          // For now, just reload or show a message
-        }
-      }, 300)
-    }
-  })
-  console.log(fileUpload.value)
-})
 </script>
 
 <style></style>
