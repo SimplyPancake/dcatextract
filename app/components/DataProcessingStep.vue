@@ -30,7 +30,20 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+const props = defineProps<{ mode: 'processing' | 'pending' }>()
+
+onMounted(() => {
+  if (props.mode === 'processing') {
+    progress.value = 10
+    currentAction.value = 'Processing...'
+    processingDone.value = false
+  } else {
+    progress.value = 0
+    currentAction.value = 'Waiting to start...'
+    processingDone.value = false
+  }
+})
 import { Loader2, CheckCircle } from '@lucide/vue'
 import { Button, ProgressBar } from 'primevue'
 import { usePresenceSocket } from '~/composables/usePresence'

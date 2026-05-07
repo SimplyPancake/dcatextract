@@ -32,6 +32,10 @@ export function startFileWorker() {
             }
             console.log('Processing:', { filepaths, sessionId })
 
+            // Move files from unprocessed to processing
+            await redis.sadd(`session:${sessionId}:files:processing`, ...paths)
+            await redis.srem(`session:${sessionId}:files:unprocessed`, ...paths)
+
             await updateProgress(5, 'Preparing temporary directory...')
 
             // Process all files (zips are extracted) to infer DCAT metadata
@@ -48,23 +52,23 @@ export function startFileWorker() {
                 updateProgress(updateNum, message)
             }
 
-            const catalog = inferDcatFromFiles(paths, { verbose: true }, tmpDir, updateProgressInfer)
-            
+            const catalog = await inferDcatFromFiles(paths, { verbose: true }, tmpDir, updateProgressInfer)
+
             await updateProgress(95, 'Saving catalog...')
 
             // Store the inferred catalog in Redis for the session
             if (sessionId) {
                 await redis.set(`catalog:${sessionId}`, JSON.stringify(catalog))
-                
-                // Move from unprocessed to processed queue
+
+                // Move from processing to processed queue
                 if (paths.length > 0) {
                     await redis.sadd(`session:${sessionId}:files:processed`, ...paths)
-                    await redis.srem(`session:${sessionId}:files:unprocessed`, ...paths)
+                    await redis.srem(`session:${sessionId}:files:processing`, ...paths)
                 }
             }
-            
+
             await updateProgress(100, 'Completed')
-            
+
             return catalog
         },
         {

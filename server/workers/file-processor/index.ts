@@ -57,7 +57,7 @@ export async function inferDcatFromFiles(filePaths: string[], opts: InferOptions
 
     const distributions: Distribution[] = []
     for (let fileIdx = 0; fileIdx < fileCount; fileIdx++) {
-        logProgress((fileIdx + 1) / fileCount, `Scanning file ${fileIdx + 1}/${fileCount}...`)
+        logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 1}/${fileCount}...`)
         const filePath = filePaths[fileIdx]!;
 
         const title = titleFromStem(path.basename(filePath));

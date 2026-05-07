@@ -90,59 +90,79 @@ async function selectBestModel(): Promise<string> {
 	return selectedModel
 }
 
-export async function queryModel<T extends z.ZodObject>(system: string, user: string, textformat: T): Promise<z.infer<T>> {
-	try {
-		const modelName = await selectBestModel()
-		const response = await getAI().responses.parse({
-			model: modelName,
-			input: [
-				{
-					role: "system",
-					content: system
-				},
-				{
-					role: "user",
-					content: user
-				}
-			],
-			text: {
-				format: zodTextFormat(textformat, "output_question")
-			}
-		})
+export async function queryModel<T extends z.ZodTypeAny>(
+	system: string,
+	user: string,
+	schema: T
+): Promise<z.infer<T>> {
+	const modelName = await selectBestModel()
 
-		return response.output_parsed!
-	} catch (error) {
-		const message = error instanceof Error ? error.message : "Unknown error"
-		const modelName = selectedModel ?? DEFAULT_MODEL
-		const schemaKeys = getSchemaKeys(textformat).join(", ")
-		const jsonOnlySystem = `${system}\n\nReturn only valid JSON. Required keys: ${schemaKeys}. No extra keys.`
+	const schemaKeys =
+		schema instanceof z.ZodObject
+			? Object.keys(schema.shape).join(", ")
+			: "unknown"
 
+	const systemPrompt = `
+${system}
+
+You are a JSON generation engine.
+
+STRICT RULES:
+- Return ONLY valid JSON
+- No markdown
+- No explanations
+- No text before or after JSON
+- All required fields must exist
+- No extra keys
+- Required keys: ${schemaKeys}
+`
+
+	const maxRetries = 3
+	let lastError: unknown
+
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			const response = await getAI().responses.create({
+			const response = await getAI().responses.parse({
 				model: modelName,
 				input: [
 					{
 						role: "system",
-						content: jsonOnlySystem
+						content: systemPrompt
 					},
 					{
 						role: "user",
 						content: user
 					}
-				]
+				],
+				text: {
+					format: zodTextFormat(schema, "output")
+				},
+				temperature: 0
 			})
 
-			const outputText = (response as any).output_text ?? ""
-			const jsonText = extractFirstJsonObject(outputText)
-			if (jsonText) {
-				const parsed = textformat.safeParse(JSON.parse(jsonText))
-				if (parsed.success) return parsed.data
+			if (!response.output_parsed) {
+				throw new Error("Model returned empty parsed output")
 			}
-		} catch (fallbackError) {
-			const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
-			throw new Error(`AI query failed for model ${modelName}: ${message}; fallback error: ${fallbackMessage}`)
-		}
 
-		throw new Error(`AI query failed for model ${modelName}: ${message}`)
+			return response.output_parsed
+		} catch (error) {
+			lastError = error
+
+			// Retry hint
+			if (attempt < maxRetries) {
+				console.warn(
+					`Retry ${attempt}/${maxRetries} failed for model ${modelName}`
+				)
+			}
+		}
 	}
+
+	const message =
+		lastError instanceof Error
+			? lastError.message
+			: "Unknown error"
+
+	throw new Error(
+		`AI query failed after ${maxRetries} attempts for model ${modelName}: ${message}`
+	)
 }

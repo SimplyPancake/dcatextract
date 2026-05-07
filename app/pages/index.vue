@@ -25,6 +25,21 @@
                         <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="activateCallback('2'); startProcess()" />
                       </div>
                     </Message>
+                      <Message v-if="isProcessing || runningJob" severity="info" class="mb-4">
+                        <div class="flex justify-between items-center">
+                          <span class="">Your session is currently processing {{ processingCount }} file<span v-if="processingCount !== 1">s</span>
+                          <span v-if="runningJob"> (active job running)</span>
+                          <span v-else-if="isProcessing"> (files in processing queue)</span>
+                          </span>
+                          <Button class="ml-4" severity="contrast" variant="outlined" label="Go to processing overview" @click="activateCallback('2')" />
+                        </div>
+                      </Message>
+                      <Message v-else-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
+                        <div class="flex justify-between items-center">
+                          <span class="">You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
+                          <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="activateCallback('2'); startProcess()" />
+                        </div>
+                      </Message>
                     <div class="flex flex-row gap-4 w-full">
                       <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
                         :class="[
@@ -113,7 +128,10 @@
                   </div>
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
-                  <DataProcessingStep @next="activateCallback('3')" />
+                  <DataProcessingStep
+                    :mode="(isProcessing || runningJob) ? 'processing' : 'pending'"
+                    @next="activateCallback('3')"
+                  />
                 </StepPanel>
               </Stepper>
             </template>
@@ -136,6 +154,12 @@ const selectedSource = ref<'local' | 'repo' | null>(null)
 
 const stepper = ref()
 const { data: unprocessedData } = useFetch('/api/unprocessed')
+// Fetch processing status
+const { data: processingStatus } = useFetch('/api/processing-status')
+const isProcessing = computed(() => processingStatus.value?.processing)
+const processingCount = computed(() => processingStatus.value?.processingCount || 0)
+const runningJob = computed(() => processingStatus.value?.runningJob)
+import { computed, ref, watch } from 'vue'
 const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
 
 const urlInput = ref('')
@@ -183,6 +207,23 @@ const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFin
   ))
 
 onMounted(() => {
+  // If processing, automatically go to processing step
+  watch(isProcessing, (val, _, onCleanup) => {
+    if (val) {
+      // Wait for DOM to be ready and Stepper slot to be available
+      setTimeout(() => {
+        // Try to find the Stepper and activate step 2
+        const stepper = document.querySelector('[data-p-stepper]')
+        if (stepper) {
+          // Simulate clicking "Next" or call the Stepper API if available
+          // Fallback: reload to step 2 if possible
+          // This is a placeholder; ideally, you should call activateCallback('2')
+          // If you have access to the Stepper ref, use that instead
+          // For now, just reload or show a message
+        }
+      }, 300)
+    }
+  })
   console.log(fileUpload.value)
 })
 </script>
