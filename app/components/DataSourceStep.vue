@@ -1,17 +1,11 @@
 <template>
   <div class="flex flex-col">
-    <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
-      <div class="flex justify-between items-center">
-        <span>You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
-        <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="emitNext" />
-      </div>
-    </Message>
     <Message v-if="isProcessing || runningJob" severity="info" class="mb-4">
       <div class="flex justify-between items-center">
         <span>Your session is currently processing data</span>
         <span v-if="runningJob"> (active job running)</span>
         <span v-else-if="isProcessing"> (files in processing queue)</span>
-        <Button class="ml-4" severity="contrast" variant="outlined" label="Go to processing overview" @click="emitNext" />
+        <Button class="ml-4" severity="contrast" variant="outlined" label="Go to processing overview" @click="emitProcessingOverview" />
       </div>
     </Message>
     <Message v-if="latestFinishedJob">
@@ -112,7 +106,8 @@ import type { LatestJobDTO } from '~~/shared/types/dto'
 
 const emit = defineEmits<{
   next: [],
-  goto: [job: Job]
+  goto: [job: Job],
+  processing: []
 }>()
 
 const { data: unprocessedData } = await useFetch('/api/unprocessed')
@@ -157,6 +152,10 @@ const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFin
 
 function emitNext() {
   emit('next')
+}
+
+function emitProcessingOverview() {
+  emit('processing')
 }
 
 function gotoOverview() {

@@ -19,20 +19,33 @@
                   <Step value="4">Complement data</Step>
                 </StepList>
                 <StepPanel v-slot="{ activateCallback }" value="1">
+                  <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <span>You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
+                      <Button
+                        severity="contrast"
+                        variant="outlined"
+                        label="Go to schema selection"
+                        @click="activateCallback('2'); currentStep = '2'"
+                      />
+                    </div>
+                  </Message>
                   <DataSourceStep
                     @next="activateCallback('2'); currentStep = '2'"
+                    @processing="activateCallback('3'); currentStep = '3'"
                     @goto="(data: Job) => {gotoOverview(data); activateCallback('4')}"
                   />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
                   Before continuing, select which metadata schema(s) should be generated.
                   <SelectSchemaStep
-                    @next="startProcessingAndContinue(activateCallback)"
+                    @next="(schemas) => {start(schemas); activateCallback('3'); currentStep = '3'}"
                   />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="3">
                   <DataProcessingStep
                     v-if="currentStep == '3'"
+                    :schemas="selectedSchemas"
                     @next="activateCallback('4'); currentStep = '4'"
                   />
                 </StepPanel>
@@ -53,26 +66,38 @@
 </template>
 
 <script lang="ts" setup>
-import { Card, Step, StepList, StepPanel, Stepper } from 'primevue'
-import { ref } from 'vue'
+import { Button, Card, Message, Step, StepList, StepPanel, Stepper } from 'primevue'
+import { computed, ref } from 'vue'
 import Hero from '~/components/Hero.vue'
 import DataProcessingStep from '~/components/DataProcessingStep.vue'
 import DataSourceStep from '~/components/DataSourceStep.vue'
 import { Job } from 'bullmq'
-const currentStep = ref('2')
+type SchemaSelection = Record<string, boolean>
+const currentStep = ref('1')
 const latestJob = ref<Job>()
-const { execute: startProcess } = useLazyFetch('/api/job/start', { immediate: false })
+const selectedSchemas = ref<SchemaSelection>({})
+const { data: unprocessedData } = await useFetch('/api/unprocessed')
+const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
+
+const startProcessJob = ref({})
+const { execute: startProcess } = useLazyFetch('/api/job/start', { 
+  immediate: false,
+  method: 'POST',
+  body: startProcessJob
+ })
+
+function start(schemas: SchemaSelection){
+  startProcessJob.value = {
+    schemas
+  }
+  startProcess()
+}
 
 function gotoOverview(data: Job) {
   latestJob.value = data
   currentStep.value = '4'
 }
 
-function startProcessingAndContinue(activateCallback: (step: string) => void) {
-  startProcess()
-  activateCallback('3')
-  currentStep.value = '3'
-}
 </script>
 
 <style></style>

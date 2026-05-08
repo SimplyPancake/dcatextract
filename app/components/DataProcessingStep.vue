@@ -44,12 +44,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import type { Job } from 'bullmq';
 import { Loader2, CheckCircle } from '@lucide/vue'
 import { Button, ProgressBar } from 'primevue'
 import { usePresenceSocket } from '~/composables/usePresence'
 import { type WorkerProgress } from "@@/shared/types/workers"
+const props = defineProps<{
+  schemas: Record<string, boolean>
+}>()
 defineEmits(['next'])
 
 const progress = ref(0)
@@ -57,6 +60,7 @@ const currentAction = ref('')
 const processingDone = ref(false)
 const processingFailed = ref(false)
 const errorMessage = ref('')
+const hasStarted = ref(false)
 
 const { socket } = usePresenceSocket()
 
@@ -115,8 +119,8 @@ async function retryProcessing() {
   errorMessage.value = ''
   progress.value = 0
   currentAction.value = 'Retrying...'
-  // Call the API to start processing again
-  await useFetch('/api/job/start')
+  hasStarted.value = false
+  await useFetch('/api/job/retry')
 }
 
 </script>

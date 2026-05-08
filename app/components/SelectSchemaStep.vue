@@ -19,11 +19,11 @@
           {{ slotProps.node.label }}
           <Info v-if="slotProps.node.extra" v-tooltip="slotProps.node.extra" />
         </div>
-    </template>
+      </template>
     </Tree>
     {{ selectedKeys }}
     <div class="flex pt-6 justify-end">
-      <Button label="Next" :disabled="!hasSelection" @click="emitNext" />
+      <Button label="Next" :disabled="!hasSelection" @click="startProcessing(); emitNext()" />
     </div>
   </div>
 </template>
@@ -137,11 +137,11 @@ function onSelectionKeysUpdate(value: Dictionary<boolean>) {
 }
 
 const emit = defineEmits<{
-  next: []
+  next: [schemas: Dictionary<boolean>]
 }>()
 
 function emitNext() {
-  emit('next')
+  emit('next', { ...selectedKeys.value })
 }
 
 const treeNodes = ref<OwnTreeNode[]>([
@@ -293,6 +293,16 @@ function selectAll() {
 
 function deselectAll() {
   selectedKeys.value = {}
+}
+
+const { execute: startProcess } = useLazyFetch('/api/job/start', {
+  immediate: false,
+  method: 'POST',
+  body: computed(() => ({ schemas: selectedKeys.value }))
+})
+
+async function startProcessing() {
+  await startProcess()
 }
 
 </script>
