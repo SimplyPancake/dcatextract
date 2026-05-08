@@ -3,7 +3,7 @@
     <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
       <div class="flex justify-between items-center">
         <span>You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
-        <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="emitNextAndStartProcess" />
+        <Button severity="contrast" variant="outlined" label="Process left-over files" class="ml-4" @click="emitNext" />
       </div>
     </Message>
     <Message v-if="isProcessing || runningJob" severity="info" class="mb-4">
@@ -96,7 +96,7 @@
       </div>
     </Transition>
     <div class="flex pt-6 justify-end">
-      <Button label="Next" :disabled="!mayContinue" @click="emitNextAndMaybeStartProcess" />
+      <Button label="Next" :disabled="!mayContinue" @click="emitNext" />
     </div>
   </div>
 </template>
@@ -141,8 +141,6 @@ const { status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlsc
   body: requestBody,
   immediate: false
 })
-const { execute: startProcess } = useLazyFetch('/api/job/start', { immediate: false })
-
 const showProviderFeedback = computed(() => status.value === 'success' || status.value === 'error')
 const feedbackProvider = computed(() => urlScanResult.value?.sourceType ?? 'Unknown')
 const feedbackErrorMessage = computed(() => {
@@ -158,16 +156,6 @@ const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFin
   ))
 
 function emitNext() {
-  emit('next')
-}
-function emitNextAndStartProcess() {
-  startProcess()
-  emit('next')
-}
-function emitNextAndMaybeStartProcess() {
-  if (selectedSource.value === 'local' && uploadFinished.value) {
-    startProcess()
-  }
   emit('next')
 }
 

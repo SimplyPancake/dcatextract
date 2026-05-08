@@ -31,6 +31,9 @@ export default defineNuxtConfig({
   css: ['./app/assets/css/main.css'],
   modules: ["@primevue/nuxt-module", '@pinia/nuxt', '@nuxt/test-utils/module'],
   primevue: {
+    directives: {
+      include: ['Tooltip']
+    },
     options: {
       theme: {
         preset: ExtractPreset,
