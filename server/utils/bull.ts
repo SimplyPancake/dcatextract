@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq'
+import { FlowProducer, Queue } from 'bullmq'
 import { getRedis } from './redis'
 
 const redis = getRedis()
@@ -16,3 +16,14 @@ export const cleanupQueue = new Queue(
     connection: redis
   }
 )
+
+export const downloadQueue = new Queue(
+  'download',
+  {
+    connection: redis,
+  }
+)
+
+export const flowProducer = new FlowProducer({
+  connection: redis
+})

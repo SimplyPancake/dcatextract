@@ -295,7 +295,7 @@ function deselectAll() {
   selectedKeys.value = {}
 }
 
-const { execute: startProcess } = useLazyFetch('/api/job/start', {
+const { execute: startProcess } = useLazyFetch('/api/job/process/start', {
   immediate: false,
   method: 'POST',
   body: computed(() => ({ schemas: selectedKeys.value }))

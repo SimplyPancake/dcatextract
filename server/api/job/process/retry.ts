@@ -1,4 +1,4 @@
-import { fileQueue } from '~~/server/utils/queues';
+import { fileQueue } from '~~/server/utils/bull';
 import { LatestJobDTO} from "~~/shared/types/dto"
 export default defineEventHandler(async (event) => {
   const sessionId = event.context.sessionId;

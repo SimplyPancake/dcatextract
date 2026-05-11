@@ -1,4 +1,4 @@
-import { fileQueue } from '~~/server/utils/queues';
+import { fileQueue } from '~~/server/utils/bull';
 import { LatestJobDTO} from "~~/shared/types/dto"
 export default defineEventHandler(async (event) => {
   const sessionId = event.context.sessionId;
@@ -11,6 +11,5 @@ export default defineEventHandler(async (event) => {
     .filter(j => j.data?.sessionId == sessionId)
     .sort((a, b) => b.finishedOn! - a.finishedOn! )[0]
   
-  console.log(lastJob?.returnvalue)
   return lastJob
 });

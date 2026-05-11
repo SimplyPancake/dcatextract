@@ -21,7 +21,7 @@
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                      <span>You have {{ unprocessedFilesCount }} unprocessed files from a previous session.</span>
+                      <span>You have {{ unprocessedFilesCount }} unprocessed files (uploads or downloads) from a previous session.</span>
                       <Button
                         severity="contrast"
                         variant="outlined"

@@ -1,9 +1,12 @@
-import { startCleanupWorker } from "../workers/cleanup-worker"
-import { startFileWorker } from "../workers/file-worker"
+import { cleanupQueue } from '../utils/bull'
+import { startCleanupWorker } from '../workers/cleanup-worker'
+import { startDownloadWorker } from '../workers/download-worker'
+import { startFileWorker } from '../workers/file-worker'
 
 export default defineNitroPlugin(async () => {
     startFileWorker()
     startCleanupWorker()
+    startDownloadWorker()
 
     // Start jobs/queues which are repeatable
     await cleanupQueue.add(

@@ -66,7 +66,7 @@ const { socket } = usePresenceSocket()
 
 onMounted(async () => {
   // Get initial state
-  const { data: initialJob } = await useFetch('/api/job/status');
+  const { data: initialJob } = await useFetch('/api/job/process/status');
   const data = initialJob.value as Job | undefined
   if (data) {
     const workerProgress = (data.progress as WorkerProgress)
@@ -120,7 +120,7 @@ async function retryProcessing() {
   progress.value = 0
   currentAction.value = 'Retrying...'
   hasStarted.value = false
-  await useFetch('/api/job/retry')
+  await useFetch('/api/job/process/retry')
 }
 
 </script>

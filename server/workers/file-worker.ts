@@ -9,6 +9,8 @@ import { WorkerProgress } from "~~/shared/types/workers"
 
 const redis = getRedis()
 export function startFileWorker() {
+
+    // TODO: Base Worker class
     const worker = new Worker(
         'file-processing',
 
@@ -72,7 +74,16 @@ export function startFileWorker() {
         },
         {
             connection: redis,
-            concurrency: 3
+            concurrency: 3,
+            // Save completed and failed jobs only a short time. Otherwise we might store more data than neccessary
+            removeOnComplete: {
+                age: 12 * 3600, // 12 hours
+                limit: 50 // Remove up to 50 jobs per cleanup iteration
+            },
+            removeOnFail: {
+                age: 12 * 3600,
+                limit: 50
+            }
         }
     )
 

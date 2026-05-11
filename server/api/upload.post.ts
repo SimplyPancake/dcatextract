@@ -1,6 +1,6 @@
 import formidable from 'formidable';
 import { IncomingMessage } from "http";
-import { fileQueue } from '../utils/queues';
+import { fileQueue } from '../utils/bull';
 import { getRedis } from '../utils/redis';
 
 

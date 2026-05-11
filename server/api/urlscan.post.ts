@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DataProvider } from '~~/shared/types/url'
+import { DataProvider, datasetProviders } from '~~/shared/types/url'
 
 const bodySchema = z.object({
 	url: z.httpUrl()
@@ -9,7 +9,11 @@ export default defineEventHandler(async (event) => {
 	const result = await readValidatedBody(event, body => bodySchema.safeParse(body))
 
 	if (!result.success) {
-		throw result.error.issues
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Invalid URL',
+			message: 'Please provide a valid, absolute URL.'
+		})
 	}
 
 	const { url } = result.data
@@ -24,8 +28,19 @@ export default defineEventHandler(async (event) => {
 		})
 	}
 
+	const identifier = getIdentifier(url, provider)
+
+	if (identifier == '') {
+		throw createError({
+			statusCode: 422,
+			statusMessage: 'Could not get identifier from URL',
+			message: `Could not extract information from provider URL. Try a different URL (structure): ${url}`
+		})
+	}
+
 	return {
-		sourceType: provider
+		sourceType: provider,
+		identifier
 	} as URLScanResult
 })
 
@@ -36,4 +51,22 @@ function getProviderFromHostname(hostname: string): DataProvider {
 		return 'GitHub'
 	}
 	return 'Unknown'
+}
+
+function getIdentifier(url: string, provider: DataProvider): string {
+	if (provider == 'Unknown' || provider == 'CKAN') {
+		return ''
+	}
+
+	const providerConfig = datasetProviders.find(p => p.provider == provider)
+	if (!providerConfig) {
+		return ''
+	}
+
+	const match = url.match(providerConfig.identifierRegex)
+	
+	if (!match) {
+		return ''
+	}
+	return `${match[1]!}/${match[2]!}`;
 }

@@ -29,7 +29,16 @@ export function startCleanupWorker() {
       }
     },
     {
-      connection: redis
+      connection: redis,
+      // Save completed and failed jobs only a short time. Otherwise we might store more data than neccessary
+      removeOnComplete: {
+        age: 12 * 3600, // 12 hours
+        limit: 50 // Remove up to 50 jobs per cleanup iteration
+      },
+      removeOnFail: {
+        age: 12 * 3600,
+        limit: 50
+      }
     }
   )
   worker.on('failed', (job: Job | undefined, error: Error, prev: string) => {

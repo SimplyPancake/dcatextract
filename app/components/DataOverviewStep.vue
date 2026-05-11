@@ -19,7 +19,7 @@ const latestJob = ref<LatestJobDTO>(props.latestJob)
 
 if (!latestJob.value) {
   const { data } = await useFetch<LatestJobDTO>(
-    '/api/job/latest-completed'
+    '/api/job/process/latest-completed'
   )
 
   latestJob.value = data.value as FileProcessJob

@@ -66,26 +66,19 @@
           <Message class="mt-2" v-if="uploadFinished" severity="success">Upload finished!</Message>
         </div>
         <div v-else>
-          <label class="mt-3 block text-xs font-medium" for="repo-url">Repository URL</label>
-          <div class="flex flex-row">
-            <InputGroup>
-              <InputGroupAddon>
-                <Scan v-if="status == 'idle'" />
-                <Loader2 v-else-if="status == 'pending'" class="animate-spin" />
-                <TriangleAlert v-else-if="status == 'error'" />
-                <SourceLogo v-else-if="status == 'success'" :type="urlScanResult?.sourceType!" />
-              </InputGroupAddon>
-              <InputText v-model="urlInput" placeholder="https://example.com/dataset" type="url" />
-              <InputGroupAddon>
-                <Button @click="execute()" severity="secondary">
-                  Search
-                  <DatabaseSearch />
-                </Button>
-              </InputGroupAddon>
-            </InputGroup>
+          <ChooseProvider
+            @status-change="repoStatus = $event"
+            @provider-change="repoProvider = $event"
+            @scan-success="handleRepoScanSuccess"
+          />
+          <div class="mt-4" v-if="downloadStatus !== 'idle'">
+            <ProgressBar v-if="downloadStatus === 'pending'" :value="downloadProgress" :showValue="false" class="h-2" />
+            <Message v-else-if="downloadStatus === 'success'" severity="success">Download completed.</Message>
+            <Message v-else-if="downloadStatus === 'error'" severity="error">{{ downloadError || 'Download failed.' }}</Message>
+            <div v-if="downloadStatus === 'pending'" class="mt-2 text-sm text-surface-500">
+              {{ downloadMessage || 'Downloading dataset...' }}
+            </div>
           </div>
-          <ProviderFeedback v-if="showProviderFeedback" class="mt-3" :type="feedbackProvider"
-            :is-error="status === 'error'" :message="feedbackErrorMessage" />
         </div>
       </div>
     </Transition>
@@ -96,13 +89,14 @@
 </template>
 
 <script lang="ts" setup>
-import { DatabaseSearch, FileArchive, Loader2, Scan, Server, TriangleAlert } from '@lucide/vue'
+import { FileArchive, Server } from '@lucide/vue'
 import type { Job } from 'bullmq'
-import { Button, Divider, Fieldset, FileUpload, InputGroup, InputGroupAddon, InputText, Message, ProgressBar, Tag } from 'primevue'
-import { computed, ref } from 'vue'
-import ProviderFeedback from '~/components/providers/ProviderFeedback.vue'
-import SourceLogo from '~/components/providers/SourceLogo.vue'
+import { Button, Divider, Fieldset, FileUpload, Message, ProgressBar, Tag } from 'primevue'
+import { computed, ref, watch } from 'vue'
+import ChooseProvider from '~/components/providers/ChooseProvider.vue'
 import type { LatestJobDTO } from '~~/shared/types/dto'
+import { usePresenceSocket } from '~/composables/usePresence'
+import type { WorkerProgress } from '@@/shared/types/workers'
 
 const emit = defineEmits<{
   next: [],
@@ -110,19 +104,51 @@ const emit = defineEmits<{
   processing: []
 }>()
 
-const { data: unprocessedData } = await useFetch('/api/unprocessed')
-const { data: processingStatus } = await useFetch('/api/job/status')
-const { data: latestFinishedJob } = await useFetch<LatestJobDTO>('/api/job/latest-completed')
+const { data: processingStatus } = await useFetch('/api/job/process/status')
+const { data: latestFinishedJob } = await useFetch<LatestJobDTO>('/api/job/process/latest-completed')
 const isProcessing = computed(() => processingStatus.value ?? false)
 const runningJob = computed(() => processingStatus.value ?? false)
-const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
 
 const selectedSource = ref<'local' | 'repo' | null>(null)
-const urlInput = ref('')
-const requestBody = computed(() => ({ url: urlInput.value }))
-const fileUpload = ref()
 const progressBar = ref(0)
 const uploadFinished = ref(false)
+const repoStatus = ref('idle')
+const repoProvider = ref('Unknown')
+const repoUrl = ref('')
+const repoIdentifier = ref('')
+const downloadStatus = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
+const downloadProgress = ref(0)
+const downloadMessage = ref('')
+const downloadError = ref('')
+const lastDownloadUrl = ref('')
+const supportedDownloadProviders = ['GitHub']
+
+const { socket } = usePresenceSocket()
+
+const { data: downloadStatusResponse } = await useFetch('/api/job/download/status')
+const { execute: startDownload, error: startDownloadError } = useLazyFetch('/api/job/download/start', {
+  immediate: false,
+  method: 'POST',
+  body: computed(() => ({
+    url: repoUrl.value,
+    provider: repoProvider.value,
+    identifier: repoIdentifier.value
+  }))
+})
+
+if (downloadStatusResponse.value?.job) {
+  const workerProgress = downloadStatusResponse.value.job.progress as WorkerProgress
+  downloadProgress.value = workerProgress?.progress ?? 0
+  downloadMessage.value = workerProgress?.message ?? 'Downloading dataset...'
+  downloadStatus.value = 'pending'
+} else if (downloadStatusResponse.value?.status === 'completed') {
+  downloadStatus.value = 'success'
+  downloadProgress.value = 100
+  downloadMessage.value = 'Download completed'
+} else if (downloadStatusResponse.value?.status === 'failed') {
+  downloadStatus.value = 'error'
+  downloadError.value = 'Download failed'
+}
 
 function progress(event: any) {
   progressBar.value = event.progress
@@ -131,23 +157,13 @@ function finishUpload() {
   uploadFinished.value = true
 }
 
-const { status, data: urlScanResult, error, execute } = useLazyFetch('/api/urlscan', {
-  method: 'POST',
-  body: requestBody,
-  immediate: false
-})
-const showProviderFeedback = computed(() => status.value === 'success' || status.value === 'error')
-const feedbackProvider = computed(() => urlScanResult.value?.sourceType ?? 'Unknown')
-const feedbackErrorMessage = computed(() => {
-  const data = (error.value as { data?: { message?: string; statusMessage?: string } } | null)?.data
-  return data?.message || data?.statusMessage || error.value?.message
-})
-
 const mayContinue = computed(() => (selectedSource.value == 'local' && uploadFinished.value)
   ||
   (
     selectedSource.value == 'repo' &&
-    status.value == 'success' && feedbackProvider.value != 'Unknown'
+    repoStatus.value == 'success' &&
+    repoProvider.value != 'Unknown' &&
+    downloadStatus.value == 'success'
   ))
 
 function emitNext() {
@@ -161,6 +177,57 @@ function emitProcessingOverview() {
 function gotoOverview() {
   emit('goto', latestFinishedJob.value as Job)
 }
+
+async function handleRepoScanSuccess(payload: { url: string; provider: string; identifier: string }) {
+  repoUrl.value = payload.url
+  repoProvider.value = payload.provider
+  repoIdentifier.value = payload.identifier
+
+  if (!supportedDownloadProviders.includes(payload.provider)) {
+    downloadStatus.value = 'error'
+    downloadError.value = 'Downloads currently supported for GitHub repositories only.'
+    return
+  }
+
+  if (payload.url && payload.url !== lastDownloadUrl.value) {
+    lastDownloadUrl.value = payload.url
+    downloadStatus.value = 'pending'
+    downloadProgress.value = 0
+    downloadMessage.value = 'Starting download...'
+    downloadError.value = ''
+
+    await startDownload()
+
+    if (startDownloadError.value) {
+      downloadStatus.value = 'error'
+      downloadError.value = startDownloadError.value.message || 'Failed to start download'
+    }
+  }
+}
+
+watch(socket, (newSocket) => {
+  if (!newSocket) return
+
+  newSocket.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'download-progress') {
+        downloadStatus.value = 'pending'
+        downloadProgress.value = data.progress || 0
+        downloadMessage.value = data.message || 'Downloading dataset...'
+      } else if (data.type === 'download-completed') {
+        downloadStatus.value = 'success'
+        downloadProgress.value = 100
+        downloadMessage.value = 'Download completed'
+      } else if (data.type === 'download-failed') {
+        downloadStatus.value = 'error'
+        downloadError.value = data.message || 'Download failed'
+      }
+    } catch (e) {
+      console.error('Failed to parse WS message', e)
+    }
+  })
+}, { immediate: true })
 </script>
 
 <style scoped></style>

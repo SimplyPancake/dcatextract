@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { fileQueue } from '~~/server/utils/queues';
+import { fileQueue } from '~~/server/utils/bull';
 
 export default defineEventHandler(async (event) => {
   const sessionId = event.context.sessionId;
