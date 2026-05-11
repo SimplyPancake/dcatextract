@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     redisUrl: process.env.NUXT_REDIS_URL || '',
     llmUrl: process.env.NUXT_LLM_URL || '',
     llmToken: process.env.NUXT_LLM_TOKEN || '',
+    useAi: !process.env.NUXT_REMOVE_AI
   },
   nitro: {
     experimental: {

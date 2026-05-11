@@ -39,7 +39,7 @@
                 <StepPanel v-slot="{ activateCallback }" value="2">
                   Before continuing, select which metadata schema(s) should be generated.
                   <SelectSchemaStep
-                    @next="(schemas) => {start(schemas); activateCallback('3'); currentStep = '3'}"
+                    @next="(schemas) => {activateCallback('3'); currentStep = '3'}"
                   />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="3">
@@ -78,20 +78,6 @@ const latestJob = ref<Job>()
 const selectedSchemas = ref<SchemaSelection>({})
 const { data: unprocessedData } = await useFetch('/api/unprocessed')
 const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
-
-const startProcessJob = ref({})
-const { execute: startProcess } = useLazyFetch('/api/job/start', { 
-  immediate: false,
-  method: 'POST',
-  body: startProcessJob
- })
-
-function start(schemas: SchemaSelection){
-  startProcessJob.value = {
-    schemas
-  }
-  startProcess()
-}
 
 function gotoOverview(data: Job) {
   latestJob.value = data
