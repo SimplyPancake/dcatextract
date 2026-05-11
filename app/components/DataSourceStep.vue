@@ -121,7 +121,7 @@ const downloadProgress = ref(0)
 const downloadMessage = ref('')
 const downloadError = ref('')
 const lastDownloadUrl = ref('')
-const supportedDownloadProviders = ['GitHub']
+const supportedDownloadProviders = ['GitHub', 'Kaggle', 'HuggingFace']
 
 const { socket } = usePresenceSocket()
 
@@ -185,7 +185,7 @@ async function handleRepoScanSuccess(payload: { url: string; provider: string; i
 
   if (!supportedDownloadProviders.includes(payload.provider)) {
     downloadStatus.value = 'error'
-    downloadError.value = 'Downloads currently supported for GitHub repositories only.'
+    downloadError.value = 'Downloads currently supported for GitHub, Kaggle, and Hugging Face.'
     return
   }
 

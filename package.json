@@ -33,6 +33,7 @@
   "devDependencies": {
     "@nuxt/test-utils": "^4.0.3",
     "@primevue/nuxt-module": "^4.5.5",
+    "@types/adm-zip": "^0.5.8",
     "@types/formidable": "^3.5.1",
     "@types/node": "^25.6.0",
     "@types/pdf-parse": "^1.1.5",

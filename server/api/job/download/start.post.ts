@@ -25,14 +25,6 @@ export default defineEventHandler(async (event) => {
 
   const { url, provider, identifier } = result.data
 
-  if (provider !== 'GitHub') {
-    throw createError({
-      statusCode: 422,
-      statusMessage: 'Unsupported provider',
-      message: 'Downloads are currently supported for GitHub repositories only.'
-    })
-  }
-
   const activeJobs = await downloadQueue.getJobs(['active', 'waiting', 'delayed'])
   const runningJob = activeJobs.find(job => job.data?.sessionId === sessionId)
   if (runningJob) {

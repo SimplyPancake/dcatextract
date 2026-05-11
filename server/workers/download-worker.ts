@@ -44,6 +44,33 @@ async function resolveGitHubDownloadUrl(identifier: string): Promise<string> {
     return `https://codeload.github.com/${identifier}/zip/refs/heads/${branch}`
 }
 
+async function resolveHuggingFaceDownloadUrl(identifier: string, token?: string): Promise<string> {
+    const baseUrl = `https://huggingface.co/datasets/${identifier}`
+    const headers: Record<string, string> = {
+        'User-Agent': 'dcatextract'
+    }
+    if (token) {
+        headers.Authorization = `Bearer ${token}`
+    }
+
+    for (const branch of ['main', 'master']) {
+        const url = `${baseUrl}/archive/refs/heads/${branch}.zip`
+        const response = await fetch(url, { method: 'HEAD', headers })
+        if (response.ok) {
+            return url
+        }
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('Hugging Face dataset requires authentication. Set NUXT_HF_TOKEN.')
+        }
+    }
+
+    throw new Error('Failed to resolve Hugging Face dataset archive')
+}
+
+function buildKaggleAuthHeader(username: string, key: string): string {
+    return `Basic ${Buffer.from(`${username}:${key}`).toString('base64')}`
+}
+
 function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`
     const kb = bytes / 1024
@@ -63,9 +90,26 @@ export function startDownloadWorker() {
                 throw new Error('Session ID is required for download')
             }
 
+            const config = useRuntimeConfig()
             let downloadUrl = sourceUrl
+            const headers: Record<string, string> = {
+                'User-Agent': 'dcatextract'
+            }
+
             if (provider === 'GitHub') {
                 downloadUrl = await resolveGitHubDownloadUrl(identifier)
+            } else if (provider === 'HuggingFace') {
+                if (config.huggingFaceToken) {
+                    headers.Authorization = `Bearer ${config.huggingFaceToken}`
+                }
+                downloadUrl = await resolveHuggingFaceDownloadUrl(identifier, config.huggingFaceToken)
+            } else if (provider === 'Kaggle') {
+                const username = config.kaggleUsername as string | undefined
+                const key = config.kaggleKey as string | undefined
+                if (username && key) {
+                    headers.Authorization = buildKaggleAuthHeader(username, key)
+                }
+                downloadUrl = `https://www.kaggle.com/api/v1/datasets/download/${identifier}`
             } else {
                 throw new Error(`Provider ${provider} not supported for download yet`)
             }
@@ -77,7 +121,15 @@ export function startDownloadWorker() {
                 `${identifier.replace('/', '-')}-${Date.now()}.zip`
             )
 
-            const response = await fetch(downloadUrl, { redirect: 'follow' })
+            const response = await fetch(downloadUrl, { redirect: 'follow', headers })
+            if (response.status === 401 || response.status === 403) {
+                if (provider === 'Kaggle') {
+                    throw new Error('Kaggle download requires credentials. Set NUXT_KAGGLE_USERNAME and NUXT_KAGGLE_KEY.')
+                }
+                if (provider === 'HuggingFace') {
+                    throw new Error('Hugging Face dataset requires authentication. Set NUXT_HF_TOKEN.')
+                }
+            }
             if (!response.ok || !response.body) {
                 throw new Error(`Failed to download dataset: ${response.status}`)
             }
