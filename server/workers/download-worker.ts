@@ -9,6 +9,12 @@ import AdmZip from 'adm-zip'
 import { getRedis } from '../utils/redis'
 import { notifySession } from '../utils/wsManager'
 import type { DownloadJobDataType, DownloadJobReturnType, WorkerProgress } from '~~/shared/types/workers'
+import {
+    buildProviderAccessUrl,
+    buildProviderDownloadUrl,
+    getProviderDownloadBaseUrl,
+    getProviderBaseUrl
+} from '~~/shared/types/url'
 
 const redis = getRedis()
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024
@@ -41,11 +47,18 @@ async function resolveGitHubDownloadUrl(identifier: string): Promise<string> {
 
     const repo = await response.json() as { default_branch?: string }
     const branch = repo.default_branch || 'main'
-    return `https://codeload.github.com/${identifier}/zip/refs/heads/${branch}`
+    const url = buildProviderDownloadUrl('GitHub', identifier, branch)
+    if (!url) {
+        throw new Error('Failed to build GitHub download URL')
+    }
+    return url
 }
 
 async function resolveHuggingFaceDownloadUrl(identifier: string, token?: string): Promise<string> {
-    const baseUrl = `https://huggingface.co/datasets/${identifier}`
+    const baseRoot = getProviderDownloadBaseUrl('HuggingFace')
+    if (!baseRoot) {
+        throw new Error('Failed to resolve Hugging Face base URL')
+    }
     const headers: Record<string, string> = {
         'User-Agent': 'dcatextract'
     }
@@ -54,7 +67,10 @@ async function resolveHuggingFaceDownloadUrl(identifier: string, token?: string)
     }
 
     for (const branch of ['main', 'master']) {
-        const url = `${baseUrl}/archive/refs/heads/${branch}.zip`
+        const url = buildProviderDownloadUrl('HuggingFace', identifier, branch)
+        if (!url) {
+            throw new Error('Failed to build Hugging Face download URL')
+        }
         const response = await fetch(url, { method: 'HEAD', headers })
         if (response.ok) {
             return url
@@ -109,10 +125,23 @@ export function startDownloadWorker() {
                 if (username && key) {
                     headers.Authorization = buildKaggleAuthHeader(username, key)
                 }
-                downloadUrl = `https://www.kaggle.com/api/v1/datasets/download/${identifier}`
+                const url = buildProviderDownloadUrl('Kaggle', identifier)
+                if (!url) {
+                    throw new Error('Failed to build Kaggle download URL')
+                }
+                downloadUrl = url
             } else {
                 throw new Error(`Provider ${provider} not supported for download yet`)
             }
+
+            const accessUrl = buildProviderAccessUrl(provider, identifier, sourceUrl) ?? sourceUrl
+            const providerBaseUrl = getProviderBaseUrl(provider) ?? undefined
+            await job.updateData({
+                ...job.data,
+                accessUrl,
+                downloadUrl,
+                providerBaseUrl
+            })
 
             const downloadDir = path.join(os.tmpdir(), 'dcat-downloads', sessionId)
             await fsp.mkdir(downloadDir, { recursive: true })
@@ -208,6 +237,7 @@ export function startDownloadWorker() {
             await updateProgress(100, 'Download completed')
             await redis.sadd(`session:${sessionId}:files:unprocessed`, ...extractedFiles)
             await redis.set(`session:${sessionId}:download:status`, 'completed', 'EX', 12 * 3600)
+            await redis.del(`session:${sessionId}:download:error`)
 
             notifySession(sessionId, { type: 'download-completed', filePath: extractDir })
 
@@ -235,6 +265,7 @@ export function startDownloadWorker() {
         if (sessionId) {
             notifySession(sessionId, { type: 'download-failed', message: error.message })
             redis.set(`session:${sessionId}:download:status`, 'failed', 'EX', 12 * 3600).catch(() => undefined)
+            redis.set(`session:${sessionId}:download:error`, error.message, 'EX', 12 * 3600).catch(() => undefined)
         }
     })
 

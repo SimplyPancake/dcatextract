@@ -67,3 +67,56 @@ export const datasetProviders: DatasetProviderConfig[] = [
       "https://github.com/user/repo",
   },
 ];
+
+export const PROVIDER_BASE_URLS: Record<DataProvider, string | null> = {
+  Kaggle: "https://www.kaggle.com/datasets/",
+  HuggingFace: "https://huggingface.co/datasets/",
+  GitHub: "https://github.com/",
+  CKAN: null,
+  Unknown: null,
+};
+
+export const PROVIDER_DOWNLOAD_BASE_URLS: Record<DataProvider, string | null> = {
+  Kaggle: "https://www.kaggle.com/api/v1/datasets/download/",
+  HuggingFace: "https://huggingface.co/datasets/",
+  GitHub: "https://codeload.github.com/",
+  CKAN: null,
+  Unknown: null,
+};
+
+export function getProviderBaseUrl(provider: DataProvider): string | null {
+  return PROVIDER_BASE_URLS[provider] ?? null;
+}
+
+export function getProviderDownloadBaseUrl(provider: DataProvider): string | null {
+  return PROVIDER_DOWNLOAD_BASE_URLS[provider] ?? null;
+}
+
+export function buildProviderAccessUrl(
+  provider: DataProvider,
+  identifier: string,
+  sourceUrl?: string
+): string | null {
+  if (sourceUrl && /^https?:\/\//.test(sourceUrl)) return sourceUrl;
+  const base = getProviderBaseUrl(provider);
+  return base ? `${base}${identifier}` : null;
+}
+
+export function buildProviderDownloadUrl(
+  provider: DataProvider,
+  identifier: string,
+  branch: "main" | "master" = "main"
+): string | null {
+  const base = getProviderDownloadBaseUrl(provider);
+  if (!base) return null;
+  if (provider === "GitHub") {
+    return `${base}${identifier}/zip/refs/heads/${branch}`;
+  }
+  if (provider === "HuggingFace") {
+    return `${base}${identifier}/archive/refs/heads/${branch}.zip`;
+  }
+  if (provider === "Kaggle") {
+    return `${base}${identifier}`;
+  }
+  return null;
+}

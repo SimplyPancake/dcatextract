@@ -5,7 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { inferDcatFromFiles } from './file-processor'
 import { notifySession } from '../utils/wsManager'
-import { WorkerProgress } from "~~/shared/types/workers"
+import { DownloadSourceType, FileProcessJob, FileProcessJobDataType, WorkerProgress } from "~~/shared/types/workers"
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -15,7 +15,8 @@ export function startFileWorker() {
         'file-processing',
 
         async (job) => {
-            const { sessionId } = job.data
+            const jobdata: FileProcessJobDataType = job.data
+            const sessionId = jobdata.sessionId
 
             if (!sessionId) {
                 console.log("[FILE_PROC] No sessionID. Exiting")
@@ -58,7 +59,21 @@ export function startFileWorker() {
                 updateProgress(updateNum, message)
             }
 
-            const catalog = await inferDcatFromFiles(paths, { verbose: true }, tmpDir, updateProgressInfer)
+            const sourceInfo = jobdata.downloadData
+                ? {
+                    accessUrl: jobdata.downloadData.accessUrl,
+                    downloadUrl: jobdata.downloadData.downloadUrl,
+                }
+                : undefined
+
+            const catalog = await inferDcatFromFiles(
+                paths,
+                { verbose: true },
+                tmpDir,
+                updateProgressInfer,
+                jobdata.selectedMetadata,
+                sourceInfo
+            )
 
             await updateProgress(95, 'Saving catalog...')
 

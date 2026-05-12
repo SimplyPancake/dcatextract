@@ -44,6 +44,7 @@ export default defineEventHandler(async (event) => {
 
   await redis.set(`session:${sessionId}:download:jobId`, job.id!, 'EX', 12 * 3600)
   await redis.set(`session:${sessionId}:download:status`, 'running', 'EX', 12 * 3600)
+  await redis.del(`session:${sessionId}:download:error`)
 
   setResponseStatus(event, 200)
   return { jobId: job.id }

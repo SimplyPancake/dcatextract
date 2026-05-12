@@ -5,6 +5,19 @@ const descriptionSchema = z.object({
   description: z.string().describe("A comprehensive summary and description of the dataset suitable for a DCAT catalog field.")
 });
 
+const distributionMetadataSchema = z.object({
+  licenseIri: z.string().nullable().optional().describe("SPDX or license IRI when explicitly stated, otherwise null."),
+  rights: z.string().nullable().optional().describe("Rights statement if explicitly present, otherwise null."),
+  languageIri: z.string().nullable().optional().describe("Language IRI when explicitly stated, otherwise null."),
+  conformsToIri: z.string().nullable().optional().describe("Standard IRI if explicitly stated, otherwise null."),
+  temporalStart: z.string().nullable().optional().describe("Temporal coverage start date if explicit, otherwise null."),
+  temporalEnd: z.string().nullable().optional().describe("Temporal coverage end date if explicit, otherwise null."),
+  temporalResolution: z.string().nullable().optional().describe("Temporal resolution duration if explicit, otherwise null."),
+  spatialResolutionInMeters: z.number().nullable().optional().describe("Spatial resolution in meters if explicit, otherwise null."),
+  spatialBboxWkt: z.string().nullable().optional().describe("Bounding box WKT if explicit, otherwise null."),
+  spatialCentroidWkt: z.string().nullable().optional().describe("Centroid WKT if explicit, otherwise null."),
+});
+
 // TODO: Handle AI refusal etc
 
 export async function processDCATDescription(fileContent: string, filePath?: string): Promise<string> {
@@ -41,5 +54,68 @@ export async function processDCATDescription(fileContent: string, filePath?: str
     const message = error instanceof Error ? error.message : "Unknown error";
     console.warn(`DCAT description generation failed: ${message}`);
     return "";
+  }
+}
+
+export async function processDistributionMetadata(fileContent: string, fileName?: string): Promise<z.infer<typeof distributionMetadataSchema>> {
+  const config = useRuntimeConfig()
+  if (!config.useAi) {
+    await new Promise(r => setTimeout(r, 1500));
+    return {
+      licenseIri: null,
+      rights: null,
+      languageIri: null,
+      conformsToIri: null,
+      temporalStart: null,
+      temporalEnd: null,
+      temporalResolution: null,
+      spatialResolutionInMeters: null,
+      spatialBboxWkt: null,
+      spatialCentroidWkt: null,
+    };
+  }
+
+  const systemPrompt = "You are an expert data cataloger. Extract distribution metadata only when it is explicitly stated. If not explicit, return null. Do not guess or infer.";
+  const MAX_CHARS = 4000;
+  const trimmedContent = fileContent.trim();
+  if (!trimmedContent) {
+    return {
+      licenseIri: null,
+      rights: null,
+      languageIri: null,
+      conformsToIri: null,
+      temporalStart: null,
+      temporalEnd: null,
+      temporalResolution: null,
+      spatialResolutionInMeters: null,
+      spatialBboxWkt: null,
+      spatialCentroidWkt: null,
+    };
+  }
+
+  const nameHint = fileName ? `File name: ${fileName}\n` : "";
+  const userPrompt = `${nameHint}Extract DCAT Distribution metadata fields from the following content. If a field is not explicitly stated, return null.\n\n${trimmedContent.slice(0, MAX_CHARS)}`;
+
+  try {
+    return await queryModel(
+      systemPrompt,
+      userPrompt,
+      distributionMetadataSchema
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.warn(`Distribution metadata generation failed: ${message}`);
+    return {
+      licenseIri: null,
+      rights: null,
+      languageIri: null,
+      conformsToIri: null,
+      temporalStart: null,
+      temporalEnd: null,
+      temporalResolution: null,
+      spatialResolutionInMeters: null,
+      spatialBboxWkt: null,
+      spatialCentroidWkt: null,
+    };
   }
 }

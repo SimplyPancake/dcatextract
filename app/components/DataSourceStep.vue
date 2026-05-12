@@ -126,15 +126,17 @@ const supportedDownloadProviders = ['GitHub', 'Kaggle', 'HuggingFace']
 const { socket } = usePresenceSocket()
 
 const { data: downloadStatusResponse } = await useFetch('/api/job/download/status')
-const { execute: startDownload, error: startDownloadError } = useLazyFetch('/api/job/download/start', {
-  immediate: false,
-  method: 'POST',
-  body: computed(() => ({
-    url: repoUrl.value,
-    provider: repoProvider.value,
-    identifier: repoIdentifier.value
-  }))
-})
+async function startDownload(payload: { url: string; provider: string; identifier: string }) {
+  try {
+    await $fetch('/api/job/download/start', {
+      method: 'POST',
+      body: payload
+    })
+    return null
+  } catch (error: any) {
+    return error
+  }
+}
 
 if (downloadStatusResponse.value?.job) {
   const workerProgress = downloadStatusResponse.value.job.progress as WorkerProgress
@@ -147,7 +149,7 @@ if (downloadStatusResponse.value?.job) {
   downloadMessage.value = 'Download completed'
 } else if (downloadStatusResponse.value?.status === 'failed') {
   downloadStatus.value = 'error'
-  downloadError.value = 'Download failed'
+  downloadError.value = downloadStatusResponse.value?.errorMessage || 'Download failed'
 }
 
 function progress(event: any) {
@@ -196,11 +198,18 @@ async function handleRepoScanSuccess(payload: { url: string; provider: string; i
     downloadMessage.value = 'Starting download...'
     downloadError.value = ''
 
-    await startDownload()
+    const error = await startDownload({
+      url: payload.url,
+      provider: payload.provider,
+      identifier: payload.identifier
+    })
 
-    if (startDownloadError.value) {
+    if (error) {
       downloadStatus.value = 'error'
-      downloadError.value = startDownloadError.value.message || 'Failed to start download'
+      downloadError.value = error?.data?.message
+        || error?.data?.statusMessage
+        || error?.message
+        || 'Failed to start download'
     }
   }
 }

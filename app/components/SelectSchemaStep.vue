@@ -65,6 +65,12 @@ import {
   Type,
   User,
 } from '@lucide/vue'
+import type {
+  CatalogRecordKey,
+  DataServiceKey,
+  DatasetKey,
+  DistributionKey,
+} from '#shared/types/utils/builder'
 import type { TreeNode } from 'primevue/treenode'
 
 type OwnTreeNode = {
@@ -144,52 +150,57 @@ function emitNext() {
   emit('next', { ...selectedKeys.value })
 }
 
+const distributionKey = (key: DistributionKey) => `distribution.${key}`
+const datasetKey = (key: DatasetKey) => `dataset.${key}`
+const dataServiceKey = (key: DataServiceKey) => `dataService.${key}`
+const catalogRecordKey = (key: CatalogRecordKey) => `catalogRecord.${key}`
+
 const treeNodes = ref<OwnTreeNode[]>([
   {
     key: 'distribution',
     icon: FileIcon,
     label: 'Distribution',
     children: [
-      { key: 'distribution.uri', label: 'URI', icon: Link2 },
+      { key: distributionKey('uri'), label: 'URI', icon: Link2 },
 
-      { key: 'distribution.title', label: 'Title', icon: Type },
-      { key: 'distribution.description', label: 'Description', icon: AlignLeft },
+      { key: distributionKey('title'), label: 'Title', icon: Type },
+      { key: distributionKey('description'), label: 'Description', icon: AlignLeft },
 
-      { key: 'distribution.issued', label: 'Issued', icon: Calendar },
-      { key: 'distribution.modified', label: 'Modified', icon: Calendar },
+      { key: distributionKey('issued'), label: 'Issued', icon: Calendar },
+      { key: distributionKey('modified'), label: 'Modified', icon: Calendar },
 
-      { key: 'distribution.license', label: 'License', icon: Scale },
-      { key: 'distribution.rights', label: 'Rights', icon: ShieldCheck },
-      { key: 'distribution.conformsTo', label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this distribution follows.' },
+      { key: distributionKey('license'), label: 'License', icon: Scale },
+      { key: distributionKey('rights'), label: 'Rights', icon: ShieldCheck },
+      { key: distributionKey('conformsTo'), label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this distribution follows.' },
 
-      { key: 'distribution.language', label: 'Language', icon: Languages },
+      { key: distributionKey('language'), label: 'Language', icon: Languages },
 
-      { key: 'distribution.accessURL', label: 'Access URL', icon: Globe },
-      { key: 'distribution.downloadURL', label: 'Download URL', icon: Download },
-      { key: 'distribution.accessService', label: 'Access Service', icon: Server, extra: 'A data service that provides access to this distribution.' },
+      { key: distributionKey('accessURL'), label: 'Access URL', icon: Globe },
+      { key: distributionKey('downloadURL'), label: 'Download URL', icon: Download },
+      { key: distributionKey('accessService'), label: 'Access Service', icon: Server, extra: 'A data service that provides access to this distribution.' },
 
-      { key: 'distribution.format', label: 'Format', icon: FileType },
-      { key: 'distribution.mediaType', label: 'Media Type', icon: FileType },
-      { key: 'distribution.compressFormat', label: 'Compress Format', icon: Archive },
-      { key: 'distribution.packageFormat', label: 'Package Format', icon: Archive },
+      { key: distributionKey('format'), label: 'Format', icon: FileType },
+      { key: distributionKey('mediaType'), label: 'Media Type', icon: FileType },
+      { key: distributionKey('compressFormat'), label: 'Compress Format', icon: Archive },
+      { key: distributionKey('packageFormat'), label: 'Package Format', icon: Archive },
 
-      { key: 'distribution.byteSize', label: 'Byte Size', icon: HardDrive },
+      { key: distributionKey('byteSize'), label: 'Byte Size', icon: HardDrive },
 
       {
-        key: 'distribution.spatialResolutionInMeters',
+        key: distributionKey('spatialResolutionInMeters'),
         label: 'Spatial Resolution (Meters)',
         icon: Ruler,
       },
 
       {
-        key: 'distribution.temporalResolution',
+        key: distributionKey('temporalResolution'),
         label: 'Temporal Resolution',
         icon: Clock3,
         extra: 'Time period covered by each observation (ISO 8601 duration).',
       },
 
-      { key: 'distribution.spatial', label: 'Spatial', icon: Ruler, extra: 'Geographic area covered by the distribution.' },
-      { key: 'distribution.temporal', label: 'Temporal', icon: Clock3, extra: 'Time period covered by the distribution.' },
+      { key: distributionKey('spatial'), label: 'Spatial', icon: Ruler, extra: 'Geographic area covered by the distribution.' },
+      { key: distributionKey('temporal'), label: 'Temporal', icon: Clock3, extra: 'Time period covered by the distribution.' },
     ],
   },
 
@@ -198,57 +209,57 @@ const treeNodes = ref<OwnTreeNode[]>([
     icon: FileIcon,
     label: 'Dataset',
     children: [
-      { key: 'dataset.uri', label: 'URI', icon: Link2 },
+      { key: datasetKey('uri'), label: 'URI', icon: Link2 },
 
-      { key: 'dataset.title', label: 'Title', icon: Type },
-      { key: 'dataset.description', label: 'Description', icon: AlignLeft },
-      { key: 'dataset.identifier', label: 'Identifier', icon: Hash },
+      { key: datasetKey('title'), label: 'Title', icon: Type },
+      { key: datasetKey('description'), label: 'Description', icon: AlignLeft },
+      { key: datasetKey('identifier'), label: 'Identifier', icon: Hash },
 
-      { key: 'dataset.issued', label: 'Issued', icon: Calendar },
-      { key: 'dataset.modified', label: 'Modified', icon: Calendar },
+      { key: datasetKey('issued'), label: 'Issued', icon: Calendar },
+      { key: datasetKey('modified'), label: 'Modified', icon: Calendar },
 
-      { key: 'dataset.language', label: 'Language', icon: Languages },
-      { key: 'dataset.publisher', label: 'Publisher', icon: Building2 },
-      { key: 'dataset.creator', label: 'Creator', icon: User },
-      { key: 'dataset.wasAttributedTo', label: 'Was Attributed To', icon: User, extra: 'Agent credited with creating or providing the dataset.' },
-      { key: 'dataset.rightsHolder', label: 'Rights Holder', icon: ShieldCheck, extra: 'Agent that owns or manages the dataset rights.' },
+      { key: datasetKey('language'), label: 'Language', icon: Languages },
+      { key: datasetKey('publisher'), label: 'Publisher', icon: Building2 },
+      { key: datasetKey('creator'), label: 'Creator', icon: User },
+      { key: datasetKey('wasAttributedTo'), label: 'Was Attributed To', icon: User, extra: 'Agent credited with creating or providing the dataset.' },
+      { key: datasetKey('rightsHolder'), label: 'Rights Holder', icon: ShieldCheck, extra: 'Agent that owns or manages the dataset rights.' },
 
-      { key: 'dataset.license', label: 'License', icon: Scale },
-      { key: 'dataset.rights', label: 'Rights', icon: ShieldCheck },
-      { key: 'dataset.accessRights', label: 'Access Rights', icon: Lock, extra: 'Access level or restrictions (public, restricted, confidential).' },
-      { key: 'dataset.conformsTo', label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this dataset follows.' },
-      { key: 'dataset.type', label: 'Type', icon: Tag, extra: 'General category or nature of the dataset.' },
+      { key: datasetKey('license'), label: 'License', icon: Scale },
+      { key: datasetKey('rights'), label: 'Rights', icon: ShieldCheck },
+      { key: datasetKey('accessRights'), label: 'Access Rights', icon: Lock, extra: 'Access level or restrictions (public, restricted, confidential).' },
+      { key: datasetKey('conformsTo'), label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this dataset follows.' },
+      { key: datasetKey('type'), label: 'Type', icon: Tag, extra: 'General category or nature of the dataset.' },
 
-      { key: 'dataset.keyword', label: 'Keyword', icon: Tag },
-      { key: 'dataset.theme', label: 'Theme', icon: Palette, extra: 'Topic category or taxonomy entry for the dataset.' },
-      { key: 'dataset.contactPoint', label: 'Contact Point', icon: Phone, extra: 'Who to contact for questions about the dataset.' },
-      { key: 'dataset.landingPage', label: 'Landing Page', icon: Globe },
+      { key: datasetKey('keyword'), label: 'Keyword', icon: Tag },
+      { key: datasetKey('theme'), label: 'Theme', icon: Palette, extra: 'Topic category or taxonomy entry for the dataset.' },
+      { key: datasetKey('contactPoint'), label: 'Contact Point', icon: Phone, extra: 'Who to contact for questions about the dataset.' },
+      { key: datasetKey('landingPage'), label: 'Landing Page', icon: Globe },
 
-      { key: 'dataset.version', label: 'Version', icon: GitBranch },
-      { key: 'dataset.versionNotes', label: 'Version Notes', icon: AlignLeft },
-      { key: 'dataset.hasVersion', label: 'Has Version', icon: ArrowLeftRight, extra: 'Links to other versions of this dataset.' },
-      { key: 'dataset.isVersionOf', label: 'Is Version Of', icon: ArrowLeftRight, extra: 'The dataset this is a version of.' },
-      { key: 'dataset.hasCurrentVersion', label: 'Has Current Version', icon: ArrowLeftRight, extra: 'Points to the latest/current version.' },
-      { key: 'dataset.previousVersion', label: 'Previous Version', icon: ArrowLeftRight, extra: 'Version that came immediately before this one.' },
-      { key: 'dataset.nextVersion', label: 'Next Version', icon: ArrowLeftRight, extra: 'Version that comes immediately after this one.' },
+      { key: datasetKey('version'), label: 'Version', icon: GitBranch },
+      { key: datasetKey('versionNotes'), label: 'Version Notes', icon: AlignLeft },
+      { key: datasetKey('hasVersion'), label: 'Has Version', icon: ArrowLeftRight, extra: 'Links to other versions of this dataset.' },
+      { key: datasetKey('isVersionOf'), label: 'Is Version Of', icon: ArrowLeftRight, extra: 'The dataset this is a version of.' },
+      { key: datasetKey('hasCurrentVersion'), label: 'Has Current Version', icon: ArrowLeftRight, extra: 'Points to the latest/current version.' },
+      { key: datasetKey('previousVersion'), label: 'Previous Version', icon: ArrowLeftRight, extra: 'Version that came immediately before this one.' },
+      { key: datasetKey('nextVersion'), label: 'Next Version', icon: ArrowLeftRight, extra: 'Version that comes immediately after this one.' },
 
-      { key: 'dataset.qualifiedRelation', label: 'Qualified Relation', icon: Link2Icon, extra: 'Relationship plus role information to another resource.' },
-      { key: 'dataset.qualifiedAttribution', label: 'Qualified Attribution', icon: Link2Icon, extra: 'Attribution with role (e.g., author, publisher).' },
-      { key: 'dataset.inCatalog', label: 'In Catalog', icon: ListTree, extra: 'Catalog where this dataset is listed.' },
+      { key: datasetKey('qualifiedRelation'), label: 'Qualified Relation', icon: Link2Icon, extra: 'Relationship plus role information to another resource.' },
+      { key: datasetKey('qualifiedAttribution'), label: 'Qualified Attribution', icon: Link2Icon, extra: 'Attribution with role (e.g., author, publisher).' },
+      { key: datasetKey('inCatalog'), label: 'In Catalog', icon: ListTree, extra: 'Catalog where this dataset is listed.' },
 
-      { key: 'dataset.distribution', label: 'Distribution', icon: FileIcon, extra: 'Files or endpoints where the dataset is available.' },
+      { key: datasetKey('distribution'), label: 'Distribution', icon: FileIcon, extra: 'Files or endpoints where the dataset is available.' },
 
-      { key: 'dataset.spatial', label: 'Spatial', icon: Ruler, extra: 'Geographic area covered by the dataset.' },
-      { key: 'dataset.spatialResolutionInMeters', label: 'Spatial Resolution (Meters)', icon: Ruler },
-      { key: 'dataset.temporal', label: 'Temporal', icon: Clock3, extra: 'Time period covered by the dataset.' },
-      { key: 'dataset.temporalResolution', label: 'Temporal Resolution', icon: Clock3, extra: 'Time period covered by each observation (ISO 8601 duration).' },
-      { key: 'dataset.accrualPeriodicity', label: 'Accrual Periodicity', icon: Repeat, extra: 'How often the dataset is updated.' },
+      { key: datasetKey('spatial'), label: 'Spatial', icon: Ruler, extra: 'Geographic area covered by the dataset.' },
+      { key: datasetKey('spatialResolutionInMeters'), label: 'Spatial Resolution (Meters)', icon: Ruler },
+      { key: datasetKey('temporal'), label: 'Temporal', icon: Clock3, extra: 'Time period covered by the dataset.' },
+      { key: datasetKey('temporalResolution'), label: 'Temporal Resolution', icon: Clock3, extra: 'Time period covered by each observation (ISO 8601 duration).' },
+      { key: datasetKey('accrualPeriodicity'), label: 'Accrual Periodicity', icon: Repeat, extra: 'How often the dataset is updated.' },
 
-      { key: 'dataset.inSeries', label: 'In Series', icon: FolderTree, extra: 'Dataset series this dataset belongs to.' },
-      { key: 'dataset.prev', label: 'Previous', icon: ArrowLeftRight, extra: 'Previous dataset in the series.' },
-      { key: 'dataset.next', label: 'Next', icon: ArrowLeftRight, extra: 'Next dataset in the series.' },
-      { key: 'dataset.first', label: 'First', icon: ArrowLeftRight, extra: 'First dataset in the series.' },
-      { key: 'dataset.last', label: 'Last', icon: ArrowLeftRight, extra: 'Last dataset in the series.' },
+      { key: datasetKey('inSeries'), label: 'In Series', icon: FolderTree, extra: 'Dataset series this dataset belongs to.' },
+      { key: datasetKey('prev'), label: 'Previous', icon: ArrowLeftRight, extra: 'Previous dataset in the series.' },
+      { key: datasetKey('next'), label: 'Next', icon: ArrowLeftRight, extra: 'Next dataset in the series.' },
+      { key: datasetKey('first'), label: 'First', icon: ArrowLeftRight, extra: 'First dataset in the series.' },
+      { key: datasetKey('last'), label: 'Last', icon: ArrowLeftRight, extra: 'Last dataset in the series.' },
     ],
   },
 
@@ -257,9 +268,9 @@ const treeNodes = ref<OwnTreeNode[]>([
     icon: Globe,
     label: 'Data Service',
     children: [
-      { key: 'dataService.endpointURL', label: 'Endpoint URL', icon: Link2 },
-      { key: 'dataService.endpointDescription', label: 'Endpoint Description', icon: AlignLeft, extra: 'Machine-readable description (e.g., OpenAPI).' },
-      { key: 'dataService.servesDataset', label: 'Serves Dataset', icon: FileIcon, extra: 'Datasets this service provides access to.' },
+      { key: dataServiceKey('endpointURL'), label: 'Endpoint URL', icon: Link2 },
+      { key: dataServiceKey('endpointDescription'), label: 'Endpoint Description', icon: AlignLeft, extra: 'Machine-readable description (e.g., OpenAPI).' },
+      { key: dataServiceKey('servesDataset'), label: 'Serves Dataset', icon: FileIcon, extra: 'Datasets this service provides access to.' },
     ],
   },
 
@@ -268,19 +279,19 @@ const treeNodes = ref<OwnTreeNode[]>([
     icon: FileIcon,
     label: 'Catalog Record',
     children: [
-      { key: 'catalogRecord.uri', label: 'URI', icon: Link2 },
-      { key: 'catalogRecord.primaryTopic', label: 'Primary Topic', icon: FileIcon, extra: 'The dataset or service this record describes.' },
+      { key: catalogRecordKey('uri'), label: 'URI', icon: Link2 },
+      { key: catalogRecordKey('primaryTopic'), label: 'Primary Topic', icon: FileIcon, extra: 'The dataset or service this record describes.' },
 
-      { key: 'catalogRecord.title', label: 'Title', icon: Type },
-      { key: 'catalogRecord.description', label: 'Description', icon: AlignLeft },
+      { key: catalogRecordKey('title'), label: 'Title', icon: Type },
+      { key: catalogRecordKey('description'), label: 'Description', icon: AlignLeft },
 
-      { key: 'catalogRecord.issued', label: 'Issued', icon: Calendar },
-      { key: 'catalogRecord.modified', label: 'Modified', icon: Calendar },
+      { key: catalogRecordKey('issued'), label: 'Issued', icon: Calendar },
+      { key: catalogRecordKey('modified'), label: 'Modified', icon: Calendar },
 
-      { key: 'catalogRecord.language', label: 'Language', icon: Languages },
-      { key: 'catalogRecord.conformsTo', label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this record follows.' },
-      { key: 'catalogRecord.status', label: 'Status', icon: CheckCircle2, extra: 'Lifecycle status of the record (e.g., draft, published).' },
-      { key: 'catalogRecord.source', label: 'Source', icon: Link2Icon, extra: 'Source metadata record this was derived from.' },
+      { key: catalogRecordKey('language'), label: 'Language', icon: Languages },
+      { key: catalogRecordKey('conformsTo'), label: 'Conforms To', icon: CheckCircle2, extra: 'A standard or specification this record follows.' },
+      { key: catalogRecordKey('status'), label: 'Status', icon: CheckCircle2, extra: 'Lifecycle status of the record (e.g., draft, published).' },
+      { key: catalogRecordKey('source'), label: 'Source', icon: Link2Icon, extra: 'Source metadata record this was derived from.' },
     ],
   },
 ])

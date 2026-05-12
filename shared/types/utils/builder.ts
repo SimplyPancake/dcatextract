@@ -28,6 +28,8 @@ import type {
   Catalog,
 } from "#shared/types/dcat3";
 
+export type SelectionMap = Record<string, boolean>;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -37,12 +39,151 @@ function asArray<T>(value: T | T[] | undefined, addition: T): T[] {
   return Array.isArray(value) ? [...value, addition] : [value, addition];
 }
 
+function applySelection<T extends Record<string, any>>(
+  data: T,
+  selected: SelectionMap | undefined,
+  prefix: string,
+  keys: readonly string[],
+): T {
+  if (!selected) return data;
+  const next: Record<string, any> = { ...data };
+  for (const key of keys) {
+    const selectionKey = `${prefix}.${key}`;
+    if (!(selectionKey in selected)) {
+      next[key] = null;
+    }
+  }
+  return next as T;
+}
+
+export const RESOURCE_KEYS = [
+  "uri",
+  "title",
+  "description",
+  "identifier",
+  "issued",
+  "modified",
+  "language",
+  "publisher",
+  "creator",
+  "wasAttributedTo",
+  "rightsHolder",
+  "license",
+  "rights",
+  "accessRights",
+  "conformsTo",
+  "type",
+  "keyword",
+  "theme",
+  "contactPoint",
+  "landingPage",
+  "version",
+  "versionNotes",
+  "hasVersion",
+  "isVersionOf",
+  "hasCurrentVersion",
+  "previousVersion",
+  "nextVersion",
+  "qualifiedRelation",
+  "qualifiedAttribution",
+  "inCatalog",
+] as const;
+export type ResourceKey = (typeof RESOURCE_KEYS)[number];
+
+export const DATASET_KEYS = [
+  ...RESOURCE_KEYS,
+  "distribution",
+  "spatial",
+  "spatialResolutionInMeters",
+  "temporal",
+  "temporalResolution",
+  "accrualPeriodicity",
+  "inSeries",
+  "prev",
+  "next",
+  "first",
+  "last",
+] as const;
+export type DatasetKey = (typeof DATASET_KEYS)[number];
+
+export const DATA_SERVICE_KEYS = [
+  ...RESOURCE_KEYS,
+  "endpointURL",
+  "endpointDescription",
+  "servesDataset",
+] as const;
+export type DataServiceKey = (typeof DATA_SERVICE_KEYS)[number];
+
+export const DISTRIBUTION_KEYS = [
+  "uri",
+  "title",
+  "description",
+  "issued",
+  "modified",
+  "license",
+  "rights",
+  "conformsTo",
+  "language",
+  "downloadURL",
+  "accessURL",
+  "accessService",
+  "format",
+  "mediaType",
+  "compressFormat",
+  "packageFormat",
+  "byteSize",
+  "spatialResolutionInMeters",
+  "temporalResolution",
+  "spatial",
+  "temporal",
+] as const;
+export type DistributionKey = (typeof DISTRIBUTION_KEYS)[number];
+
+export const CATALOG_RECORD_KEYS = [
+  "uri",
+  "primaryTopic",
+  "title",
+  "description",
+  "issued",
+  "modified",
+  "language",
+  "conformsTo",
+  "status",
+  "source",
+] as const;
+export type CatalogRecordKey = (typeof CATALOG_RECORD_KEYS)[number];
+
+export const CATALOG_KEYS = [
+  ...RESOURCE_KEYS,
+  "dataset",
+  "service",
+  "catalog",
+  "resource",
+  "record",
+  "themeTaxonomy",
+] as const;
+export type CatalogKey = (typeof CATALOG_KEYS)[number];
+
+export const AGENT_KEYS = ["uri", "name", "homepage"] as const;
+export type AgentKey = (typeof AGENT_KEYS)[number];
+
+export const PERIOD_OF_TIME_KEYS = ["startDate", "endDate"] as const;
+export type PeriodOfTimeKey = (typeof PERIOD_OF_TIME_KEYS)[number];
+
+export const LOCATION_KEYS = ["bbox", "centroid", "geometry"] as const;
+export type LocationKey = (typeof LOCATION_KEYS)[number];
+
 // ---------------------------------------------------------------------------
 // AgentBuilder
 // ---------------------------------------------------------------------------
 
 export class AgentBuilder {
   private data: Agent = {};
+  private readonly selectedProperties?: SelectionMap;
+
+  constructor(selectedProperties?: SelectionMap) {
+    this.selectedProperties = selectedProperties;
+  }
 
   uri(uri: IRI): this {
     this.data.uri = uri;
@@ -57,7 +198,12 @@ export class AgentBuilder {
     return this;
   }
   build(): Agent {
-    return { ...this.data };
+    return applySelection(
+      { ...this.data },
+      this.selectedProperties,
+      "agent",
+      AGENT_KEYS,
+    ) as Agent;
   }
 }
 
@@ -67,6 +213,11 @@ export class AgentBuilder {
 
 export class PeriodOfTimeBuilder {
   private data: PeriodOfTime = {};
+  private readonly selectedProperties?: SelectionMap;
+
+  constructor(selectedProperties?: SelectionMap) {
+    this.selectedProperties = selectedProperties;
+  }
 
   startDate(date: DateOrDateTime): this {
     this.data.startDate = date;
@@ -77,7 +228,12 @@ export class PeriodOfTimeBuilder {
     return this;
   }
   build(): PeriodOfTime {
-    return { ...this.data };
+    return applySelection(
+      { ...this.data },
+      this.selectedProperties,
+      "periodOfTime",
+      PERIOD_OF_TIME_KEYS,
+    ) as PeriodOfTime;
   }
 }
 
@@ -87,6 +243,11 @@ export class PeriodOfTimeBuilder {
 
 export class LocationBuilder {
   private data: Location = {};
+  private readonly selectedProperties?: SelectionMap;
+
+  constructor(selectedProperties?: SelectionMap) {
+    this.selectedProperties = selectedProperties;
+  }
 
   bbox(wkt: string): this {
     this.data.bbox = wkt;
@@ -101,7 +262,12 @@ export class LocationBuilder {
     return this;
   }
   build(): Location {
-    return { ...this.data };
+    return applySelection(
+      { ...this.data },
+      this.selectedProperties,
+      "location",
+      LOCATION_KEYS,
+    ) as Location;
   }
 }
 
@@ -111,9 +277,11 @@ export class LocationBuilder {
 
 export class DistributionBuilder {
   private data: Partial<Distribution> & { accessURL: IRI | IRI[] };
+  private readonly selectedProperties?: SelectionMap;
 
-  constructor(accessURL: IRI) {
+  constructor(accessURL: IRI, selectedProperties?: SelectionMap) {
     this.data = { accessURL };
+    this.selectedProperties = selectedProperties;
   }
 
   uri(uri: IRI): this {
@@ -146,6 +314,10 @@ export class DistributionBuilder {
   }
   conformsTo(iri: IRI): this {
     this.data.conformsTo = asArray(this.data.conformsTo, iri);
+    return this;
+  }
+  language(iri: IRI): this {
+    this.data.language = asArray(this.data.language, iri);
     return this;
   }
   downloadURL(url: IRI): this {
@@ -194,7 +366,12 @@ export class DistributionBuilder {
   }
 
   build(): Distribution {
-    return this.data as Distribution;
+    return applySelection(
+      this.data as Distribution,
+      this.selectedProperties,
+      "distribution",
+      DISTRIBUTION_KEYS,
+    ) as Distribution;
   }
 }
 
@@ -206,7 +383,32 @@ abstract class ResourceBuilder<
   T extends ResourceBuilder<T, R>,
   R extends Resource,
 > {
+  protected readonly selectedProperties?: SelectionMap;
+  private readonly selectionBaseKey?: string;
+
+  /**
+   *
+   */
+  constructor(
+    selectedProperties?: SelectionMap,
+    selectionBaseKey?: string,
+  ) {
+    this.selectedProperties = selectedProperties;
+    this.selectionBaseKey = selectionBaseKey;
+  }
   protected data: Partial<R> = {};
+
+  protected applySelection(data: Partial<R>, keys: readonly string[]): R {
+    if (!this.selectedProperties || !this.selectionBaseKey) {
+      return data as R;
+    }
+    return applySelection(
+      data as Record<string, any>,
+      this.selectedProperties,
+      this.selectionBaseKey,
+      keys,
+    ) as R;
+  }
 
   uri(uri: IRI): T {
     this.data.uri = uri;
@@ -242,6 +444,17 @@ abstract class ResourceBuilder<
   }
   creator(agent: Agent | IRI): T {
     this.data.creator = asArray(this.data.creator as any, agent) as any;
+    return this as unknown as T;
+  }
+  wasAttributedTo(agent: Agent | IRI): T {
+    this.data.wasAttributedTo = asArray(
+      this.data.wasAttributedTo as any,
+      agent,
+    ) as any;
+    return this as unknown as T;
+  }
+  rightsHolder(agent: Agent | IRI): T {
+    this.data.rightsHolder = agent;
     return this as unknown as T;
   }
   license(iri: IRI): T {
@@ -310,6 +523,10 @@ abstract class ResourceBuilder<
     this.data.previousVersion = resource;
     return this as unknown as T;
   }
+  nextVersion(resource: Resource | IRI): T {
+    this.data.nextVersion = resource;
+    return this as unknown as T;
+  }
   qualifiedRelation(rel: Relationship): T {
     this.data.qualifiedRelation = asArray(
       this.data.qualifiedRelation as any,
@@ -324,6 +541,10 @@ abstract class ResourceBuilder<
     ) as any;
     return this as unknown as T;
   }
+  inCatalog(catalog: Catalog | IRI): T {
+    this.data.inCatalog = catalog;
+    return this as unknown as T;
+  }
 
   abstract build(): R;
 }
@@ -333,6 +554,9 @@ abstract class ResourceBuilder<
 // ---------------------------------------------------------------------------
 
 export class DatasetBuilder extends ResourceBuilder<DatasetBuilder, Dataset> {
+  constructor(selectedProperties?: SelectionMap) {
+    super(selectedProperties, "dataset");
+  }
   distribution(dist: Distribution): this {
     this.data.distribution = asArray(
       this.data.distribution as any,
@@ -382,7 +606,7 @@ export class DatasetBuilder extends ResourceBuilder<DatasetBuilder, Dataset> {
   }
 
   build(): Dataset {
-    return { ...this.data } as Dataset;
+    return this.applySelection({ ...this.data }, DATASET_KEYS);
   }
 }
 
@@ -394,6 +618,9 @@ export class DatasetSeriesBuilder extends ResourceBuilder<
   DatasetSeriesBuilder,
   DatasetSeries
 > {
+  constructor(selectedProperties?: SelectionMap) {
+    super(selectedProperties, "datasetSeries");
+  }
   first(dataset: Dataset | IRI): this {
     this.data.first = dataset;
     return this;
@@ -419,7 +646,7 @@ export class DatasetSeriesBuilder extends ResourceBuilder<
   }
 
   build(): DatasetSeries {
-    return { ...this.data } as DatasetSeries;
+    return this.applySelection({ ...this.data }, RESOURCE_KEYS);
   }
 }
 
@@ -433,8 +660,8 @@ export class DataServiceBuilder extends ResourceBuilder<
 > {
   private endpointURLValue: IRI | IRI[];
 
-  constructor(endpointURL: IRI) {
-    super();
+  constructor(endpointURL: IRI, selectedProperties?: SelectionMap) {
+    super(selectedProperties, "dataService");
     this.endpointURLValue = endpointURL;
   }
 
@@ -454,7 +681,10 @@ export class DataServiceBuilder extends ResourceBuilder<
   }
 
   build(): DataService {
-    return { ...this.data, endpointURL: this.endpointURLValue } as DataService;
+    return this.applySelection(
+      { ...this.data, endpointURL: this.endpointURLValue },
+      DATA_SERVICE_KEYS,
+    );
   }
 }
 
@@ -464,9 +694,11 @@ export class DataServiceBuilder extends ResourceBuilder<
 
 export class CatalogRecordBuilder {
   private data: Partial<CatalogRecord> & { primaryTopic: Resource | IRI };
+  private readonly selectedProperties?: SelectionMap;
 
-  constructor(primaryTopic: Resource | IRI) {
+  constructor(primaryTopic: Resource | IRI, selectedProperties?: SelectionMap) {
     this.data = { primaryTopic };
+    this.selectedProperties = selectedProperties;
   }
 
   uri(uri: IRI): this {
@@ -507,7 +739,12 @@ export class CatalogRecordBuilder {
   }
 
   build(): CatalogRecord {
-    return this.data as CatalogRecord;
+    return applySelection(
+      this.data as CatalogRecord,
+      this.selectedProperties,
+      "catalogRecord",
+      CATALOG_RECORD_KEYS,
+    ) as CatalogRecord;
   }
 }
 
@@ -516,6 +753,9 @@ export class CatalogRecordBuilder {
 // ---------------------------------------------------------------------------
 
 export class CatalogBuilder extends ResourceBuilder<CatalogBuilder, Catalog> {
+  constructor(selectedProperties?: SelectionMap) {
+    super(selectedProperties, "catalog");
+  }
   addDataset(dataset: Dataset): this {
     this.data.dataset = asArray(this.data.dataset as any, dataset) as any;
     return this;
@@ -545,7 +785,7 @@ export class CatalogBuilder extends ResourceBuilder<CatalogBuilder, Catalog> {
   }
 
   build(): Catalog {
-    return { ...this.data } as Catalog;
+    return this.applySelection({ ...this.data }, CATALOG_KEYS);
   }
 }
 

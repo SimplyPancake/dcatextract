@@ -13,15 +13,17 @@ export default defineEventHandler(async (event) => {
 
   const redis = getRedis()
   let status = await redis.get(`session:${sessionId}:download:status`)
+  const errorMessage = await redis.get(`session:${sessionId}:download:error`)
   const unprocessedCount = await redis.scard(`session:${sessionId}:files:unprocessed`)
 
   if (!job && status && unprocessedCount === 0) {
     await redis.del(
       `session:${sessionId}:download:status`,
-      `session:${sessionId}:download:jobId`
+      `session:${sessionId}:download:jobId`,
+      `session:${sessionId}:download:error`
     )
     status = null
   }
 
-  return { job, status }
+  return { job, status, errorMessage }
 })

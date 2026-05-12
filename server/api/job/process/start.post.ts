@@ -1,6 +1,6 @@
 import z from 'zod';
 import { downloadQueue, fileQueue, flowProducer } from '~~/server/utils/bull';
-import { FileProcessJobDataType } from '~~/shared/types/workers';
+import { DownloadJob, DownloadSourceType, FileProcessJobDataType } from '~~/shared/types/workers';
 import { getRedis } from '~~/server/utils/redis';
 
 const dictSchema = z.object({
@@ -21,9 +21,10 @@ export default defineEventHandler(async (event) => {
 		throw createError("Session ID is required to proceed.")
 	}
 
-	const queueData: FileProcessJobDataType = {
+	const queueData: Partial<FileProcessJobDataType> = {
 		sessionId,
-		selectedMetadata: schemas
+		selectedMetadata: schemas,
+		downloadType: DownloadSourceType.LOCALFILE
 	}
 
 	// Check if there is already a job working
@@ -36,11 +37,15 @@ export default defineEventHandler(async (event) => {
 	const redis = getRedis()
 	const downloadJobId = await redis.get(`session:${sessionId}:download:jobId`)
 	if (downloadJobId) {
+		queueData.downloadType = DownloadSourceType.DOWNLOADSOURCE
 		const downloadJob = await downloadQueue.getJob(downloadJobId)
 		if (downloadJob) {
 			if (await downloadJob.isFailed()) {
 				throw createError('Download job failed. Please retry the download.')
 			}
+
+			// Job is finished and has data!
+			queueData.downloadData = (downloadJob as DownloadJob).data
 
 			const downloadState = await downloadJob.getState()
 			const shouldWaitForDownload = ['waiting', 'active', 'delayed', 'paused'].includes(downloadState)
