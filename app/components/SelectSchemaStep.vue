@@ -28,7 +28,8 @@
       <Textarea v-model="schemaText" class="mt-3 w-full" rows="6"
         placeholder="@prefix dcat: <http://www.w3.org/ns/dcat#> ." />
       <div class="mt-3 flex flex-wrap gap-2 items-center">
-        <Button label="Apply schema" severity="secondary" type="button" @click="saveSchemaText" :disabled="!schemaText.trim()" />
+        <Button label="Apply schema" severity="secondary" type="button" @click="saveSchemaText"
+          :disabled="!schemaText.trim()" />
         <Button label="Clear schema" severity="secondary" type="button" @click="clearSchema" />
       </div>
       <Message v-if="schemaStatus === 'saved'" severity="success" class="mt-3">
@@ -65,7 +66,8 @@
         </div>
         <div>
           <div class="text-sm font-medium">Unmatched DCAT properties</div>
-          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them manually.</div>
+          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them
+            manually.</div>
           <div v-if="unmatchedDcatKeys.length === 0" class="text-xs text-surface-500">
             All DCAT properties are matched.
           </div>
@@ -95,7 +97,8 @@
                     {{ iri }}
                   </div>
                 </div>
-                <button type="button" class="rounded-full border border-amber-200 bg-white px-2 py-1 text-[10px] text-amber-700 hover:bg-amber-100"
+                <button type="button"
+                  class="rounded-full border border-amber-200 bg-white px-2 py-1 text-[10px] text-amber-700 hover:bg-amber-100"
                   @click="removeCustomProperty(iri)">
                   Remove
                 </button>
@@ -104,8 +107,10 @@
             <div class="rounded-md border border-dashed border-amber-200 bg-white px-3 py-2">
               <div class="text-[11px] text-amber-700/80">Add custom property IRI</div>
               <div class="mt-2 flex gap-2">
-                <InputText v-model="customPropertyDraft" class="w-full" placeholder="https://example.org/terms/customField" />
-                <Button label="Add" severity="secondary" type="button" @click="addCustomProperty" :disabled="!customPropertyDraft.trim()" />
+                <InputText v-model="customPropertyDraft" class="w-full"
+                  placeholder="https://example.org/terms/customField" />
+                <Button label="Add" severity="secondary" type="button" @click="addCustomProperty"
+                  :disabled="!customPropertyDraft.trim()" />
               </div>
             </div>
           </div>
@@ -117,8 +122,7 @@
           <div class="text-sm font-medium">{{ group.label }}</div>
           <div class="mt-2 flex flex-wrap gap-2">
             <button v-for="child in group.children" :key="child.key" type="button"
-              class="rounded-full border px-3 py-1 text-xs font-medium transition"
-              :class="isSelected(child.key)
+              class="rounded-full border px-3 py-1 text-xs font-medium transition" :class="isSelected(child.key)
                 ? 'border-sky-300 bg-sky-100 text-sky-900'
                 : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'"
               @click="toggleSelection(child.key)">
