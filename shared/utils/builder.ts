@@ -276,11 +276,11 @@ export class LocationBuilder {
 // ---------------------------------------------------------------------------
 
 export class DistributionBuilder {
-  private data: Partial<Distribution> & { accessURL: IRI | IRI[] };
+  private data: Partial<Distribution> & { accessURL: IRI[] };
   private readonly selectedProperties?: SelectionMap;
 
-  constructor(accessURL: IRI, selectedProperties?: SelectionMap) {
-    this.data = { accessURL };
+  constructor(accessURL: IRI | IRI[], selectedProperties?: SelectionMap) {
+    this.data = { accessURL: Array.isArray(accessURL) ? accessURL : [accessURL] };
     this.selectedProperties = selectedProperties;
   }
 
@@ -289,11 +289,11 @@ export class DistributionBuilder {
     return this;
   }
   title(title: string): this {
-    this.data.title = asArray(this.data.title, title);
+    this.data.title = title;
     return this;
   }
   description(desc: string): this {
-    this.data.description = asArray(this.data.description, desc);
+    this.data.description = desc;
     return this;
   }
   issued(date: DateOrDateTime): this {
@@ -415,15 +415,15 @@ abstract class ResourceBuilder<
     return this as unknown as T;
   }
   title(title: string): T {
-    this.data.title = asArray(this.data.title as any, title) as any;
+    this.data.title = title as any;
     return this as unknown as T;
   }
   description(desc: string): T {
-    this.data.description = asArray(this.data.description as any, desc) as any;
+    this.data.description = desc as any;
     return this as unknown as T;
   }
   identifier(id: string): T {
-    this.data.identifier = asArray(this.data.identifier as any, id) as any;
+    this.data.identifier = id as any;
     return this as unknown as T;
   }
   issued(date: DateOrDateTime): T {
@@ -658,11 +658,13 @@ export class DataServiceBuilder extends ResourceBuilder<
   DataServiceBuilder,
   DataService
 > {
-  private endpointURLValue: IRI | IRI[];
+  private endpointURLValue: IRI[];
 
-  constructor(endpointURL: IRI, selectedProperties?: SelectionMap) {
+  constructor(endpointURL: IRI | IRI[], selectedProperties?: SelectionMap) {
     super(selectedProperties, "dataService");
-    this.endpointURLValue = endpointURL;
+    this.endpointURLValue = Array.isArray(endpointURL)
+      ? endpointURL
+      : [endpointURL];
   }
 
   endpointDescription(iri: IRI): this {
@@ -706,11 +708,11 @@ export class CatalogRecordBuilder {
     return this;
   }
   title(title: string): this {
-    this.data.title = asArray(this.data.title, title);
+    this.data.title = title;
     return this;
   }
   description(desc: string): this {
-    this.data.description = asArray(this.data.description, desc);
+    this.data.description = desc;
     return this;
   }
   issued(date: DateOrDateTime): this {

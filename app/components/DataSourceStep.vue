@@ -14,7 +14,7 @@
         <Button class="ml-4" severity="contrast" variant="outlined" label="Go to data overview" @click="gotoOverview()" />
       </div>
     </Message>
-    <div class="flex flex-row gap-4 w-full">
+    <div class="flex flex-row gap-4 w-full pt-2">
       <Fieldset legend="Local Source" role="button" tabindex="0" @click="selectedSource = 'local'"
         :class="[
           'w-1/2 cursor-pointer select-none transition-shadow duration-500 ease-out hover:shadow-lg hover:shadow-slate-300/40 dark:hover:shadow-black/40',

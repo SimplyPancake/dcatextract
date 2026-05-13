@@ -21,7 +21,6 @@
         </div>
       </template>
     </Tree>
-    {{ selectedKeys }}
     <div class="flex pt-6 justify-end">
       <Button label="Next" :disabled="!hasSelection" @click="startProcessing(); emitNext()" />
     </div>
@@ -70,7 +69,7 @@ import type {
   DataServiceKey,
   DatasetKey,
   DistributionKey,
-} from '#shared/types/utils/builder'
+} from '#shared/utils/builder'
 import type { TreeNode } from 'primevue/treenode'
 
 type OwnTreeNode = {

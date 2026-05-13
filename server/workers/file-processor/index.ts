@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Distribution, InferOptions } from "../../../shared/types/dcat3.js";
-import * as builders from "../../../shared/types/utils/builder";
+import * as builders from "../../../shared/utils/builder";
 import { walk } from "./helpers.js";
 import { buildDistributionFromFile, createSelectionGuard } from "./distribution-builder.js";
 
@@ -14,10 +14,11 @@ import { buildDistributionFromFile, createSelectionGuard } from "./distribution-
 function stageInputs(
     filePaths: string[],
     tmpDir: string,
-    log: (msg: string) => void
+    log: (msg: string) => void,
+    originalNames?: Record<string, string>
 ): void {
     for (const [index, filePath] of filePaths.entries()) {
-        const baseName = path.basename(filePath);
+        const baseName = path.basename(originalNames?.[filePath] ?? filePath);
 
         const targetDir = filePaths.length === 1 ? tmpDir : path.join(tmpDir, `file-${index}`);
         fs.mkdirSync(targetDir, { recursive: true });
@@ -37,7 +38,8 @@ export async function inferDcatFromFiles(
     tmpDir: string,
     logProgress: (prc: number, message: string) => void,
     selectedProperties: Record<string, boolean>,
-    sourceInfo?: { accessUrl?: string; downloadUrl?: string }
+    sourceInfo?: { accessUrl?: string; downloadUrl?: string },
+    originalNames?: Record<string, string>
 ) {
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
@@ -48,7 +50,7 @@ export async function inferDcatFromFiles(
     }
 
     // ── 1. Stage inputs ──────────────────────────────────────────────────────
-    stageInputs(filePaths, tmpDir, log);
+    stageInputs(filePaths, tmpDir, log, originalNames);
 
     // ── 2. Enumerate all relative paths ───────────────────────────────────────
     const allFiles = walk(tmpDir);
@@ -64,7 +66,13 @@ export async function inferDcatFromFiles(
         for (let fileIdx = 0; fileIdx < fileCount; fileIdx++) {
             const filePath = filePaths[fileIdx]!;
 
-            const distribution = await buildDistributionFromFile(filePath, selection, log, sourceInfo);
+            const distribution = await buildDistributionFromFile(
+                filePath,
+                selection,
+                log,
+                sourceInfo,
+                originalNames?.[filePath]
+            );
             if (fileIdx + 1 != fileCount) {
                 logProgress(((fileIdx + 1) / fileCount) * 100, `Scanning file ${fileIdx + 2}/${fileCount}...`)
             }

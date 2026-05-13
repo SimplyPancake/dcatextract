@@ -32,6 +32,7 @@ export function startFileWorker() {
             }
             
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+            const originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)
 
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
             if (paths.length === 0) {
@@ -72,7 +73,8 @@ export function startFileWorker() {
                 tmpDir,
                 updateProgressInfer,
                 jobdata.selectedMetadata,
-                sourceInfo
+                sourceInfo,
+                originalNames
             )
 
             await updateProgress(95, 'Saving catalog...')

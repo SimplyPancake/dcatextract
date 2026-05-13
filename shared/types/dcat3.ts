@@ -105,23 +105,23 @@ export interface Resource {
 
   // --- Core descriptive properties (from dcterms) ---
   /** dcterms:title */
-  title?: string | string[];
+  title?: string;
   /** dcterms:description */
-  description?: string | string[];
+  description?: string;
   /** dcterms:identifier */
-  identifier?: string | string[];
+  identifier?: string;
   /** dcterms:issued */
   issued?: DateOrDateTime;
   /** dcterms:modified */
   modified?: DateOrDateTime;
   /** dcterms:language */
-  language?: IRI | IRI[];
+  language?: IRI[];
   /** dcterms:publisher */
   publisher?: Agent | IRI;
   /** dcterms:creator */
-  creator?: Agent | IRI | (Agent | IRI)[];
+  creator?: (Agent | IRI)[];
   /** prov:wasAttributedTo */
-  wasAttributedTo?: Agent | IRI | (Agent | IRI)[];
+  wasAttributedTo?: (Agent | IRI)[];
   /** dcterms:rightsHolder */
   rightsHolder?: Agent | IRI;
   /** dcterms:license */
@@ -131,27 +131,27 @@ export interface Resource {
   /** dcterms:accessRights */
   accessRights?: IRI | string;
   /** dcterms:conformsTo */
-  conformsTo?: IRI | IRI[];
+  conformsTo?: IRI[];
   /** dcterms:type */
-  type?: IRI | IRI[];
+  type?: IRI[];
 
   // --- DCAT-specific properties ---
   /** dcat:keyword */
-  keyword?: string | string[];
+  keyword?: string[];
   /** dcat:theme */
-  theme?: Concept | IRI | (Concept | IRI)[];
+  theme?: (Concept | IRI)[];
   /** dcat:contactPoint */
-  contactPoint?: ContactPoint | ContactPoint[];
+  contactPoint?: ContactPoint[];
   /** dcat:landingPage */
-  landingPage?: Document | Document[];
+  landingPage?: Document[];
 
   // --- Versioning (DCAT 3) ---
   /** dcat:version */
   version?: string;
   /** dcat:versionNotes */
-  versionNotes?: string | string[];
+  versionNotes?: string[];
   /** dcat:hasVersion */
-  hasVersion?: Resource | IRI | (Resource | IRI)[];
+  hasVersion?: (Resource | IRI)[];
   /** dcat:isVersionOf – inverse of dcat:hasVersion */
   isVersionOf?: Resource | IRI;
   /** dcat:hasCurrentVersion */
@@ -163,9 +163,9 @@ export interface Resource {
 
   // --- Relations ---
   /** dcat:qualifiedRelation */
-  qualifiedRelation?: Relationship | Relationship[];
+  qualifiedRelation?: Relationship[];
   /** prov:qualifiedAttribution */
-  qualifiedAttribution?: Attribution | Attribution[];
+  qualifiedAttribution?: Attribution[];
 
   // --- Catalog membership (DCAT 3) ---
   /** dcat:inCatalog – inverse of dcat:resource */
@@ -193,9 +193,9 @@ export interface Distribution {
   uri?: IRI;
 
   /** dcterms:title */
-  title?: string | string[];
+  title?: string;
   /** dcterms:description */
-  description?: string | string[];
+  description?: string;
   /** dcterms:issued */
   issued?: DateOrDateTime;
   /** dcterms:modified */
@@ -205,17 +205,17 @@ export interface Distribution {
   /** dcterms:rights */
   rights?: IRI | string;
   /** dcterms:conformsTo */
-  conformsTo?: IRI | IRI[];
+  conformsTo?: IRI[];
   /** dcterms:language */
-  language?: IRI | IRI[];
+  language?: IRI[];
 
   /** dcat:accessURL (required) – URL giving access to the distribution. */
-  accessURL: IRI | IRI[];
+  accessURL: IRI[];
   /** dcat:downloadURL – direct download URL. */
-  downloadURL?: IRI | IRI[];
+  downloadURL?: IRI[];
 
   /** dcat:accessService – data service providing access. */
-  accessService?: DataService | IRI | (DataService | IRI)[];
+  accessService?: (DataService | IRI)[];
 
   /** dcterms:format */
   format?: IRI;
@@ -235,7 +235,7 @@ export interface Distribution {
   temporalResolution?: Duration;
 
   /** dcterms:spatial */
-  spatial?: Location | IRI | (Location | IRI)[];
+  spatial?: (Location | IRI)[];
   /** dcterms:temporal */
   temporal?: PeriodOfTime;
 }
@@ -250,10 +250,10 @@ export interface Distribution {
  */
 export interface Dataset extends Resource {
   /** dcat:distribution */
-  distribution?: Distribution | Distribution[];
+  distribution?: Distribution[];
 
   /** dcterms:spatial / dcat:spatialResolutionInMeters */
-  spatial?: Location | IRI | (Location | IRI)[];
+  spatial?: (Location | IRI)[];
   /** dcat:spatialResolutionInMeters */
   spatialResolutionInMeters?: Decimal;
 
@@ -267,7 +267,7 @@ export interface Dataset extends Resource {
 
   // --- Dataset series membership (DCAT 3) ---
   /** dcat:inSeries – series this dataset belongs to. */
-  inSeries?: DatasetSeries | IRI | (DatasetSeries | IRI)[];
+  inSeries?: (DatasetSeries | IRI)[];
   /** dcat:prev – previous resource in a series. */
   prev?: Dataset | IRI;
   /** dcat:next – inverse of dcat:prev. */
@@ -292,7 +292,7 @@ export interface DatasetSeries extends Dataset {
   /** dcat:last – last dataset in the series. */
   last?: Dataset | IRI;
   /** dcat:seriesMember – inverse of dcat:inSeries. */
-  seriesMember?: Dataset | IRI | (Dataset | IRI)[];
+  seriesMember?: (Dataset | IRI)[];
 }
 
 // ---------------------------------------------------------------------------
@@ -305,11 +305,11 @@ export interface DatasetSeries extends Dataset {
  */
 export interface DataService extends Resource {
   /** dcat:endpointURL (required) – root location or primary endpoint IRI. */
-  endpointURL: IRI | IRI[];
+  endpointURL: IRI[];
   /** dcat:endpointDescription – description of the endpoint (e.g. OpenAPI). */
-  endpointDescription?: IRI | IRI[];
+  endpointDescription?: IRI[];
   /** dcat:servesDataset – datasets this service can distribute. */
-  servesDataset?: Dataset | IRI | (Dataset | IRI)[];
+  servesDataset?: (Dataset | IRI)[];
 }
 
 // ---------------------------------------------------------------------------
@@ -327,17 +327,17 @@ export interface CatalogRecord {
   primaryTopic: Resource | IRI;
 
   /** dcterms:title */
-  title?: string | string[];
+  title?: string;
   /** dcterms:description */
-  description?: string | string[];
+  description?: string;
   /** dcterms:issued */
   issued?: DateOrDateTime;
   /** dcterms:modified */
   modified?: DateOrDateTime;
   /** dcterms:language */
-  language?: IRI | IRI[];
+  language?: IRI[];
   /** dcterms:conformsTo */
-  conformsTo?: IRI | IRI[];
+  conformsTo?: IRI[];
   /** adms:status */
   status?: IRI;
   /** dcterms:source – source metadata record. */
@@ -354,17 +354,17 @@ export interface CatalogRecord {
  */
 export interface Catalog extends Dataset {
   /** dcat:dataset – datasets listed in this catalog. */
-  dataset?: Dataset | Dataset[];
+  dataset?: Dataset[];
   /** dcat:service – data services listed in this catalog. */
-  service?: DataService | DataService[];
+  service?: DataService[];
   /** dcat:catalog – sub-catalogs listed in this catalog. */
-  catalog?: Catalog | Catalog[];
+  catalog?: Catalog[];
   /** dcat:resource – any catalogued resource (most general). */
-  resource?: Resource | Resource[];
+  resource?: Resource[];
   /** dcat:record – catalog records. */
-  record?: CatalogRecord | CatalogRecord[];
+  record?: CatalogRecord[];
   /** dcat:themeTaxonomy – knowledge organization system used to classify resources. */
-  themeTaxonomy?: IRI | IRI[];
+  themeTaxonomy?: IRI[];
   /** _meta */
   _meta?: Record<string, unknown>;
 }

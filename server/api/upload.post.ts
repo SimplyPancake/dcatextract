@@ -1,17 +1,34 @@
 import formidable from 'formidable';
 import { IncomingMessage } from "http";
-import { fileQueue } from '../utils/bull';
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { getRedis } from '../utils/redis';
 
 
 export default defineEventHandler(async (event) => {
     const req = event.node.req as IncomingMessage;
+    const contentLengthHeader = req.headers["content-length"]
+    const expectedBytes = contentLengthHeader
+        ? BigInt(Number(contentLengthHeader))
+        : null
     const form = formidable({
         multiples: true,
         maxFileSize: 2 * 1024 * 1024 * 1024, // 2GB
         allowEmptyFiles: false,
         keepExtensions: true
     });
+
+    if (expectedBytes !== null && expectedBytes > 0n) {
+        const stats = await fs.statfs(process.cwd())
+        const freeBytes = BigInt(stats.bavail) * BigInt(stats.bsize)
+        if (expectedBytes > freeBytes) {
+            throw createError({
+                statusCode: 507,
+                statusMessage: 'Insufficient storage',
+                message: 'Not enough disk space to store uploaded files'
+            })
+        }
+    }
 
     const files = await new Promise<formidable.Files>((resolve, reject) => {
         form.parse(req, (err, fields, files) => {
@@ -29,6 +46,23 @@ export default defineEventHandler(async (event) => {
         })
     }
 
+    const totalBytes = userFiles.reduce(
+        (sum, file) => sum + BigInt(file.size ?? 0),
+        0n
+    )
+    const firstFilePath = userFiles[0]?.filepath
+    if (expectedBytes === null && firstFilePath && totalBytes > 0n) {
+        const stats = await fs.statfs(path.dirname(firstFilePath))
+        const freeBytes = BigInt(stats.bavail) * BigInt(stats.bsize)
+        if (totalBytes > freeBytes) {
+            throw createError({
+                statusCode: 507,
+                statusMessage: 'Insufficient storage',
+                message: 'Not enough disk space to store uploaded files'
+            })
+        }
+    }
+
     const redis = getRedis()
     const sessionId = event.context.sessionId
     if (!sessionId) {
@@ -38,13 +72,43 @@ export default defineEventHandler(async (event) => {
             message: 'Session required'
         })
     }
+    const previousUnprocessed = await redis.smembers(
+        `session:${sessionId}:files:unprocessed`
+    )
+    if (previousUnprocessed.length > 0) {
+        await redis.sadd(
+            `session:${sessionId}:files:stopped`,
+            ...previousUnprocessed
+        )
+        await redis.srem(
+            `session:${sessionId}:files:unprocessed`,
+            ...previousUnprocessed
+        )
+
+        await redis.hdel(
+            `session:${sessionId}:files:original-names`,
+            ...previousUnprocessed
+        )
+    }
     // Store file ownership in Redis (unprocessed queue)
     const filepaths = userFiles.map((file) => file.filepath);
+    const originalNameEntries = userFiles
+        .map((file) => {
+            const originalName = file.originalFilename ?? undefined;
+            return originalName ? [file.filepath, originalName] : null;
+        })
+        .filter((entry): entry is [string, string] => entry !== null);
     
     await redis.sadd(
         `session:${sessionId}:files:unprocessed`,
         ...filepaths
     )
+    if (originalNameEntries.length > 0) {
+        await redis.hset(
+            `session:${sessionId}:files:original-names`,
+            ...originalNameEntries.flat()
+        )
+    }
 
     return { success: true, files };
 })

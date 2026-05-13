@@ -1,5 +1,5 @@
 import type { Job } from "bullmq"
-import type { Distribution } from "./dcat3"
+import type { Dataset, Distribution } from "./dcat3"
 import type { DataProvider } from "./url"
 
 interface Dictionary<T> {
@@ -23,7 +23,7 @@ export type FileProcessJobDataType = {
     downloadData?: DownloadJobDataType
 }
 
-export type FileProcessJobReturnType = Distribution
+export type FileProcessJobReturnType = Dataset
 
 export type FileProcessJob = Job<FileProcessJobDataType, FileProcessJobReturnType>
 

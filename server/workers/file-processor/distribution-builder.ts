@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { Distribution } from "../../../shared/types/dcat3.js";
 import { DCAT_FORMAT_IRIS, MEDIA_TYPES } from "./constants.js";
 import { inspectFile } from "./inspectors.js";
-import * as builders from "../../../shared/types/utils/builder";
+import * as builders from "../../../shared/utils/builder";
 import { extractFileText, readReadme, titleFromStem } from "./helpers.js";
 import { processDCATDescription, processDistributionMetadata } from "./ai-derive.js";
 
@@ -151,16 +151,19 @@ export async function buildDistributionFromFile(
     filePath: string,
     selection: SelectionGuard,
     log: (msg: string) => void,
-    sourceInfo?: { accessUrl?: string; downloadUrl?: string }
+    sourceInfo?: { accessUrl?: string; downloadUrl?: string },
+    originalName?: string
 ): Promise<Distribution> {
     const fileUrl = pathToFileURL(filePath).toString();
     const accessUrl = sourceInfo?.accessUrl ?? fileUrl;
     const distributionBuilder = new builders.DistributionBuilder(accessUrl);
-    const ext = path.extname(filePath).toLowerCase();
+    const displayName = originalName ? path.basename(originalName) : path.basename(filePath);
+    const displayExt = path.extname(displayName).toLowerCase();
+    const ext = displayExt || path.extname(filePath).toLowerCase();
     const mediaType = MEDIA_TYPES[ext] ?? "application/octet-stream";
     const packageFormat = ext === ".zip" || ext === ".tar" ? mediaType : undefined;
     const compressFormat = ext === ".gz" ? mediaType : undefined;
-    const filename = path.basename(filePath);
+    const filename = displayName;
     const wantsDescription = selection.isSelected("distribution.description");
     const wantsLicense = selection.isSelected("distribution.license");
     const wantsRights = selection.isSelected("distribution.rights");
@@ -201,7 +204,7 @@ export async function buildDistributionFromFile(
     }
 
     if (selection.isSelected("distribution.title")) {
-        const title = titleFromStem(path.basename(filePath));
+        const title = titleFromStem(path.basename(displayName, ext));
         distributionBuilder.title(`${title} (${ext.slice(1).toUpperCase()})`);
     }
 
@@ -280,7 +283,7 @@ export async function buildDistributionFromFile(
         let description = inspectFile(filePath).description;
         const hasDescription = typeof description === "string"
             ? description.trim().length > 0
-            : Array.isArray(description) && description.some(item => item.trim().length > 0);
+            : false;
 
         if (!hasDescription) {
             // AI Parsing
@@ -298,8 +301,6 @@ export async function buildDistributionFromFile(
 
         if (typeof description === "string") {
             distributionBuilder.description(description);
-        } else if (Array.isArray(description)) {
-            description.forEach(item => distributionBuilder.description(item));
         }
     }
 

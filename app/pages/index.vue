@@ -1,10 +1,14 @@
 <template>
   <div class="min-h-screen bg-surface-ground px-6 py-16 text-slate-900 dark:text-slate-50">
-    <div class="mx-auto w-full max-w-5xl">
+    <div class="mx-auto w-full">
       <Hero />
 
       <main class="mx-auto mt-8 px-4">
-        <section class="mx-auto max-w-4xl">
+        <section class="mx-auto"
+          :class="{
+            'max-w-7xl': inOverview,
+            'max-w-4xl': !inOverview
+          }">
           <Card
             class="border border-surface-200 bg-surface-card shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-surface-700 dark:shadow-black/30">
             <template #title>
@@ -78,6 +82,7 @@ const latestJob = ref<Job>()
 const selectedSchemas = ref<SchemaSelection>({})
 const { data: unprocessedData } = await useFetch('/api/unprocessed')
 const unprocessedFilesCount = computed(() => unprocessedData.value?.unprocessedCount || 0)
+const inOverview = computed(() => currentStep.value == '4')
 
 function gotoOverview(data: Job) {
   latestJob.value = data
