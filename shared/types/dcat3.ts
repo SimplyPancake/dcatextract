@@ -276,6 +276,11 @@ export interface Dataset extends Resource {
   first?: Dataset | IRI;
   /** dcat:last – last resource in the series. */
   last?: Dataset | IRI;
+
+  /** Non-DCAT custom properties (keyed by full IRI). */
+  custom?: Record<string, string | null>;
+  /** Confidence scores keyed by property path or IRI (0..1). */
+  confidence?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------

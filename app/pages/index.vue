@@ -77,7 +77,7 @@ import DataProcessingStep from '~/components/DataProcessingStep.vue'
 import DataSourceStep from '~/components/DataSourceStep.vue'
 import { Job } from 'bullmq'
 type SchemaSelection = Record<string, boolean>
-const currentStep = ref('1')
+const currentStep = ref('2')
 const latestJob = ref<Job>()
 const selectedSchemas = ref<SchemaSelection>({})
 const { data: unprocessedData } = await useFetch('/api/unprocessed')

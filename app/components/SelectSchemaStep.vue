@@ -1,26 +1,118 @@
 <template>
   <div>
-    <div class="flex flex-row flex-wrap gap-2 pt-4">
-      <Button label="Select all" severity="secondary" @click="selectAll" />
-      <Button label="Deselect all" severity="secondary" @click="deselectAll" />
+    <div class="pt-6">
+      <div class="text-sm font-medium mb-3">Quick presets</div>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <button type="button" @click="applyPresetDcat"
+          class="flex items-center justify-between rounded-lg border-2 border-sky-200 bg-sky-50 px-4 py-3 text-left transition hover:bg-sky-100 hover:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-1">
+          <div>
+            <div class="font-medium text-sky-900">DCAT</div>
+            <div class="text-xs text-sky-700">Data Catalog Vocabulary</div>
+          </div>
+          <div class="text-sky-400 text-lg">→</div>
+        </button>
+        <button type="button" @click="applyPresetDcatAp"
+          class="flex items-center justify-between rounded-lg border-2 border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:bg-emerald-100 hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1">
+          <div>
+            <div class="font-medium text-emerald-900">DCAT-AP</div>
+            <div class="text-xs text-emerald-700">European Profile</div>
+          </div>
+          <div class="text-emerald-400 text-lg">→</div>
+        </button>
+      </div>
     </div>
-    <Tree
-      :value="treeNodes"
-      class="w-lg"
-      selectionMode="multiple"
-      :selectionKeys="selectedKeys"
-      @update:selectionKeys="onSelectionKeysUpdate"
-      @node-select="onNodeSelect"
-      @node-unselect="onNodeUnselect"
-    >
-      <template #default="slotProps">
-        <div class="flex flex-row gap-2">
-          <component :is="slotProps.node.icon"></component>
-          {{ slotProps.node.label }}
-          <Info v-if="slotProps.node.extra" v-tooltip="slotProps.node.extra" />
+    <div class="text-sm font-medium mb-2 mt-4">Metadata schema uploader</div>
+    <div class="mt-0 rounded-lg border border-surface-200 bg-surface-0 p-4 shadow-sm">
+      <div class="text-sm font-medium">Custom RDF/OWL schema (Turtle)</div>
+      <div class="text-xs text-surface-500">Paste Turtle. DCAT terms will be auto-selected.</div>
+      <Textarea v-model="schemaText" class="mt-3 w-full" rows="6"
+        placeholder="@prefix dcat: <http://www.w3.org/ns/dcat#> ." />
+      <div class="mt-3 flex flex-wrap gap-2 items-center">
+        <Button label="Apply schema" severity="secondary" type="button" @click="saveSchemaText" :disabled="!schemaText.trim()" />
+        <Button label="Clear schema" severity="secondary" type="button" @click="clearSchema" />
+      </div>
+      <Message v-if="schemaStatus === 'saved'" severity="success" class="mt-3">
+        Schema stored. Matched {{ schemaAnalysis?.dcatKeys.length ?? 0 }} DCAT properties,
+        {{ schemaAnalysis?.customProperties.length ?? 0 }} custom properties. Custom properties are derived by AI.
+      </Message>
+      <Message v-else-if="schemaStatus === 'warning'" severity="warn" class="mt-3">
+        Schema stored, but no DCAT terms detected. Custom properties:
+        {{ schemaAnalysis?.customProperties.length ?? 0 }}. Custom properties are derived by AI.
+      </Message>
+      <Message v-else-if="schemaStatus === 'error'" severity="error" class="mt-3">
+        {{ schemaError || 'Failed to store schema.' }}
+      </Message>
+    </div>
+    <div class="mt-4">
+      <div v-if="schemaAnalysis" class="space-y-4">
+        <div>
+          <div class="text-sm font-medium">Matched DCAT properties</div>
+          <div class="text-xs text-surface-500">Click tags to toggle.</div>
+          <div v-if="schemaAnalysis.dcatKeys.length === 0" class="text-xs text-surface-500">
+            No DCAT matches found.
+          </div>
+          <div v-else class="mt-2 flex flex-wrap gap-2">
+            <button v-for="key in schemaAnalysis.dcatKeys" :key="key" type="button"
+              class="flex min-h-11 flex-col items-start rounded-xl border px-3 py-2 text-left text-xs font-medium transition"
+              :class="isSelected(key)
+                ? 'border-sky-300 bg-sky-100 text-sky-900'
+                : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'"
+              @click="toggleSelection(key)">
+              <span class="text-[10px] uppercase tracking-wide opacity-70">{{ objectLabelForKey(key) }}</span>
+              <span>{{ labelForKey(key) }}</span>
+            </button>
+          </div>
         </div>
-      </template>
-    </Tree>
+        <div>
+          <div class="text-sm font-medium">Custom properties</div>
+          <div v-if="schemaAnalysis.customProperties.length === 0" class="text-xs text-surface-500">
+            No custom properties detected.
+          </div>
+          <div v-else class="mt-2 grid gap-2 sm:grid-cols-2">
+            <div v-for="iri in schemaAnalysis.customProperties" :key="iri"
+              class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="text-xs font-semibold text-amber-900" :title="iri">
+                    {{ formatIri(iri) }}
+                  </div>
+                  <div class="text-[11px] text-amber-700/80 break-all">
+                    {{ iri }}
+                  </div>
+                </div>
+                <button type="button" class="rounded-full border border-amber-200 bg-white px-2 py-1 text-[10px] text-amber-700 hover:bg-amber-100"
+                  @click="removeCustomProperty(iri)">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <div class="rounded-md border border-dashed border-amber-200 bg-white px-3 py-2">
+              <div class="text-[11px] text-amber-700/80">Add custom property IRI</div>
+              <div class="mt-2 flex gap-2">
+                <InputText v-model="customPropertyDraft" class="w-full" placeholder="https://example.org/terms/customField" />
+                <Button label="Add" severity="secondary" type="button" @click="addCustomProperty" :disabled="!customPropertyDraft.trim()" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="space-y-4">
+        <div class="text-sm font-medium">All DCAT properties</div>
+        <div v-for="group in treeNodes" :key="group.key" class="rounded-md border border-surface-200 p-3">
+          <div class="text-sm font-medium">{{ group.label }}</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button v-for="child in group.children" :key="child.key" type="button"
+              class="rounded-full border px-3 py-1 text-xs font-medium transition"
+              :class="isSelected(child.key)
+                ? 'border-sky-300 bg-sky-100 text-sky-900'
+                : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'"
+              @click="toggleSelection(child.key)">
+              {{ child.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="flex pt-6 justify-end">
       <Button label="Next" :disabled="!hasSelection" @click="startProcessing(); emitNext()" />
     </div>
@@ -28,9 +120,11 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
-import Tree from 'primevue/tree'
+import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
+import Textarea from 'primevue/textarea'
 import {
   AlignLeft,
   Archive,
@@ -70,7 +164,7 @@ import type {
   DatasetKey,
   DistributionKey,
 } from '#shared/utils/builder'
-import type { TreeNode } from 'primevue/treenode'
+import type { SchemaAnalysis, SchemaStoreResponse } from '~~/shared/types/schema'
 
 type OwnTreeNode = {
   key: string
@@ -84,24 +178,6 @@ interface Dictionary<T> {
   [Key: string]: T
 }
 
-function collectChildKeys(node: TreeNode, target: Dictionary<boolean>) {
-  if (!node.children?.length) return
-
-  for (const child of node.children) {
-    target[child.key] = true
-    collectChildKeys(child, target)
-  }
-}
-
-function removeChildKeys(node: TreeNode, target: Dictionary<boolean>) {
-  if (!node.children?.length) return
-
-  for (const child of node.children) {
-    delete target[child.key]
-    removeChildKeys(child, target)
-  }
-}
-
 function collectAllKeys(nodes: OwnTreeNode[], target: Dictionary<boolean>) {
   for (const node of nodes) {
     target[node.key] = true
@@ -111,34 +187,36 @@ function collectAllKeys(nodes: OwnTreeNode[], target: Dictionary<boolean>) {
   }
 }
 
-const pendingParent = ref<TreeNode | null>(null)
-const pendingUnselect = ref<TreeNode | null>(null)
-
-function onNodeSelect(event: TreeNode | { node: TreeNode }) {
-  pendingParent.value = 'node' in event ? event.node : event
-}
-
-function onNodeUnselect(event: TreeNode | { node: TreeNode }) {
-  pendingUnselect.value = 'node' in event ? event.node : event
-}
-
 const selectedKeys = ref<Dictionary<boolean>>({})
-const hasSelection = computed(() => Object.values(selectedKeys.value).some(Boolean))
+const schemaText = ref('')
+const schemaStatus = ref<'idle' | 'saving' | 'saved' | 'warning' | 'error'>('idle')
+const schemaError = ref('')
+const schemaAnalysis = ref<SchemaAnalysis | null>(null)
+const schemaDirty = ref(false)
+const customPropertyDraft = ref('')
 
-function onSelectionKeysUpdate(value: Dictionary<boolean>) {
-  const next = { ...value }
+const hasSelection = computed(() => {
+  const hasDcat = Object.values(selectedKeys.value).some(Boolean)
+  const hasCustom = (schemaAnalysis.value?.customProperties.length ?? 0) > 0
+  return hasDcat || hasCustom
+})
 
-  if (pendingParent.value) {
-    collectChildKeys(pendingParent.value, next)
-    pendingParent.value = null
+watch(schemaText, () => {
+  schemaDirty.value = true
+})
+
+function toggleSelection(key: string) {
+  const next = { ...selectedKeys.value }
+  if (next[key]) {
+    delete next[key]
+  } else {
+    next[key] = true
   }
-
-  if (pendingUnselect.value) {
-    removeChildKeys(pendingUnselect.value, next)
-    pendingUnselect.value = null
-  }
-
   selectedKeys.value = next
+}
+
+function isSelected(key: string) {
+  return !!selectedKeys.value[key]
 }
 
 const emit = defineEmits<{
@@ -147,6 +225,84 @@ const emit = defineEmits<{
 
 function emitNext() {
   emit('next', { ...selectedKeys.value })
+}
+
+function applySchemaSelection(analysis: SchemaAnalysis | null) {
+  if (!analysis) return
+  const next = { ...selectedKeys.value }
+  for (const key of analysis.dcatKeys) {
+    next[key] = true
+  }
+  selectedKeys.value = next
+}
+
+const schemaPayload = ref<FormData | null>(null)
+const { data: schemaResponse, execute: saveSchemaExecute } = useLazyFetch<SchemaStoreResponse>('/api/schema', {
+  immediate: false,
+  method: 'POST',
+  body: schemaPayload
+})
+
+async function saveSchemaPayload(payload: FormData) {
+  schemaStatus.value = 'saving'
+  schemaError.value = ''
+  try {
+    schemaPayload.value = payload
+    await saveSchemaExecute()
+    const response = schemaResponse.value
+    if (!response) {
+      throw new Error('No schema response received')
+    }
+    if (response.stored && response.analysis) {
+      schemaAnalysis.value = response.analysis
+      applySchemaSelection(response.analysis)
+      schemaStatus.value = response.analysis.usesDcat ? 'saved' : 'warning'
+    } else {
+      schemaAnalysis.value = null
+      schemaStatus.value = 'idle'
+    }
+    schemaDirty.value = false
+  } catch (err: any) {
+    schemaStatus.value = 'error'
+    schemaError.value = err?.message ?? 'Failed to store schema.'
+  }
+}
+
+async function saveSchemaText() {
+  const payload = new FormData()
+  payload.append('schemaText', schemaText.value)
+  await saveSchemaPayload(payload)
+}
+
+async function saveCustomProperties(list: string[]) {
+  const payload = new FormData()
+  payload.append('customProperties', JSON.stringify(list))
+  await saveSchemaPayload(payload)
+}
+
+
+async function clearSchema() {
+  schemaText.value = ''
+  const payload = new FormData()
+  payload.append('clear', '1')
+  await saveSchemaPayload(payload)
+}
+
+async function addCustomProperty() {
+  if (!schemaAnalysis.value) return
+  const iri = customPropertyDraft.value.trim()
+  if (!iri) return
+  const next = [...new Set([...schemaAnalysis.value.customProperties, iri])]
+  schemaAnalysis.value = { ...schemaAnalysis.value, customProperties: next }
+  customPropertyDraft.value = ''
+  await saveCustomProperties(next)
+}
+
+async function removeCustomProperty(iri: string) {
+  if (!schemaAnalysis.value) return
+  const next = schemaAnalysis.value.customProperties.filter(item => item !== iri)
+  schemaAnalysis.value = { ...schemaAnalysis.value, customProperties: next }
+  await saveCustomProperties(next)
 }
 
 const distributionKey = (key: DistributionKey) => `distribution.${key}`
@@ -295,23 +451,96 @@ const treeNodes = ref<OwnTreeNode[]>([
   },
 ])
 
-function selectAll() {
-  const next: Dictionary<boolean> = {}
-  collectAllKeys(treeNodes.value, next)
-  selectedKeys.value = next
+const labelByKey = computed(() => {
+  const map: Record<string, string> = {}
+  for (const group of treeNodes.value) {
+    for (const child of group.children ?? []) {
+      map[child.key] = child.label
+    }
+  }
+  return map
+})
+
+const objectLabelByKey = computed(() => {
+  const map: Record<string, string> = {}
+  for (const group of treeNodes.value) {
+    for (const child of group.children ?? []) {
+      map[child.key] = group.label
+    }
+  }
+  return map
+})
+
+function labelForKey(key: string) {
+  return labelByKey.value[key] ?? key
 }
 
-function deselectAll() {
-  selectedKeys.value = {}
+function objectLabelForKey(key: string) {
+  return objectLabelByKey.value[key] ?? key.split('.')[0] ?? 'Object'
 }
+
+const iriPrefixes: Record<string, string> = {
+  dcat: 'http://www.w3.org/ns/dcat#',
+  dcterms: 'http://purl.org/dc/terms/',
+  prov: 'http://www.w3.org/ns/prov#',
+  foaf: 'http://xmlns.com/foaf/0.1/',
+  vcard: 'http://www.w3.org/2006/vcard/ns#'
+}
+
+function formatIri(iri: string) {
+  for (const [prefix, base] of Object.entries(iriPrefixes)) {
+    if (iri.startsWith(base)) {
+      return `${prefix}:${iri.slice(base.length)}`
+    }
+  }
+  const hashIndex = iri.lastIndexOf('#')
+  const slashIndex = iri.lastIndexOf('/')
+  const splitIndex = Math.max(hashIndex, slashIndex)
+  return splitIndex >= 0 ? iri.slice(splitIndex + 1) : iri
+}
+
+async function loadPreset(path: string) {
+  try {
+    const text = await $fetch<string>(path, { responseType: 'text' })
+    schemaText.value = text
+    schemaDirty.value = true
+    schemaStatus.value = 'idle'
+    schemaError.value = ''
+    schemaAnalysis.value = null
+  } catch (err: any) {
+    schemaStatus.value = 'error'
+    schemaError.value = err?.message ?? 'Failed to load preset.'
+  }
+}
+
+async function applyPresetDcat() {
+  await loadPreset('/schemas/dcat.ttl')
+}
+
+async function applyPresetDcatAp() {
+  await loadPreset('/schemas/dcat-ap.ttl')
+}
+
+const requestBody = computed(() => {
+  const payload: Dictionary<boolean> = { ...selectedKeys.value }
+  const hasDcat = Object.values(payload).some(Boolean)
+  const hasCustom = (schemaAnalysis.value?.customProperties.length ?? 0) > 0
+  if (!hasDcat && hasCustom) {
+    payload.__customOnly = false
+  }
+  return { schemas: payload }
+})
 
 const { execute: startProcess } = useLazyFetch('/api/job/process/start', {
   immediate: false,
   method: 'POST',
-  body: computed(() => ({ schemas: selectedKeys.value }))
+  body: requestBody
 })
 
 async function startProcessing() {
+  if (schemaDirty.value && schemaText.value.trim()) {
+    await saveSchemaText()
+  }
   await startProcess()
 }
 

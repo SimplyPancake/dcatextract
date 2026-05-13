@@ -40,6 +40,13 @@ const CONFORMS_TO_BY_EXT: Record<string, string> = {
     ".xml": "https://www.w3.org/TR/xml/",
 };
 
+const CONFIDENCE = {
+    system: 0.95,
+    heuristic: 0.85,
+    inspection: 0.75,
+    ai: 0.6,
+};
+
 function readFirstExistingFile(paths: string[]): string | null {
     for (const filePath of paths) {
         if (!fs.existsSync(filePath)) continue;
@@ -153,7 +160,7 @@ export async function buildDistributionFromFile(
     log: (msg: string) => void,
     sourceInfo?: { accessUrl?: string; downloadUrl?: string },
     originalName?: string
-): Promise<Distribution> {
+): Promise<{ distribution: Distribution; confidence: Record<string, number> }> {
     const fileUrl = pathToFileURL(filePath).toString();
     const accessUrl = sourceInfo?.accessUrl ?? fileUrl;
     const distributionBuilder = new builders.DistributionBuilder(accessUrl);
@@ -173,6 +180,14 @@ export async function buildDistributionFromFile(
     const wantsTemporalResolution = selection.isSelected("distribution.temporalResolution");
     const wantsSpatial = selection.isSelected("distribution.spatial");
     const wantsSpatialResolution = selection.isSelected("distribution.spatialResolutionInMeters");
+    const confidence: Record<string, number> = {};
+    const setConfidence = (key: string, value: number) => {
+        confidence[key] = value;
+    };
+
+    if (selection.isSelected("distribution.accessURL")) {
+        setConfidence("distribution.accessURL", CONFIDENCE.system);
+    }
 
     const needsReadme = wantsRights
         || wantsLanguage
@@ -197,66 +212,81 @@ export async function buildDistributionFromFile(
 
     if (selection.isSelected("distribution.uri")) {
         distributionBuilder.uri(fileUrl);
+        setConfidence("distribution.uri", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.downloadURL") && sourceInfo?.downloadUrl) {
         distributionBuilder.downloadURL(sourceInfo.downloadUrl);
+        setConfidence("distribution.downloadURL", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.title")) {
         const title = titleFromStem(path.basename(displayName, ext));
         distributionBuilder.title(`${title} (${ext.slice(1).toUpperCase()})`);
+        setConfidence("distribution.title", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.mediaType")) {
         distributionBuilder.mediaType(mediaType);
+        setConfidence("distribution.mediaType", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.format")) {
         const formatIri = DCAT_FORMAT_IRIS[ext];
         if (formatIri) {
             distributionBuilder.format(formatIri);
+            setConfidence("distribution.format", CONFIDENCE.system);
         }
     }
 
     if (selection.isSelected("distribution.packageFormat") && packageFormat) {
         distributionBuilder.packageFormat(packageFormat);
+        setConfidence("distribution.packageFormat", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.compressFormat") && compressFormat) {
         distributionBuilder.compressFormat(compressFormat);
+        setConfidence("distribution.compressFormat", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.license") && licenseIri) {
         distributionBuilder.license(licenseIri);
+        setConfidence("distribution.license", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.rights") && rightsText) {
         distributionBuilder.rights(rightsText);
+        setConfidence("distribution.rights", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.language") && languageIri) {
         distributionBuilder.language(languageIri);
+        setConfidence("distribution.language", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.conformsTo") && conformsToIri) {
         distributionBuilder.conformsTo(conformsToIri);
+        setConfidence("distribution.conformsTo", CONFIDENCE.system);
     }
 
     if (selection.isSelected("distribution.temporal") && temporal) {
         distributionBuilder.temporal(temporal);
+        setConfidence("distribution.temporal", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.temporalResolution") && temporalResolution) {
         distributionBuilder.temporalResolution(temporalResolution);
+        setConfidence("distribution.temporalResolution", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.spatialResolutionInMeters") && spatialResolution !== null) {
         distributionBuilder.spatialResolutionInMeters(spatialResolution);
+        setConfidence("distribution.spatialResolutionInMeters", CONFIDENCE.heuristic);
     }
 
     if (selection.isSelected("distribution.spatial") && spatial) {
         distributionBuilder.spatial(spatial);
+        setConfidence("distribution.spatial", CONFIDENCE.heuristic);
     }
 
     if (
@@ -267,14 +297,17 @@ export async function buildDistributionFromFile(
         const stats = fs.statSync(filePath);
         if (selection.isSelected("distribution.byteSize")) {
             distributionBuilder.byteSize(stats.size);
+            setConfidence("distribution.byteSize", CONFIDENCE.system);
         }
         if (selection.isSelected("distribution.modified")) {
             distributionBuilder.modified(stats.mtime.toISOString());
+            setConfidence("distribution.modified", CONFIDENCE.system);
         }
         if (selection.isSelected("distribution.issued")) {
             const issued = Number.isNaN(stats.birthtime.getTime()) ? null : stats.birthtime.toISOString();
             if (issued) {
                 distributionBuilder.issued(issued);
+                setConfidence("distribution.issued", CONFIDENCE.system);
             }
         }
     }
@@ -301,6 +334,7 @@ export async function buildDistributionFromFile(
 
         if (typeof description === "string") {
             distributionBuilder.description(description);
+            setConfidence("distribution.description", hasDescription ? CONFIDENCE.inspection : CONFIDENCE.ai);
         }
     }
 
@@ -322,33 +356,41 @@ export async function buildDistributionFromFile(
 
             if (wantsLicense && !licenseIri && aiMeta.licenseIri) {
                 distributionBuilder.license(aiMeta.licenseIri);
+                setConfidence("distribution.license", CONFIDENCE.ai);
             }
             if (wantsRights && !rightsText && aiMeta.rights) {
                 distributionBuilder.rights(aiMeta.rights);
+                setConfidence("distribution.rights", CONFIDENCE.ai);
             }
             if (wantsLanguage && !languageIri && aiMeta.languageIri) {
                 distributionBuilder.language(aiMeta.languageIri);
+                setConfidence("distribution.language", CONFIDENCE.ai);
             }
             if (wantsConformsTo && !conformsToIri && aiMeta.conformsToIri) {
                 distributionBuilder.conformsTo(aiMeta.conformsToIri);
+                setConfidence("distribution.conformsTo", CONFIDENCE.ai);
             }
             if (wantsTemporal && !temporal && (aiMeta.temporalStart || aiMeta.temporalEnd)) {
                 distributionBuilder.temporal({
                     startDate: aiMeta.temporalStart ?? undefined,
                     endDate: aiMeta.temporalEnd ?? undefined,
                 });
+                setConfidence("distribution.temporal", CONFIDENCE.ai);
             }
             if (wantsTemporalResolution && !temporalResolution && aiMeta.temporalResolution) {
                 distributionBuilder.temporalResolution(aiMeta.temporalResolution);
+                setConfidence("distribution.temporalResolution", CONFIDENCE.ai);
             }
             if (wantsSpatialResolution && spatialResolution === null && aiMeta.spatialResolutionInMeters !== null && aiMeta.spatialResolutionInMeters != undefined) {
                 distributionBuilder.spatialResolutionInMeters(aiMeta.spatialResolutionInMeters);
+                setConfidence("distribution.spatialResolutionInMeters", CONFIDENCE.ai);
             }
             if (wantsSpatial && !spatial && (aiMeta.spatialBboxWkt || aiMeta.spatialCentroidWkt)) {
                 distributionBuilder.spatial({
                     bbox: aiMeta.spatialBboxWkt ?? undefined,
                     centroid: aiMeta.spatialCentroidWkt ?? undefined,
                 });
+                setConfidence("distribution.spatial", CONFIDENCE.ai);
             }
         } catch (e: any) {
             log(`Failed to process AI distribution metadata for ${filePath}`);
@@ -356,7 +398,8 @@ export async function buildDistributionFromFile(
         }
     }
 
-    console.log(distributionBuilder.build())
+    const distribution = distributionBuilder.build();
+    console.log(distribution);
 
-    return distributionBuilder.build();
+    return { distribution, confidence };
 }

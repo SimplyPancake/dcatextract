@@ -18,6 +18,11 @@ const distributionMetadataSchema = z.object({
   spatialCentroidWkt: z.string().nullable().optional().describe("Centroid WKT if explicit, otherwise null."),
 });
 
+const customSchemaValues = z.object({
+  values: z.record(z.string(), z.string().nullable()),
+  confidence: z.record(z.string(), z.number().min(0).max(1)),
+});
+
 // TODO: Handle AI refusal etc
 
 export async function processDCATDescription(fileContent: string, filePath?: string): Promise<string> {
@@ -116,6 +121,56 @@ export async function processDistributionMetadata(fileContent: string, fileName?
       spatialResolutionInMeters: null,
       spatialBboxWkt: null,
       spatialCentroidWkt: null,
+    };
+  }
+}
+
+export async function processCustomSchemaProperties(
+  fileContent: string,
+  properties: string[],
+  fileName?: string
+): Promise<z.infer<typeof customSchemaValues>> {
+  const config = useRuntimeConfig();
+  if (!config.useAi || properties.length === 0) {
+    const emptyValues = Object.fromEntries(properties.map((prop) => [prop, null]));
+    const emptyConfidence = Object.fromEntries(properties.map((prop) => [prop, 0]));
+    return {
+      values: emptyValues,
+      confidence: emptyConfidence,
+    };
+  }
+
+  const MAX_CHARS = 4000;
+  const trimmedContent = fileContent.trim();
+  if (!trimmedContent) {
+    const emptyValues = Object.fromEntries(properties.map((prop) => [prop, null]));
+    const emptyConfidence = Object.fromEntries(properties.map((prop) => [prop, 0]));
+    return {
+      values: emptyValues,
+      confidence: emptyConfidence,
+    };
+  }
+
+  const nameHint = fileName ? `File name: ${fileName}\n` : "";
+  const systemPrompt = "You are an expert data cataloger. Extract values only when explicitly stated. If not explicit, return null. Provide confidence 0 to 1 for each property.";
+  const userPrompt = `${nameHint}Extract custom schema properties from the following content.\n\nProperties:\n${properties.join("\n")}\n\nContent:\n${trimmedContent.slice(0, MAX_CHARS)}`;
+
+  try {
+    const result = await queryModel(systemPrompt, userPrompt, customSchemaValues);
+    const normalizedValues = Object.fromEntries(properties.map((prop) => [prop, result.values[prop] ?? null]));
+    const normalizedConfidence = Object.fromEntries(properties.map((prop) => [prop, result.confidence[prop] ?? 0]));
+    return {
+      values: normalizedValues,
+      confidence: normalizedConfidence,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.warn(`Custom schema extraction failed: ${message}`);
+    const emptyValues = Object.fromEntries(properties.map((prop) => [prop, null]));
+    const emptyConfidence = Object.fromEntries(properties.map((prop) => [prop, 0]));
+    return {
+      values: emptyValues,
+      confidence: emptyConfidence,
     };
   }
 }

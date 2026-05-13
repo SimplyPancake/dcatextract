@@ -6,6 +6,8 @@ import * as path from "node:path";
 import { inferDcatFromFiles } from './file-processor'
 import { notifySession } from '../utils/wsManager'
 import { DownloadSourceType, FileProcessJob, FileProcessJobDataType, WorkerProgress } from "~~/shared/types/workers"
+import { analyzeTurtleSchema } from '../utils/schema'
+import type { SchemaAnalysis } from '~~/shared/types/schema'
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -33,6 +35,21 @@ export function startFileWorker() {
             
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
             const originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)
+
+            const schemaText = await redis.get(`session:${sessionId}:schema:turtle`)
+            const schemaAnalysisRaw = await redis.get(`session:${sessionId}:schema:analysis`)
+            let schemaAnalysis: SchemaAnalysis | null = null
+            if (schemaAnalysisRaw) {
+                try {
+                    schemaAnalysis = JSON.parse(schemaAnalysisRaw) as SchemaAnalysis
+                } catch (err) {
+                    console.warn("Failed to parse schema analysis", err)
+                }
+            }
+            if (!schemaAnalysis && schemaText) {
+                schemaAnalysis = analyzeTurtleSchema(schemaText)
+                await redis.set(`session:${sessionId}:schema:analysis`, JSON.stringify(schemaAnalysis))
+            }
 
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
             if (paths.length === 0) {
@@ -67,14 +84,23 @@ export function startFileWorker() {
                 }
                 : undefined
 
+            const mergedSelection = { ...jobdata.selectedMetadata }
+            const schemaDcatKeys = schemaAnalysis?.dcatKeys ?? []
+            for (const key of schemaDcatKeys) {
+                mergedSelection[key] = true
+            }
+
+            const customProperties = schemaAnalysis?.customProperties ?? []
+
             const catalog = await inferDcatFromFiles(
                 paths,
                 { verbose: true },
                 tmpDir,
                 updateProgressInfer,
-                jobdata.selectedMetadata,
+                mergedSelection,
                 sourceInfo,
-                originalNames
+                originalNames,
+                customProperties
             )
 
             await updateProgress(95, 'Saving catalog...')
