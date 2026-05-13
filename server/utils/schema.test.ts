@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { analyzeTurtleSchema } from "./schema.js";
 
@@ -52,5 +54,17 @@ ex:dataset a dcat:Dataset ;
 
     expect(analysis.dcatKeys).toContain("dcat.someFutureProperty");
     expect(analysis.customProperties).not.toContain("http://www.w3.org/ns/dcat#someFutureProperty");
+  });
+
+  it("analyzes bundled DCAT preset as DCAT", () => {
+    const turtle = readFileSync(join(process.cwd(), "public/schemas/dcat.ttl"), "utf8");
+
+    const analysis = analyzeTurtleSchema(turtle);
+
+    expect(analysis.usesDcat).toBe(true);
+    expect(analysis.dcatKeys).toContain("dataset.description");
+    expect(analysis.dcatKeys).toContain("dataset.distribution");
+    expect(analysis.dcatKeys).toContain("distribution.byteSize");
+    expect(analysis.customProperties).not.toContain("http://www.w3.org/ns/dcat#byteSize");
   });
 });

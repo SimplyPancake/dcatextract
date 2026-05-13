@@ -48,15 +48,30 @@
         <div>
           <div class="text-sm font-medium">Matched DCAT properties</div>
           <div class="text-xs text-surface-500">Click tags to toggle.</div>
-          <div v-if="schemaAnalysis.dcatKeys.length === 0" class="text-xs text-surface-500">
+          <div v-if="matchedDcatKeys.length === 0" class="text-xs text-surface-500">
             No DCAT matches found.
           </div>
           <div v-else class="mt-2 flex flex-wrap gap-2">
-            <button v-for="key in schemaAnalysis.dcatKeys" :key="key" type="button"
+            <button v-for="key in matchedDcatKeys" :key="key" type="button"
               class="flex min-h-11 flex-col items-start rounded-xl border px-3 py-2 text-left text-xs font-medium transition"
               :class="isSelected(key)
                 ? 'border-sky-300 bg-sky-100 text-sky-900'
                 : 'border-surface-200 bg-surface-0 text-surface-600 hover:bg-surface-50'"
+              @click="toggleSelection(key)">
+              <span class="text-[10px] uppercase tracking-wide opacity-70">{{ objectLabelForKey(key) }}</span>
+              <span>{{ labelForKey(key) }}</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm font-medium">Unmatched DCAT properties</div>
+          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them manually.</div>
+          <div v-if="unmatchedDcatKeys.length === 0" class="text-xs text-surface-500">
+            All DCAT properties are matched.
+          </div>
+          <div v-else class="mt-2 flex flex-wrap gap-2">
+            <button v-for="key in unmatchedDcatKeys" :key="key" type="button"
+              class="flex min-h-11 flex-col items-start rounded-xl border border-dashed px-3 py-2 text-left text-xs font-medium text-surface-500 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
               @click="toggleSelection(key)">
               <span class="text-[10px] uppercase tracking-wide opacity-70">{{ objectLabelForKey(key) }}</span>
               <span>{{ labelForKey(key) }}</span>
@@ -469,6 +484,25 @@ const objectLabelByKey = computed(() => {
     }
   }
   return map
+})
+
+const allDcatKeys = computed(() =>
+  treeNodes.value.flatMap(group => group.children ?? []).map(child => child.key)
+)
+
+const manuallyMatchedDcatKeys = computed(() => {
+  const schemaMatched = new Set(schemaAnalysis.value?.dcatKeys ?? [])
+  return allDcatKeys.value.filter(key => !schemaMatched.has(key) && isSelected(key))
+})
+
+const matchedDcatKeys = computed(() => [
+  ...(schemaAnalysis.value?.dcatKeys ?? []),
+  ...manuallyMatchedDcatKeys.value,
+])
+
+const unmatchedDcatKeys = computed(() => {
+  const matched = new Set(matchedDcatKeys.value)
+  return allDcatKeys.value.filter(key => !matched.has(key))
 })
 
 function labelForKey(key: string) {
