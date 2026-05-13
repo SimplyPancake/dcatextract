@@ -1,272 +1,313 @@
 import type { SchemaAnalysis } from "~~/shared/types/schema";
 import { Parser } from "n3";
 
-const NAMESPACE_IRIS = {
-  dcat: "http://www.w3.org/ns/dcat#",
-  dcterms: "http://purl.org/dc/terms/",
-  prov: "http://www.w3.org/ns/prov#",
-  foaf: "http://xmlns.com/foaf/0.1/",
-  vcard: "http://www.w3.org/2006/vcard/ns#",
-};
+// ─── Namespace constants ──────────────────────────────────────────────────────
 
-const KNOWN_NAMESPACE_LIST = Object.values(NAMESPACE_IRIS);
+const NS = {
+  dcat:     "http://www.w3.org/ns/dcat#",
+  dcterms:  "http://purl.org/dc/terms/",
+  prov:     "http://www.w3.org/ns/prov#",
+  foaf:     "http://xmlns.com/foaf/0.1/",
+  vcard:    "http://www.w3.org/2006/vcard/ns#",
+} as const;
 
-const CLASS_IRIS = {
-  Dataset: "http://www.w3.org/ns/dcat#Dataset",
-  Distribution: "http://www.w3.org/ns/dcat#Distribution",
-  DataService: "http://www.w3.org/ns/dcat#DataService",
-  CatalogRecord: "http://www.w3.org/ns/dcat#CatalogRecord",
+/** Namespaces whose IRIs map to known DCAT keys. */
+const KNOWN_NS = new Set(Object.values(NS));
+
+/**
+ * Namespaces used for ontology/schema infrastructure.
+ * Predicates in these namespaces are never treated as custom dataset properties.
+ */
+const INFRASTRUCTURE_NS = new Set([
+  "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+  "http://www.w3.org/2000/01/rdf-schema#",
+  "http://www.w3.org/2002/07/owl#",
+  "http://www.w3.org/2001/XMLSchema#",
+  "http://www.w3.org/2004/02/skos/core#",
+  "http://schema.org/",
+  "http://xmlns.com/foaf/0.1/",
+  "http://www.w3.org/ns/adms#",
+  "http://purl.org/ontology/bibo/",
+  "http://purl.org/vocab/vann/",
+  "http://www.w3.org/ns/org#",
+]);
+
+const RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+const OWL_CLASS  = "http://www.w3.org/2002/07/owl#Class";
+const RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class";
+
+// ─── Class registry ───────────────────────────────────────────────────────────
+
+const CLASS_IRIS: Record<string, string> = {
+  Dataset:       `${NS.dcat}Dataset`,
+  Distribution:  `${NS.dcat}Distribution`,
+  DataService:   `${NS.dcat}DataService`,
+  CatalogRecord: `${NS.dcat}CatalogRecord`,
 };
 
 const CLASS_IRI_SET = new Set(Object.values(CLASS_IRIS));
 
-const CLASS_PREFIX: Record<string, string> = {
-  Dataset: "dataset",
-  Distribution: "distribution",
-  DataService: "dataService",
+/** Maps class name → key prefix used in dcatKeys (e.g. "Dataset" → "dataset"). */
+const CLASS_TO_PREFIX: Record<string, string> = {
+  Dataset:       "dataset",
+  Distribution:  "distribution",
+  DataService:   "dataService",
   CatalogRecord: "catalogRecord",
 };
 
+// ─── IRI → dcatKey mappings ───────────────────────────────────────────────────
+
 const IRI_TO_KEYS = new Map<string, string[]>();
 
-function addMapping(iri: string, keys: string[]) {
+function map(iri: string, ...keys: string[]) {
   IRI_TO_KEYS.set(iri, keys);
 }
 
-addMapping(`${NAMESPACE_IRIS.dcterms}title`, ["dataset.title", "distribution.title", "catalogRecord.title"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}description`, ["dataset.description", "distribution.description", "catalogRecord.description"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}identifier`, ["dataset.identifier"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}issued`, ["dataset.issued", "distribution.issued", "catalogRecord.issued"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}modified`, ["dataset.modified", "distribution.modified", "catalogRecord.modified"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}language`, ["dataset.language", "distribution.language", "catalogRecord.language"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}publisher`, ["dataset.publisher"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}creator`, ["dataset.creator"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}rightsHolder`, ["dataset.rightsHolder"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}license`, ["dataset.license", "distribution.license"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}rights`, ["dataset.rights", "distribution.rights"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}accessRights`, ["dataset.accessRights"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}conformsTo`, ["dataset.conformsTo", "distribution.conformsTo", "catalogRecord.conformsTo"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}type`, ["dataset.type"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}spatial`, ["dataset.spatial", "distribution.spatial"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}temporal`, ["dataset.temporal", "distribution.temporal"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}accrualPeriodicity`, ["dataset.accrualPeriodicity"]);
-addMapping(`${NAMESPACE_IRIS.dcterms}format`, ["distribution.format"]);
+// dcterms
+map(`${NS.dcterms}title`,              "dataset.title",              "distribution.title",    "catalogRecord.title");
+map(`${NS.dcterms}description`,        "dataset.description",        "distribution.description", "catalogRecord.description");
+map(`${NS.dcterms}identifier`,         "dataset.identifier");
+map(`${NS.dcterms}issued`,             "dataset.issued",             "distribution.issued",   "catalogRecord.issued");
+map(`${NS.dcterms}modified`,           "dataset.modified",           "distribution.modified", "catalogRecord.modified");
+map(`${NS.dcterms}language`,           "dataset.language",           "distribution.language", "catalogRecord.language");
+map(`${NS.dcterms}publisher`,          "dataset.publisher");
+map(`${NS.dcterms}creator`,            "dataset.creator");
+map(`${NS.dcterms}rightsHolder`,       "dataset.rightsHolder");
+map(`${NS.dcterms}license`,            "dataset.license",            "distribution.license");
+map(`${NS.dcterms}rights`,             "dataset.rights",             "distribution.rights");
+map(`${NS.dcterms}accessRights`,       "dataset.accessRights");
+map(`${NS.dcterms}conformsTo`,         "dataset.conformsTo",         "distribution.conformsTo", "catalogRecord.conformsTo");
+map(`${NS.dcterms}type`,               "dataset.type");
+map(`${NS.dcterms}spatial`,            "dataset.spatial",            "distribution.spatial");
+map(`${NS.dcterms}temporal`,           "dataset.temporal",           "distribution.temporal");
+map(`${NS.dcterms}accrualPeriodicity`, "dataset.accrualPeriodicity");
+map(`${NS.dcterms}format`,             "distribution.format");
 
-addMapping(`${NAMESPACE_IRIS.dcat}keyword`, ["dataset.keyword"]);
-addMapping(`${NAMESPACE_IRIS.dcat}theme`, ["dataset.theme"]);
-addMapping(`${NAMESPACE_IRIS.dcat}contactPoint`, ["dataset.contactPoint"]);
-addMapping(`${NAMESPACE_IRIS.dcat}landingPage`, ["dataset.landingPage"]);
-addMapping(`${NAMESPACE_IRIS.dcat}distribution`, ["dataset.distribution"]);
-addMapping(`${NAMESPACE_IRIS.dcat}inCatalog`, ["dataset.inCatalog"]);
-addMapping(`${NAMESPACE_IRIS.dcat}qualifiedRelation`, ["dataset.qualifiedRelation"]);
-addMapping(`${NAMESPACE_IRIS.dcat}version`, ["dataset.version"]);
-addMapping(`${NAMESPACE_IRIS.dcat}versionNotes`, ["dataset.versionNotes"]);
-addMapping(`${NAMESPACE_IRIS.dcat}hasVersion`, ["dataset.hasVersion"]);
-addMapping(`${NAMESPACE_IRIS.dcat}isVersionOf`, ["dataset.isVersionOf"]);
-addMapping(`${NAMESPACE_IRIS.dcat}hasCurrentVersion`, ["dataset.hasCurrentVersion"]);
-addMapping(`${NAMESPACE_IRIS.dcat}previousVersion`, ["dataset.previousVersion"]);
-addMapping(`${NAMESPACE_IRIS.dcat}nextVersion`, ["dataset.nextVersion"]);
-addMapping(`${NAMESPACE_IRIS.dcat}inSeries`, ["dataset.inSeries"]);
-addMapping(`${NAMESPACE_IRIS.dcat}prev`, ["dataset.prev"]);
-addMapping(`${NAMESPACE_IRIS.dcat}next`, ["dataset.next"]);
-addMapping(`${NAMESPACE_IRIS.dcat}first`, ["dataset.first"]);
-addMapping(`${NAMESPACE_IRIS.dcat}last`, ["dataset.last"]);
-addMapping(`${NAMESPACE_IRIS.dcat}spatialResolutionInMeters`, ["dataset.spatialResolutionInMeters", "distribution.spatialResolutionInMeters"]);
-addMapping(`${NAMESPACE_IRIS.dcat}temporalResolution`, ["dataset.temporalResolution", "distribution.temporalResolution"]);
-addMapping(`${NAMESPACE_IRIS.dcat}accessURL`, ["distribution.accessURL"]);
-addMapping(`${NAMESPACE_IRIS.dcat}downloadURL`, ["distribution.downloadURL"]);
-addMapping(`${NAMESPACE_IRIS.dcat}accessService`, ["distribution.accessService"]);
-addMapping(`${NAMESPACE_IRIS.dcat}mediaType`, ["distribution.mediaType"]);
-addMapping(`${NAMESPACE_IRIS.dcat}compressFormat`, ["distribution.compressFormat"]);
-addMapping(`${NAMESPACE_IRIS.dcat}packageFormat`, ["distribution.packageFormat"]);
-addMapping(`${NAMESPACE_IRIS.dcat}byteSize`, ["distribution.byteSize"]);
-addMapping(`${NAMESPACE_IRIS.dcat}endpointURL`, ["dataService.endpointURL"]);
-addMapping(`${NAMESPACE_IRIS.dcat}endpointDescription`, ["dataService.endpointDescription"]);
-addMapping(`${NAMESPACE_IRIS.dcat}servesDataset`, ["dataService.servesDataset"]);
-addMapping(`${NAMESPACE_IRIS.dcat}primaryTopic`, ["catalogRecord.primaryTopic"]);
-addMapping(`${NAMESPACE_IRIS.dcat}status`, ["catalogRecord.status"]);
-addMapping(`${NAMESPACE_IRIS.dcat}source`, ["catalogRecord.source"]);
+// dcat — dataset
+map(`${NS.dcat}keyword`,                   "dataset.keyword");
+map(`${NS.dcat}theme`,                     "dataset.theme");
+map(`${NS.dcat}contactPoint`,              "dataset.contactPoint");
+map(`${NS.dcat}landingPage`,               "dataset.landingPage");
+map(`${NS.dcat}distribution`,              "dataset.distribution");
+map(`${NS.dcat}inCatalog`,                 "dataset.inCatalog");
+map(`${NS.dcat}qualifiedRelation`,         "dataset.qualifiedRelation");
+map(`${NS.dcat}version`,                   "dataset.version");
+map(`${NS.dcat}versionNotes`,              "dataset.versionNotes");
+map(`${NS.dcat}hasVersion`,                "dataset.hasVersion");
+map(`${NS.dcat}isVersionOf`,               "dataset.isVersionOf");
+map(`${NS.dcat}hasCurrentVersion`,         "dataset.hasCurrentVersion");
+map(`${NS.dcat}previousVersion`,           "dataset.previousVersion");
+map(`${NS.dcat}nextVersion`,               "dataset.nextVersion");
+map(`${NS.dcat}inSeries`,                  "dataset.inSeries");
+map(`${NS.dcat}prev`,                      "dataset.prev");
+map(`${NS.dcat}next`,                      "dataset.next");
+map(`${NS.dcat}first`,                     "dataset.first");
+map(`${NS.dcat}last`,                      "dataset.last");
+map(`${NS.dcat}spatialResolutionInMeters`, "dataset.spatialResolutionInMeters", "distribution.spatialResolutionInMeters");
+map(`${NS.dcat}temporalResolution`,        "dataset.temporalResolution",        "distribution.temporalResolution");
 
-addMapping(`${NAMESPACE_IRIS.prov}wasAttributedTo`, ["dataset.wasAttributedTo"]);
-addMapping(`${NAMESPACE_IRIS.prov}qualifiedAttribution`, ["dataset.qualifiedAttribution"]);
+// dcat — distribution
+map(`${NS.dcat}accessURL`,      "distribution.accessURL");
+map(`${NS.dcat}downloadURL`,    "distribution.downloadURL");
+map(`${NS.dcat}accessService`,  "distribution.accessService");
+map(`${NS.dcat}mediaType`,      "distribution.mediaType");
+map(`${NS.dcat}compressFormat`, "distribution.compressFormat");
+map(`${NS.dcat}packageFormat`,  "distribution.packageFormat");
+map(`${NS.dcat}byteSize`,       "distribution.byteSize");
 
-const PREFIX_DECLARATION = /@prefix\s+([A-Za-z][\w-]*):\s*<([^>]+)>\s*\./g;
-const PREFIX_DECLARATION_ALT = /PREFIX\s+([A-Za-z][\w-]*):\s*<([^>]+)>/gi;
-const PREFIXED_NAME = /\b([A-Za-z][\w-]*):([A-Za-z_][\w-]*)\b/g;
-const IRI_LITERAL = /<([^>]+)>/g;
-const RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+// dcat — dataService
+map(`${NS.dcat}endpointURL`,         "dataService.endpointURL");
+map(`${NS.dcat}endpointDescription`, "dataService.endpointDescription");
+map(`${NS.dcat}servesDataset`,       "dataService.servesDataset");
 
-function collectPrefixes(turtle: string): Record<string, string> {
-  const prefixMap: Record<string, string> = {};
-  for (const match of turtle.matchAll(PREFIX_DECLARATION)) {
-    if (!match[1] || !match[2]) continue;
-    prefixMap[match[1]] = match[2];
-  }
-  for (const match of turtle.matchAll(PREFIX_DECLARATION_ALT)) {
-    if (!match[1] || !match[2]) continue;
-    prefixMap[match[1]] = match[2];
-  }
-  return prefixMap;
+// dcat — catalogRecord
+map(`${NS.dcat}primaryTopic`, "catalogRecord.primaryTopic");
+map(`${NS.dcat}status`,       "catalogRecord.status");
+map(`${NS.dcat}source`,       "catalogRecord.source");
+
+// prov
+map(`${NS.prov}wasAttributedTo`,      "dataset.wasAttributedTo");
+map(`${NS.prov}qualifiedAttribution`, "dataset.qualifiedAttribution");
+
+// ─── Prefix extraction (fallback text parser) ─────────────────────────────────
+
+const RE_PREFIX     = /@prefix\s+([A-Za-z][\w-]*):\s*<([^>]+)>\s*\./g;
+const RE_PREFIX_ALT = /PREFIX\s+([A-Za-z][\w-]*):\s*<([^>]+)>/gi;
+const RE_PREFIXED   = /\b([A-Za-z][\w-]*):([A-Za-z_][\w-]*)\b/g;
+const RE_IRI        = /<([^>]+)>/g;
+
+function collectPrefixes(turtle: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const m of turtle.matchAll(RE_PREFIX))     if (m[1] && m[2]) out.set(m[1], m[2]);
+  for (const m of turtle.matchAll(RE_PREFIX_ALT)) if (m[1] && m[2]) out.set(m[1], m[2]);
+  return out;
 }
 
-function resolvePrefixedName(prefixMap: Record<string, string>, prefix: string, local: string): string | null {
-  const iriBase = prefixMap[prefix];
-  if (!iriBase) return null;
-  return `${iriBase}${local}`;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isKnownNs(iri: string): boolean {
+  for (const ns of KNOWN_NS) if (iri.startsWith(ns)) return true;
+  return false;
 }
 
-function isKnownNamespace(iri: string): boolean {
-  return KNOWN_NAMESPACE_LIST.some(ns => iri.startsWith(ns));
+function isInfrastructureNs(iri: string): boolean {
+  for (const ns of INFRASTRUCTURE_NS) if (iri.startsWith(ns)) return true;
+  return false;
 }
 
 function dcatSyntheticKey(iri: string): string | null {
-  if (!iri.startsWith(NAMESPACE_IRIS.dcat)) return null;
-  const local = iri.slice(NAMESPACE_IRIS.dcat.length);
+  if (!iri.startsWith(NS.dcat)) return null;
+  const local = iri.slice(NS.dcat.length);
   return local ? `dcat.${local}` : null;
 }
 
-function filterKeysByClassHints(keys: string[], classHints: Set<string>): string[] {
-  if (classHints.size === 0) return keys;
+/**
+ * Filter keys by class hints.
+ * In ontology mode (the uploaded file defines owl:Class / rdfs:Class terms)
+ * all keys are returned unfiltered — every defined property should be matched
+ * regardless of which class it nominally belongs to.
+ */
+function filterKeysByClassHints(
+  keys: string[],
+  classHints: Set<string>,
+  isOntologyMode: boolean,
+): string[] {
+  if (isOntologyMode || classHints.size === 0) return keys;
   return keys.filter(key => {
     const prefix = key.split(".")[0] ?? "";
-    for (const classHint of classHints) {
-      if (CLASS_PREFIX[classHint] === prefix) return true;
+    for (const hint of classHints) {
+      if (CLASS_TO_PREFIX[hint] === prefix) return true;
     }
     return false;
   });
 }
 
-function addClassHintsFromIris(iris: Set<string>, classHints: Set<string>) {
-  for (const [className, classIri] of Object.entries(CLASS_IRIS)) {
-    if (iris.has(classIri)) {
-      classHints.add(className);
-    }
+// ─── Class hint helpers ───────────────────────────────────────────────────────
+
+function addHintsFromIris(iris: Set<string>, hints: Set<string>) {
+  for (const [name, iri] of Object.entries(CLASS_IRIS)) {
+    if (iris.has(iri)) hints.add(name);
   }
 }
 
-function addClassHintsFromPredicates(predicateIris: Set<string>, classHints: Set<string>) {
-  for (const iri of predicateIris) {
+function addHintsFromPredicates(predicates: Set<string>, hints: Set<string>) {
+  for (const iri of predicates) {
     const keys = IRI_TO_KEYS.get(iri);
     if (!keys) continue;
-
-    const prefixes = new Set(
-      keys
-        .map(key => key.split('.')[0])
-        .filter((prefix): prefix is string => !!prefix)
-    );
+    const prefixes = new Set(keys.map(k => k.split(".")[0]).filter(Boolean) as string[]);
     if (prefixes.size !== 1) continue;
-
-    const prefix = [...prefixes][0];
-    const className = Object.entries(CLASS_PREFIX).find(([, value]) => value === prefix)?.[0];
-    if (className) {
-      classHints.add(className);
-    }
+    const prefix = [...prefixes][0]!;
+    const name = Object.entries(CLASS_TO_PREFIX).find(([, v]) => v === prefix)?.[0];
+    if (name) hints.add(name);
   }
 }
 
-function addClassHintsFromText(turtle: string, classHints: Set<string>) {
-  for (const className of Object.keys(CLASS_IRIS)) {
-    if (turtle.match(new RegExp(`\\b${className}\\b`))) {
-      classHints.add(className);
-    }
+function addHintsFromText(turtle: string, hints: Set<string>) {
+  for (const name of Object.keys(CLASS_IRIS)) {
+    if (new RegExp(`\\b${name}\\b`).test(turtle)) hints.add(name);
   }
 }
 
-function parseTurtleIris(turtle: string): { iris: Set<string>; predicateIris: Set<string>; classHints: Set<string> } | null {
+// ─── Turtle parser ────────────────────────────────────────────────────────────
+
+interface ParseResult {
+  iris: Set<string>;
+  predicateIris: Set<string>;
+  classHints: Set<string>;
+  /** True when the file uses owl:Class / rdfs:Class definitions (ontology file). */
+  isOntologyMode: boolean;
+}
+
+function parseTurtleIris(turtle: string): ParseResult | null {
   try {
     const parser = new Parser();
-    const quads = parser.parse(turtle);
-    const iris = new Set<string>();
+    const quads  = parser.parse(turtle);
+
+    const iris          = new Set<string>();
     const predicateIris = new Set<string>();
-    const classHints = new Set<string>();
+    const classHints    = new Set<string>();
+    let   isOntologyMode = false;
 
     for (const quad of quads) {
-      const subject = quad.subject;
-      const predicate = quad.predicate;
-      const object = quad.object;
+      const { subject: s, predicate: p, object: o } = quad;
 
-      if (subject.termType === "NamedNode") iris.add(subject.value);
-      if (predicate.termType === "NamedNode") {
-        iris.add(predicate.value);
-        predicateIris.add(predicate.value);
-      }
-      if (object.termType === "NamedNode") iris.add(object.value);
+      if (s.termType === "NamedNode") iris.add(s.value);
+      if (p.termType === "NamedNode") { iris.add(p.value); predicateIris.add(p.value); }
+      if (o.termType === "NamedNode") iris.add(o.value);
 
-      if (predicate.termType === "NamedNode" && predicate.value === RDF_TYPE && object.termType === "NamedNode") {
-        for (const [className, classIri] of Object.entries(CLASS_IRIS)) {
-          if (object.value === classIri) classHints.add(className);
+      if (p.termType === "NamedNode" && p.value === RDF_TYPE && o.termType === "NamedNode") {
+        for (const [name, iri] of Object.entries(CLASS_IRIS)) {
+          if (o.value === iri) classHints.add(name);
+        }
+        if (o.value === OWL_CLASS || o.value === RDFS_CLASS) {
+          isOntologyMode = true;
         }
       }
     }
 
-    return { iris, predicateIris, classHints };
+    return { iris, predicateIris, classHints, isOntologyMode };
   } catch {
     return null;
   }
 }
 
+// ─── Main export ──────────────────────────────────────────────────────────────
+
 export function analyzeTurtleSchema(turtle: string): SchemaAnalysis {
-  const parsed = parseTurtleIris(turtle);
-  const prefixMap = collectPrefixes(turtle);
-  const iris = parsed?.iris ?? new Set<string>();
+  const parsed        = parseTurtleIris(turtle);
+  const iris          = parsed?.iris          ?? new Set<string>();
   const predicateIris = parsed?.predicateIris ?? new Set<string>();
-  const classHints = parsed?.classHints ?? new Set<string>();
+  const classHints    = parsed?.classHints    ?? new Set<string>();
+  const isOntologyMode = parsed?.isOntologyMode ?? false;
 
+  // Fallback: regex-based IRI extraction when the N3 parser fails
   if (!parsed) {
-    for (const match of turtle.matchAll(IRI_LITERAL)) {
-      const iri = match[1];
-      if (iri) iris.add(iri);
+    const prefixMap = collectPrefixes(turtle);
+    for (const m of turtle.matchAll(RE_IRI))    if (m[1]) iris.add(m[1]);
+    for (const m of turtle.matchAll(RE_PREFIXED)) {
+      if (!m[1] || !m[2]) continue;
+      const base = prefixMap.get(m[1]);
+      if (base) iris.add(`${base}${m[2]}`);
     }
-
-    for (const match of turtle.matchAll(PREFIXED_NAME)) {
-      const prefix = match[1];
-      const local = match[2];
-      if (!prefix || !local) continue;
-      const iri = resolvePrefixedName(prefixMap, prefix, local);
-      if (iri) iris.add(iri);
-    }
-
-    addClassHintsFromText(turtle, classHints);
+    addHintsFromText(turtle, classHints);
   }
 
-  addClassHintsFromIris(iris, classHints);
-  addClassHintsFromPredicates(predicateIris, classHints);
+  addHintsFromIris(iris, classHints);
+  addHintsFromPredicates(predicateIris, classHints);
 
-  const dcatKeys = new Set<string>();
-  const dcatIris = new Set<string>();
+  const dcatKeys         = new Set<string>();
+  const dcatIris         = new Set<string>();
   const customProperties = new Set<string>();
 
   for (const iri of iris) {
-    if (CLASS_IRI_SET.has(iri)) {
-      continue;
-    }
+    if (CLASS_IRI_SET.has(iri)) continue;
 
-    if (isKnownNamespace(iri)) {
+    if (isKnownNs(iri)) {
       dcatIris.add(iri);
       const keys = IRI_TO_KEYS.get(iri);
       if (keys) {
-        const filteredKeys = filterKeysByClassHints(keys, classHints);
-        for (const key of filteredKeys) {
+        for (const key of filterKeysByClassHints(keys, classHints, isOntologyMode)) {
           dcatKeys.add(key);
         }
       } else if (predicateIris.has(iri)) {
-        const syntheticKey = dcatSyntheticKey(iri);
-        if (syntheticKey) {
-          dcatKeys.add(syntheticKey);
-        } else {
-          customProperties.add(iri);
-        }
+        // Known namespace but unmapped predicate — try synthetic dcat.* key, else silently skip
+        const synth = dcatSyntheticKey(iri);
+        if (synth) dcatKeys.add(synth);
       }
-    } else if (predicateIris.has(iri) && (iri.startsWith("http://") || iri.startsWith("https://"))) {
+    } else if (
+      predicateIris.has(iri) &&
+      !isInfrastructureNs(iri) &&
+      (iri.startsWith("http://") || iri.startsWith("https://"))
+    ) {
       customProperties.add(iri);
     }
   }
 
   return {
-    usesDcat: dcatIris.size > 0,
-    dcatKeys: [...dcatKeys],
-    dcatIris: [...dcatIris],
+    usesDcat:         dcatIris.size > 0,
+    dcatKeys:         [...dcatKeys],
+    dcatIris:         [...dcatIris],
     customProperties: [...customProperties],
-    classHints: [...classHints],
+    classHints:       [...classHints],
   };
 }

@@ -193,15 +193,6 @@ interface Dictionary<T> {
   [Key: string]: T
 }
 
-function collectAllKeys(nodes: OwnTreeNode[], target: Dictionary<boolean>) {
-  for (const node of nodes) {
-    target[node.key] = true
-    if (node.children?.length) {
-      collectAllKeys(node.children, target)
-    }
-  }
-}
-
 const selectedKeys = ref<Dictionary<boolean>>({})
 const schemaText = ref('')
 const schemaStatus = ref<'idle' | 'saving' | 'saved' | 'warning' | 'error'>('idle')
@@ -285,6 +276,7 @@ async function saveSchemaPayload(payload: FormData) {
 
 async function saveSchemaText() {
   const payload = new FormData()
+  selectedKeys.value = {}
   payload.append('schemaText', schemaText.value)
   await saveSchemaPayload(payload)
 }
@@ -298,6 +290,7 @@ async function saveCustomProperties(list: string[]) {
 
 async function clearSchema() {
   schemaText.value = ''
+  selectedKeys.value = {}
   const payload = new FormData()
   payload.append('clear', '1')
   await saveSchemaPayload(payload)
