@@ -104,14 +104,14 @@
                 </button>
               </div>
             </div>
-            <div class="rounded-md border border-dashed border-amber-200 bg-white px-3 py-2">
-              <div class="text-[11px] text-amber-700/80">Add custom property IRI</div>
-              <div class="mt-2 flex gap-2">
-                <InputText v-model="customPropertyDraft" class="w-full"
-                  placeholder="https://example.org/terms/customField" />
-                <Button label="Add" severity="secondary" type="button" @click="addCustomProperty"
-                  :disabled="!customPropertyDraft.trim()" />
-              </div>
+          </div>
+          <div class="rounded-md border border-dashed border-amber-200 bg-white px-3 py-1 my-2 w-1/2">
+            <div class="text-[11px] text-amber-700/80">Add custom property IRI</div>
+            <div class="mt-2 flex gap-2">
+              <InputText v-model="customPropertyDraft" class="w-full"
+                placeholder="https://example.org/terms/customField" />
+              <Button label="Add" severity="secondary" type="button" @click="addCustomProperty"
+                :disabled="!customPropertyDraft.trim()" />
             </div>
           </div>
         </div>
@@ -574,6 +574,10 @@ async function startProcessing() {
   }
   await startProcess()
 }
+
+const canUseCustomProperties = computed(() => {
+  return !!schemaAnalysis.value && schemaAnalysis.value.customProperties !== undefined
+})
 
 </script>
 
