@@ -67,4 +67,46 @@ ex:dataset a dcat:Dataset ;
     expect(analysis.dcatKeys).toContain("distribution.byteSize");
     expect(analysis.customProperties).not.toContain("http://www.w3.org/ns/dcat#byteSize");
   });
+
+  it("infers inherited class properties through rdfs:subClassOf and rdfs:domain", () => {
+    const turtle = `
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix ex: <http://example.com/> .
+
+dcat:Distribution rdfs:subClassOf dcat:Dataset .
+dcat:inheritedProp a rdf:Property ;
+  rdfs:domain dcat:Dataset .
+
+ex:dist a dcat:Distribution ;
+  dcat:inheritedProp "ok" .
+`;
+
+    const analysis = analyzeTurtleSchema(turtle);
+
+    expect(analysis.dcatKeys).toContain("distribution.inheritedProp");
+  });
+
+  it("infers domains inherited through rdfs:subPropertyOf", () => {
+    const turtle = `
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix ex: <http://example.com/> .
+
+dcat:parentProp a rdf:Property ;
+  rdfs:domain dcat:Distribution .
+
+dcat:childProp a rdf:Property ;
+  rdfs:subPropertyOf dcat:parentProp .
+
+ex:dist a dcat:Distribution ;
+  dcat:childProp "ok" .
+`;
+
+    const analysis = analyzeTurtleSchema(turtle);
+
+    expect(analysis.dcatKeys).toContain("distribution.childProp");
+  });
 });
