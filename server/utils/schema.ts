@@ -1,4 +1,4 @@
-import type { SchemaAnalysis } from "~~/shared/types/schema";
+import type { CustomProperty, SchemaAnalysis } from "~~/shared/types/schema";
 import { Parser } from "n3";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -340,31 +340,38 @@ export function analyzeTurtleSchema(turtle: string): SchemaAnalysis {
 
   const keyMap = buildPropertyKeyMap(merged);
 
-  // All inferred keys from the ontology graph (includes inherited properties)
-  const allKeys = new Set<string>();
-  const allIris = new Set<string>();
-  for (const [iri, keys] of keyMap) {
-    for (const k of keys) allKeys.add(k);
-    allIris.add(iri);
-  }
+  // Only include keys for IRIs actually present in the input file
+  const iris = new Set<string>([
+    ...(parsed?.predicateIris ?? []),
+    ...local.properties,
+  ]);
 
-  // Custom = IRIs used in the input file that aren't in the keyMap
-  const custom = new Set<string>();
-  for (const iri of [...(parsed?.predicateIris ?? []), ...local.properties]) {
-    if (!keyMap.has(iri) && !isInfra(iri) && !iri.startsWith(NS.dcat)) {
-      custom.add(iri);
+  const dcatKeys = new Set<string>();
+  const dcatIris = new Set<string>();
+  const customProperties: CustomProperty[] = [];
+
+  for (const iri of iris) {
+    const keys = keyMap.get(iri);
+    if (keys?.size) {
+      for (const k of keys) dcatKeys.add(k);
+      dcatIris.add(iri);
+      continue;
+    }
+    if (!isInfra(iri) && !iri.startsWith(NS.dcat)) {
+      customProperties.push({ iri, context: 'dataset' });
     }
   }
 
-  allKeys.add("dataset.uri");
-  allKeys.add("distribution.uri");
-  allKeys.add("catalogRecord.uri");
+  // URIs are implicit (subject of each resource, not a predicate in the file)
+  dcatKeys.add("dataset.uri");
+  dcatKeys.add("distribution.uri");
+  dcatKeys.add("catalogRecord.uri");
 
   return {
-    usesDcat: allIris.size > 0,
-    dcatKeys: [...allKeys],
-    dcatIris: [...allIris],
-    customProperties: [...custom],
+    usesDcat: dcatIris.size > 0,
+    dcatKeys: [...dcatKeys],
+    dcatIris: [...dcatIris],
+    customProperties,
     classHints: [...(parsed?.classHints ?? [])],
   };
 }

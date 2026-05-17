@@ -1,10 +1,15 @@
-export type SchemaAnalysis = {
-  usesDcat: boolean;
-  dcatKeys: string[];
-  dcatIris: string[];
-  customProperties: string[];
-  classHints: string[];
-};
+export interface CustomProperty {
+  iri: string
+  context: 'dataset' | 'distribution' | 'dataService' | 'catalogRecord'
+}
+
+export interface SchemaAnalysis {
+  usesDcat: boolean
+  dcatKeys: string[]
+  dcatIris: string[]
+  customProperties: CustomProperty[]   // was: string[]
+  classHints: string[]
+}
 
 export type SchemaStoreResponse = {
   stored: boolean;
