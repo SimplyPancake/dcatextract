@@ -66,8 +66,10 @@
         <!-- Unmatched DCAT properties -->
         <div v-if="unmatchedDcatKeys.length > 0">
           <div class="text-sm font-medium">Unmatched DCAT properties</div>
-          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them manually.</div>
-          <div v-if="unmatchedDcatKeys.length === 0" class="text-xs text-surface-500">All DCAT properties are matched.</div>
+          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them
+            manually.</div>
+          <div v-if="unmatchedDcatKeys.length === 0" class="text-xs text-surface-500">All DCAT properties are matched.
+          </div>
           <div v-else class="mt-2 flex flex-wrap gap-2">
             <button v-for="key in unmatchedDcatKeys" :key="key" type="button"
               class="flex min-h-11 flex-col items-start rounded-xl border border-dashed px-3 py-2 text-left text-xs font-medium text-surface-500 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900"
@@ -100,27 +102,27 @@
         <div class="text-sm font-medium mb-1">Custom properties</div>
         <div class="text-xs text-surface-500 mb-3">Add non-DCAT properties and assign them a context.</div>
         <div v-if="customProperties.length > 0" class="grid gap-2 sm:grid-cols-2 mb-3">
-          <div v-for="(prop, idx) in customProperties" :key="prop.iri"
-            class="rounded-md border px-3 py-2" :class="contextBorderClass(prop.context)">
+          <div v-for="(prop, idx) in customProperties" :key="prop.iri" class="rounded-md border px-3 py-2"
+            :class="contextBorderClass(prop.context)">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0 flex-1">
                 <div class="text-xs font-semibold" :class="contextTextClass(prop.context)" :title="prop.iri">
                   {{ formatIri(prop.iri) }}
                 </div>
-                <div class="text-[11px] break-all opacity-70" :class="contextTextClass(prop.context)">{{ prop.iri }}</div>
+                <div class="text-[11px] break-all opacity-70" :class="contextTextClass(prop.context)">{{ prop.iri }}
+                </div>
                 <select :value="prop.context"
                   @change="updateContext(idx, ($event.target as HTMLSelectElement).value as CustomPropertyContext)"
-                  class="mt-1.5 text-[11px] rounded border px-1.5 py-0.5 bg-white" :class="contextBorderClass(prop.context)">
+                  class="mt-1.5 text-[11px] rounded border px-1.5 py-0.5 bg-white"
+                  :class="contextBorderClass(prop.context)">
                   <option value="dataset">Dataset</option>
                   <option value="distribution">Distribution</option>
                   <option value="dataService">Data Service</option>
                   <option value="catalogRecord">Catalog Record</option>
                 </select>
               </div>
-              <button type="button"
-                class="rounded-full border px-2 py-1 text-[10px] hover:opacity-80 shrink-0"
-                :class="contextBorderClass(prop.context)"
-                @click="removeCustomProperty(idx)">Remove</button>
+              <button type="button" class="rounded-full border px-2 py-1 text-[10px] hover:opacity-80 shrink-0"
+                :class="contextBorderClass(prop.context)" @click="removeCustomProperty(idx)">Remove</button>
             </div>
           </div>
         </div>
@@ -128,8 +130,7 @@
         <div class="rounded-md border border-dashed border-amber-200 bg-white px-3 py-2">
           <div class="text-[11px] text-amber-700/80 mb-2">Add custom property IRI</div>
           <div class="flex flex-wrap gap-2 items-center">
-            <InputText v-model="draft.iri" class="flex-1 min-w-48"
-              placeholder="https://example.org/terms/myField" />
+            <InputText v-model="draft.iri" class="flex-1 min-w-48" placeholder="https://example.org/terms/myField" />
             <select v-model="draft.context"
               class="h-9 rounded-md border border-surface-200 px-2 text-xs text-surface-700 bg-white">
               <option value="dataset">Dataset</option>
@@ -137,10 +138,28 @@
               <option value="dataService">Data Service</option>
               <option value="catalogRecord">Catalog Record</option>
             </select>
-            <Button label="Add" severity="secondary" type="button"
-              :disabled="!draft.iri.trim()" @click="addCustomProperty" />
+            <Button label="Add" severity="secondary" type="button" :disabled="!draft.iri.trim()"
+              @click="addCustomProperty" />
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- AI Confidence setting -->
+    <Divider class="py-2" />
+    <div class="text-sm font-medium mb-3">AI Inference</div>
+    <div class="flex flex-row">
+      <span class="basis-2/4 text-sm text-gray-400 dark:text-gray-300">Contextual (and custom) properties will be
+        derived by an LLM. The LLM generates a confidence score per property.
+      </span>
+    </div>
+    <div class="flex flex-row my-2 gap-4">
+      <div class="flex-auto gap-4">
+        <label for="percSlider font-bold">Minimum confidence score</label>
+        <Slider inputId="percSlider" v-model="confidenceScore" class="flex-1 self-center" />
+      </div>
+      <div class="max-w-20">
+        <InputNumber v-model.number="confidenceScore" suffix="%" fluid :min="0" :max="100" />
       </div>
     </div>
 
@@ -163,15 +182,14 @@ import {
   Palette, Phone, Repeat, Ruler, Scale, Server, ShieldCheck, Tag, Type, User,
 } from '@lucide/vue'
 import type { CatalogRecordKey, DataServiceKey, DatasetKey, DistributionKey } from '#shared/utils/builder'
-import type { SchemaAnalysis, SchemaStoreResponse } from '~~/shared/types/schema'
+import type { CustomPropertyContext, SchemaAnalysis, SchemaStoreResponse } from '~~/shared/types/schema'
+import { Divider, InputNumber, Slider } from 'primevue'
 
-type CustomPropertyContext = 'dataset' | 'distribution' | 'dataService' | 'catalogRecord'
-interface CustomProperty { iri: string; context: CustomPropertyContext }
 type OwnTreeNode = { key: string; label: string; children?: OwnTreeNode[]; icon: any; extra?: string }
 interface Dictionary<T> { [Key: string]: T }
 
 // ─── State ────────────────────────────────────────────────────────────────────
-
+const confidenceScore = ref(60)
 const selectedKeys = ref<Dictionary<boolean>>({})
 const schemaText = ref('')
 const schemaStatus = ref<'idle' | 'saving' | 'saved' | 'warning' | 'error'>('idle')
@@ -205,7 +223,7 @@ function updateContext(idx: number, context: CustomPropertyContext) {
 
 // ─── Fetch: schema (text upload) ─────────────────────────────────────────────
 
-const schemaPayload = ref<FormData | null>(null)
+const schemaPayload = ref<{ schemaText: string } | null>(null)
 const { data: schemaResponse, execute: executeSchema } = useLazyFetch<SchemaStoreResponse>('/api/schema', {
   immediate: false, method: 'POST', body: schemaPayload,
 })
@@ -215,9 +233,7 @@ async function applySchema() {
   schemaError.value = ''
   selectedKeys.value = {}
   try {
-    const payload = new FormData()
-    payload.append('schemaText', schemaText.value)
-    schemaPayload.value = payload
+    schemaPayload.value = { schemaText: schemaText.value }
     await executeSchema()
     const res = schemaResponse.value
     if (!res?.stored || !res.analysis) throw new Error('No schema response received')
@@ -235,18 +251,8 @@ async function applySchema() {
   }
 }
 
-// ─── Fetch: custom properties only (no schema re-processing) ─────────────────
-
-const customPropsPayload = ref<FormData | null>(null)
-const { execute: executeCustomProps } = useLazyFetch('/api/schema', {
-  immediate: false, method: 'POST', body: customPropsPayload,
-})
-
 function persistCustomProperties() {
-  const payload = new FormData()
-  payload.append('customProperties', JSON.stringify(customProperties.value))
-  customPropsPayload.value = payload
-  executeCustomProps()
+  // Custom properties are client-side only now.
 }
 
 // ─── Clear ────────────────────────────────────────────────────────────────────
@@ -258,10 +264,6 @@ async function clearSchema() {
   customProperties.value = []
   schemaDirty.value = false
   schemaStatus.value = 'idle'
-  const payload = new FormData()
-  payload.append('clear', '1')
-  schemaPayload.value = payload
-  await executeSchema()
 }
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -294,7 +296,11 @@ const { execute: startProcess } = useLazyFetch('/api/job/process/start', {
 
 async function startProcessing() {
   if (schemaDirty.value && schemaText.value.trim()) await applySchema()
-  processBody.value = { schemas: { ...selectedKeys.value }, customProperties: customProperties.value }
+  processBody.value = {
+    schemas: { ...selectedKeys.value },
+    customProperties: customProperties.value,
+    inferencePercentage: confidenceScore.value
+  }
   await startProcess()
 }
 

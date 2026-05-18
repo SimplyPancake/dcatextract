@@ -324,8 +324,10 @@ export async function buildDistributionFromFile(
             try {
                 fileContent = fileContent ?? await extractFileText(filePath, 5000);
                 const response = await processDCATDescription(fileContent);
-                console.log(response);
-                description = response;
+                description = response.description.value ?? description;
+                if (response.description.value) {
+                    setConfidence("distribution.description", response.description.confidence);
+                }
             } catch (e: any) {
                 log(`Failed to process AI description for ${filePath}`);
                 log(e);
@@ -354,43 +356,56 @@ export async function buildDistributionFromFile(
             fileContent = fileContent ?? await extractFileText(filePath, 5000);
             const aiMeta = await processDistributionMetadata(fileContent, filename);
 
-            if (wantsLicense && !licenseIri && aiMeta.licenseIri) {
-                distributionBuilder.license(aiMeta.licenseIri);
-                setConfidence("distribution.license", CONFIDENCE.ai);
+            if (wantsLicense && !licenseIri && aiMeta.licenseIri.value) {
+                distributionBuilder.license(aiMeta.licenseIri.value);
+                setConfidence("distribution.license", aiMeta.licenseIri.confidence);
             }
-            if (wantsRights && !rightsText && aiMeta.rights) {
-                distributionBuilder.rights(aiMeta.rights);
-                setConfidence("distribution.rights", CONFIDENCE.ai);
+            if (wantsRights && !rightsText && aiMeta.rights.value) {
+                distributionBuilder.rights(aiMeta.rights.value);
+                setConfidence("distribution.rights", aiMeta.rights.confidence);
             }
-            if (wantsLanguage && !languageIri && aiMeta.languageIri) {
-                distributionBuilder.language(aiMeta.languageIri);
-                setConfidence("distribution.language", CONFIDENCE.ai);
+            if (wantsLanguage && !languageIri && aiMeta.languageIri.value) {
+                distributionBuilder.language(aiMeta.languageIri.value);
+                setConfidence("distribution.language", aiMeta.languageIri.confidence);
             }
-            if (wantsConformsTo && !conformsToIri && aiMeta.conformsToIri) {
-                distributionBuilder.conformsTo(aiMeta.conformsToIri);
-                setConfidence("distribution.conformsTo", CONFIDENCE.ai);
+            if (wantsConformsTo && !conformsToIri && aiMeta.conformsToIri.value) {
+                distributionBuilder.conformsTo(aiMeta.conformsToIri.value);
+                setConfidence("distribution.conformsTo", aiMeta.conformsToIri.confidence);
             }
-            if (wantsTemporal && !temporal && (aiMeta.temporalStart || aiMeta.temporalEnd)) {
+            if (wantsTemporal && !temporal && (aiMeta.temporalStart.value || aiMeta.temporalEnd.value)) {
                 distributionBuilder.temporal({
-                    startDate: aiMeta.temporalStart ?? undefined,
-                    endDate: aiMeta.temporalEnd ?? undefined,
+                    startDate: aiMeta.temporalStart.value ?? undefined,
+                    endDate: aiMeta.temporalEnd.value ?? undefined,
                 });
-                setConfidence("distribution.temporal", CONFIDENCE.ai);
+                const temporalConfidence = Math.max(
+                    aiMeta.temporalStart.confidence,
+                    aiMeta.temporalEnd.confidence
+                );
+                setConfidence("distribution.temporal", temporalConfidence);
             }
-            if (wantsTemporalResolution && !temporalResolution && aiMeta.temporalResolution) {
-                distributionBuilder.temporalResolution(aiMeta.temporalResolution);
-                setConfidence("distribution.temporalResolution", CONFIDENCE.ai);
+            if (wantsTemporalResolution && !temporalResolution && aiMeta.temporalResolution.value) {
+                distributionBuilder.temporalResolution(aiMeta.temporalResolution.value);
+                setConfidence("distribution.temporalResolution", aiMeta.temporalResolution.confidence);
             }
-            if (wantsSpatialResolution && spatialResolution === null && aiMeta.spatialResolutionInMeters !== null && aiMeta.spatialResolutionInMeters != undefined) {
-                distributionBuilder.spatialResolutionInMeters(aiMeta.spatialResolutionInMeters);
-                setConfidence("distribution.spatialResolutionInMeters", CONFIDENCE.ai);
+            if (
+                wantsSpatialResolution
+                && spatialResolution === null
+                && aiMeta.spatialResolutionInMeters.value !== null
+                && aiMeta.spatialResolutionInMeters.value !== undefined
+            ) {
+                distributionBuilder.spatialResolutionInMeters(aiMeta.spatialResolutionInMeters.value);
+                setConfidence("distribution.spatialResolutionInMeters", aiMeta.spatialResolutionInMeters.confidence);
             }
-            if (wantsSpatial && !spatial && (aiMeta.spatialBboxWkt || aiMeta.spatialCentroidWkt)) {
+            if (wantsSpatial && !spatial && (aiMeta.spatialBboxWkt.value || aiMeta.spatialCentroidWkt.value)) {
                 distributionBuilder.spatial({
-                    bbox: aiMeta.spatialBboxWkt ?? undefined,
-                    centroid: aiMeta.spatialCentroidWkt ?? undefined,
+                    bbox: aiMeta.spatialBboxWkt.value ?? undefined,
+                    centroid: aiMeta.spatialCentroidWkt.value ?? undefined,
                 });
-                setConfidence("distribution.spatial", CONFIDENCE.ai);
+                const spatialConfidence = Math.max(
+                    aiMeta.spatialBboxWkt.confidence,
+                    aiMeta.spatialCentroidWkt.confidence
+                );
+                setConfidence("distribution.spatial", spatialConfidence);
             }
         } catch (e: any) {
             log(`Failed to process AI distribution metadata for ${filePath}`);

@@ -105,7 +105,7 @@ export async function queryModel<T extends z.ZodTypeAny>(
 	const systemPrompt = `
 ${system}
 
-You are a JSON generation engine.
+You are also a JSON generation engine.
 
 STRICT RULES:
 - Return ONLY valid JSON

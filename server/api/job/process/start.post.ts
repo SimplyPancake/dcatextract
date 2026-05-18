@@ -2,9 +2,12 @@ import z from 'zod';
 import { downloadQueue, fileQueue, flowProducer } from '~~/server/utils/bull';
 import { DownloadJob, DownloadSourceType, FileProcessJobDataType } from '~~/shared/types/workers';
 import { getRedis } from '~~/server/utils/redis';
+import { CustomPropertySchema } from '~~/shared/types/schema';
 
 const dictSchema = z.object({
-	schemas: z.record(z.string(), z.boolean())
+	schemas: z.record(z.string(), z.boolean()),
+	customProperties: z.array(CustomPropertySchema),
+	inferencePercentage: z.number().min(0).max(100)
 })
 
 export default defineEventHandler(async (event) => {
@@ -15,7 +18,7 @@ export default defineEventHandler(async (event) => {
 		throw result.error.issues
 	}
 
-	const { schemas } = result.data
+	const { schemas, customProperties, inferencePercentage } = result.data
 
 	if (!sessionId) {
 		throw createError("Session ID is required to proceed.")
@@ -24,6 +27,8 @@ export default defineEventHandler(async (event) => {
 	const queueData: Partial<FileProcessJobDataType> = {
 		sessionId,
 		selectedMetadata: schemas,
+		customProperties,
+		inferencePercentage,
 		downloadType: DownloadSourceType.LOCALFILE
 	}
 

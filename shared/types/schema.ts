@@ -1,7 +1,4 @@
-export interface CustomProperty {
-  iri: string
-  context: 'dataset' | 'distribution' | 'dataService' | 'catalogRecord'
-}
+import { z } from "zod";
 
 export interface SchemaAnalysis {
   usesDcat: boolean
@@ -16,3 +13,19 @@ export type SchemaStoreResponse = {
   analysis?: SchemaAnalysis;
   message?: string;
 };
+
+export const CustomPropertyContextSchema = z.enum([
+  "dataset",
+  "distribution",
+  "dataService",
+  "catalogRecord",
+]);
+
+export const CustomPropertySchema = z.object({
+  iri: z.string(),
+  context: CustomPropertyContextSchema,
+});
+
+export type CustomPropertyContext = z.infer<typeof CustomPropertyContextSchema>;
+
+export type CustomProperty = z.infer<typeof CustomPropertySchema>;
