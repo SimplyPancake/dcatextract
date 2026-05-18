@@ -348,7 +348,7 @@ export async function inferDcatFromFiles(
     };
 
     // Distribution contextual results
-    filePaths.forEach(async filePath => {
+    for (let filePath of filePaths) {
         const results: ContextualResultsTypeInfoType = {
             contextual_derivations: {},
             deterministic_derivations: {},
@@ -376,12 +376,13 @@ export async function inferDcatFromFiles(
                     key: x
                 }
             }),
-            fileContents
+            fileContents,
+            "These properties have a custom DCAT IRI that describe them."
         )
 
         // Push to large object
         contextualResultsCollection.distribution.push(results)
-    });
+    }
 
     console.log(contextualResultsCollection.distribution)
     return contextualResultsCollection

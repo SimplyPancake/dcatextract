@@ -10,7 +10,12 @@ const scored = <T extends z.ZodTypeAny>(schema: T) =>
 const baseSystemPrompt = `You are an expert data cataloger.
 Analyze the provided file content or metadata and generate values only when they are clearly supported.
 Return a confidence score per property indicating how directly the data supports the value.
-If a value is not derivable, return null with low confidence.`;
+If a value is not derivable, return null with low confidence.
+
+Output format requirements:
+- Each property key maps to an object with fields: { "value": <string|null>, "confidence": <number 0..1> }
+- Confidence is required even when value is null.
+- Example: { "dataset.title": { "value": "Example dataset", "confidence": 0.72 } }`;
 
 type DerivationKey = {
     key: string;
@@ -29,7 +34,8 @@ function buildPropertyHints(keys: DerivationKey[]): string {
 export async function processProperties(
     contextType: CustomPropertyContext,
     keys: DerivationKey[],
-    content: string
+    content: string,
+    extraInstructions?: string
 ): Promise<ContextualResults> {
     const uniqueKeys = [...new Set(keys.map(item => item.key))];
     const shape: Record<string, z.ZodTypeAny> = {};
@@ -39,10 +45,14 @@ export async function processProperties(
 
     const schema = z.object(shape) as z.ZodType<ContextualResults>;
     const hints = buildPropertyHints(keys);
-    const systemPrompt = `${baseSystemPrompt}
+    let systemPrompt = `${baseSystemPrompt}
 Context class: ${contextType}.`;
 
-    return queryModel(
+    if (extraInstructions) {
+        systemPrompt += "\n" + extraInstructions
+    }
+
+    return await queryModel(
         systemPrompt,
         `${hints}\n\nContent:\n${content}`.trim(),
         schema

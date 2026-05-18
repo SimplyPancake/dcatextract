@@ -4,11 +4,10 @@
       <Hero />
 
       <main class="mx-auto mt-8 px-4">
-        <section class="mx-auto"
-          :class="{
-            'max-w-7xl': inOverview,
-            'max-w-4xl': !inOverview
-          }">
+        <section class="mx-auto" :class="{
+          'max-w-7xl': inOverview,
+          'max-w-4xl': !inOverview
+        }">
           <Card
             class="border border-surface-200 bg-surface-card shadow-2xl shadow-slate-200/70 backdrop-blur dark:border-surface-700 dark:shadow-black/30">
             <template #title>
@@ -25,40 +24,26 @@
                 <StepPanel v-slot="{ activateCallback }" value="1">
                   <Message v-if="unprocessedFilesCount > 0" severity="warn" class="mb-4">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                      <span>You have {{ unprocessedFilesCount }} unprocessed files (uploads or downloads) from a previous session.</span>
-                      <Button
-                        severity="contrast"
-                        variant="outlined"
-                        label="Go to schema selection"
-                        @click="activateCallback('2'); currentStep = '2'"
-                      />
+                      <span>You have {{ unprocessedFilesCount }} unprocessed files (uploads or downloads) from a
+                        previous session.</span>
+                      <Button severity="contrast" variant="outlined" label="Go to schema selection"
+                        @click="activateCallback('2'); currentStep = '2'" />
                     </div>
                   </Message>
-                  <DataSourceStep
-                    @next="activateCallback('2'); currentStep = '2'"
+                  <DataSourceStep @next="activateCallback('2'); currentStep = '2'"
                     @processing="activateCallback('3'); currentStep = '3'"
-                    @goto="(data: Job) => {gotoOverview(data); activateCallback('4')}"
-                  />
+                    @goto="(data: Job) => { gotoOverview(data); activateCallback('4') }" />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="2">
                   Before continuing, select which metadata schema(s) should be generated.
-                  <SelectSchemaStep
-                    @next="(schemas) => {activateCallback('3'); currentStep = '3'}"
-                  />
+                  <SelectSchemaStep @next="(schemas) => { activateCallback('3'); currentStep = '3' }" />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="3">
-                  <DataProcessingStep
-                    v-if="currentStep == '3'"
-                    :schemas="selectedSchemas"
-                    @next="activateCallback('4'); currentStep = '4'"
-                  />
+                  <DataProcessingStep v-if="currentStep == '3'" :schemas="selectedSchemas"
+                    @next="activateCallback('4'); currentStep = '4'" />
                 </StepPanel>
                 <StepPanel v-slot="{ activateCallback }" value="4">
-                  <DataOverviewStep
-                    v-if="currentStep == '4'"
-                    @next=""
-                    :latest-job="latestJob"
-                  />
+                  <DataOverviewStep v-if="currentStep == '4'" @next="" :latest-job="latestJob" />
                 </StepPanel>
               </Stepper>
             </template>
@@ -77,7 +62,7 @@ import DataProcessingStep from '~/components/DataProcessingStep.vue'
 import DataSourceStep from '~/components/DataSourceStep.vue'
 import { Job } from 'bullmq'
 type SchemaSelection = Record<string, boolean>
-const currentStep = ref('2')
+const currentStep = ref('1')
 const latestJob = ref<Job>()
 const selectedSchemas = ref<SchemaSelection>({})
 const { data: unprocessedData } = await useFetch('/api/unprocessed')

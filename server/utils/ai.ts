@@ -110,11 +110,16 @@ You are also a JSON generation engine.
 STRICT RULES:
 - Return ONLY valid JSON
 - No markdown
+- Do NOT begin output with backticks
 - No explanations
 - No text before or after JSON
+- Do not use code blocks.
+- Do not wrap output in \`\`\` or any formatting.
+- Output must start with { and end with }.
 - All required fields must exist
 - No extra keys
 - Required keys: ${schemaKeys}
+- Return ONLY valid JSON
 `
 
 	const maxRetries = 3
