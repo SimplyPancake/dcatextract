@@ -47,7 +47,7 @@ const DISTRIBUTION_MAP: DerivationMap = {
     },
     language: {
         strategy: "Contextual",
-        contextMessage: "Primary language of the distribution content.",
+        contextMessage: "Primary language of the distribution content. Answer in two-letter language code",
     },
     conformsTo: {
         strategy: "Contextual",
@@ -164,7 +164,7 @@ const CATALOG_RECORD_MAP: DerivationMap = {
     },
     language: {
         strategy: "Contextual",
-        contextMessage: "Language of the catalog record metadata.",
+        contextMessage: "Language of the catalog record metadata. Answer in two-letter language code",
     },
     source: {
         strategy: "Contextual",
@@ -260,7 +260,7 @@ type DerivationPlan = {
     additional_derivations: string[];
 };
 export async function inferDcatFromFiles(
-    filePaths: string[],
+    absFilePath: string[],
     opts: InferOptions = {},
     tmpDir: string,
     logProgress: (prc: number, message: string) => void,
@@ -272,11 +272,11 @@ export async function inferDcatFromFiles(
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
 
-    if (filePaths.length === 0) {
+    if (absFilePath.length === 0) {
         throw new Error("No files provided for inference");
     }
 
-    stageInputs(filePaths, tmpDir, log, originalNames);
+    stageInputs(absFilePath, tmpDir, log, originalNames);
 
     const allFiles = walk(tmpDir);
     log(`Found ${allFiles.length} total files`);
@@ -348,14 +348,14 @@ export async function inferDcatFromFiles(
     };
 
     // Distribution contextual results
-    for (let filePath of filePaths) {
+    for (let filePath of absFilePath) {
         const results: ContextualResultsTypeInfoType = {
             contextual_derivations: {},
             deterministic_derivations: {},
             additional_derivations: {}
         }
 
-        const fileContents = await extractFileText(path.join(tmpDir, filePath), 2000)
+        const fileContents = await extractFileText(filePath, 3000)
         const plan = derivationPlan.distribution
 
         // Compute/derive computable properties
@@ -365,7 +365,9 @@ export async function inferDcatFromFiles(
         results.contextual_derivations = await processProperties(
             "distribution",
             plan.contextual_derivations,
-            fileContents
+            fileContents,
+            undefined,
+            path.basename(filePath)
         );
 
         // Then obtain extra properties
@@ -377,7 +379,8 @@ export async function inferDcatFromFiles(
                 }
             }),
             fileContents,
-            "These properties have a custom DCAT IRI that describe them."
+            "These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
+            path.basename(filePath)
         )
 
         // Push to large object

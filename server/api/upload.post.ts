@@ -3,6 +3,7 @@ import { IncomingMessage } from "http";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getRedis } from '../utils/redis';
+import { extractFileText } from '../workers/file-processor/helpers';
 
 
 export default defineEventHandler(async (event) => {
@@ -61,6 +62,24 @@ export default defineEventHandler(async (event) => {
                 message: 'Not enough disk space to store uploaded files'
             })
         }
+    }
+
+    // Check if all files return anything
+    let noContains = []
+    for (const file of userFiles) {
+        const fileText = await extractFileText(file.filepath, 100)
+        console.log(fileText)
+        if (fileText == '') {
+            noContains.push(file.originalFilename)
+        }
+    }
+
+    if (noContains.length > 0) {
+        throw createError({
+            statusCode: 507,
+            statusMessage: 'No content',
+            message: `Your file(s) do not contain content: ${noContains.join(', ')}`
+        })
     }
 
     const redis = getRedis()
