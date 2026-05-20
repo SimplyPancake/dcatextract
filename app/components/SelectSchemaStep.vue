@@ -65,9 +65,16 @@
 
         <!-- Unmatched DCAT properties -->
         <div v-if="unmatchedDcatKeys.length > 0">
-          <div class="text-sm font-medium">Unmatched DCAT properties</div>
-          <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them
-            manually.</div>
+          <div class="flex flex-row">
+            <div class="flex-1">
+              <div class="text-sm font-medium">Unmatched DCAT properties</div>
+              <div class="text-xs text-surface-500">Known DCAT terms not detected in this schema. You can still select them
+                manually.</div>
+            </div>
+            <div>
+              <Button severity="secondary" size="small" @click="selectAllUnmatched()">Select all</Button>
+            </div>
+          </div>
           <div v-if="unmatchedDcatKeys.length === 0" class="text-xs text-surface-500">All DCAT properties are matched.
           </div>
           <div v-else class="mt-2 flex flex-wrap gap-2">
@@ -486,4 +493,11 @@ const unmatchedDcatKeys = computed(() => {
 
 function labelForKey(key: string) { return labelByKey.value[key] ?? key }
 function objectLabelForKey(key: string) { return objectLabelByKey.value[key] ?? key.split('.')[0] ?? 'Object' }
+
+function selectAllUnmatched() {
+  selectedKeys.value = {
+    ...selectedKeys.value,
+    ...Object.fromEntries(unmatchedDcatKeys.value.map(key => [key, true]))
+  }
+}
 </script>

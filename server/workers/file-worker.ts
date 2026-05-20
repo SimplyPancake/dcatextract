@@ -23,7 +23,7 @@ export function startFileWorker() {
                 return
             }
 
-            async function updateProgress(prc: number, message: string) {
+            async function updateProgress(message: string, prc: number = 0, ) {
                 await job.updateProgress({
                     progress: prc,
                     message: message
@@ -45,21 +45,13 @@ export function startFileWorker() {
             await redis.sadd(`session:${sessionId}:files:processing`, ...paths)
             await redis.srem(`session:${sessionId}:files:unprocessed`, ...paths)
 
-            await updateProgress(5, 'Preparing temporary directory...')
+            await updateProgress('Preparing temporary directory...')
 
             // Process all files (zips are extracted) to infer DCAT metadata
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
             await job.updateData({ ...job.data, tmpDir });
 
-            await updateProgress(10, 'Inferring DCAT metadata...')
-            let prevProgress = 10
-            let nextProgress = 95
-            function updateProgressInfer(prc: number, message: string) {
-                let between = nextProgress - prevProgress
-                let result = (prc / 100) * between
-                let updateNum = Math.round(prevProgress + result)
-                updateProgress(updateNum, message)
-            }
+            await updateProgress('Inferring DCAT metadata...')
 
             const sourceInfo = jobdata.downloadData
                 ? {
@@ -72,14 +64,14 @@ export function startFileWorker() {
                 paths,
                 { verbose: true },
                 tmpDir,
-                updateProgressInfer,
+                updateProgress,
                 jobdata.selectedMetadata,
                 sourceInfo,
                 originalNames,
                 jobdata.customProperties
             )
 
-            await updateProgress(95, 'Saving catalog...')
+            await updateProgress('Saving catalog...')
 
             // Move from processing to processed queue
             if (paths.length > 0) {
@@ -87,7 +79,7 @@ export function startFileWorker() {
                 await redis.srem(`session:${sessionId}:files:processing`, ...paths)
             }
             
-            await updateProgress(100, 'Completed')
+            await updateProgress('Completed', 1)
             
             return catalog
         },

@@ -15,7 +15,8 @@
       </Tree>
     </div>
     <div class="basis-2/4">
-      Info tab
+      {{ latestJob }}
+
     </div>
     <div class="basis-1/4">
       Validation warnings

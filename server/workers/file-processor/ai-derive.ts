@@ -93,3 +93,41 @@ Context class: ${contextType}.`;
         schema
     );
 }
+
+export async function processCompactProperties(
+    contextType: CustomPropertyContext,
+    keys: DerivationKey[],
+    content: string,
+    extraInstructions?: string,
+    sourceName?: string
+): Promise<ContextualResults> {
+    const uniqueKeys = [...new Set(keys.map(item => item.key))];
+    const shape: Record<string, z.ZodTypeAny> = {};
+    for (const key of uniqueKeys) {
+        shape[key] = scored(z.string());
+    }
+
+    const schema = z.object(shape) as z.ZodType<ContextualResults>;
+    const hints = buildPropertyHints(keys);
+    let systemPrompt = `You are a concise data cataloger.
+Return JSON only.
+Use null when a value is not supported.
+Use confidence in [0,1].
+If evidence is direct, confidence should be high. If evidence is weak, use a low nonzero confidence.`;
+
+    systemPrompt += `\nContext: ${contextType}.`;
+
+    if (sourceName) {
+        systemPrompt += `\nSource file name: ${sourceName}.`;
+    }
+
+    if (extraInstructions) {
+        systemPrompt += "\n" + extraInstructions;
+    }
+
+    return await queryModel(
+        systemPrompt,
+        `${hints}\n\nContent:\n${content}`.trim(),
+        schema
+    );
+}

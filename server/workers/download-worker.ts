@@ -15,6 +15,7 @@ import {
     getProviderDownloadBaseUrl,
     getProviderBaseUrl
 } from '~~/shared/types/url'
+import { queuePreviousFilesForStop } from '../utils/files'
 
 const redis = getRedis()
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024
@@ -234,11 +235,22 @@ export function startDownloadWorker() {
                 throw new Error('Extracted archive is empty')
             }
 
-            await updateProgress(100, 'Download completed')
+            // Remove other processed files
+            await queuePreviousFilesForStop(sessionId)
+
             await redis.sadd(`session:${sessionId}:files:unprocessed`, ...extractedFiles)
+            if (extractedFiles.length > 0) {
+                const originalNameEntries = extractedFiles
+                    .map(filePath => [filePath, path.basename(filePath)] as [string, string])
+                await redis.hset(
+                    `session:${sessionId}:files:original-names`,
+                    ...originalNameEntries.flat()
+                )
+            }
             await redis.set(`session:${sessionId}:download:status`, 'completed', 'EX', 12 * 3600)
             await redis.del(`session:${sessionId}:download:error`)
 
+            await updateProgress(100, 'Download completed')
             notifySession(sessionId, { type: 'download-completed', filePath: extractDir })
 
             return {

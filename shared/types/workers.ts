@@ -73,7 +73,7 @@ export interface DeterministicKeyProcessInformation<TInput, TReturn>
     extends KeyProcessInformation {
     strategy: 'Deterministic'
     returnType: ZodType
-    derivationFunction: (filename: string, input: TInput) => TReturn
+    derivationFunction: (input: TInput) => TReturn
 }
 
 export type DerivationMap = Record<string, ContextualKeyProcessInformation | DeterministicKeyProcessInformation<any, any>>

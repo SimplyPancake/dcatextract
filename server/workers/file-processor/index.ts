@@ -1,13 +1,38 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Distribution, InferOptions } from "../../../shared/types/dcat3.js";
-import * as builders from "../../../shared/utils/builder";
 import { extractFileText, walk } from "./helpers.js";
-import { buildDistributionFromFile, createSelectionGuard } from "./distribution-builder.js";
+import { inferDistributionMetadata, type DistributionDeterministicInput } from "./distribution-inference.js";
+import {
+    inferDatasetTitle,
+    inferDatasetLicense,
+    inferDatasetRights,
+    inferDatasetTemporal,
+    inferDatasetSpatial,
+    inferDatasetIdentifier,
+    inferDatasetIssued,
+    inferDatasetModified,
+    inferDatasetLanguage,
+    inferDatasetConformsTo,
+    inferDatasetAccessRights,
+    type DistributionResultsFlat,
+} from "./dataset-inference.js";
 import { CustomProperty, CustomPropertyContext } from "~~/shared/types/schema.js";
-import { ContextualKeyProcessInformation, DeterministicKeyProcessInformation, DerivationMap, ScoredValue, ContextualResults } from "~~/shared/types/workers.js";
+import { DerivationMap, ContextualResults } from "~~/shared/types/workers.js";
 import { z } from "zod";
-import { processProperties } from "./ai-derive.js";
+import { processCompactProperties, processProperties } from "./ai-derive.js";
+import {
+    collectAllContextualDerivations,
+    collectContextualDerivations,
+    collectDeterministicDerivations,
+    collectDeterministicResults,
+    fetchRemoteText,
+    groupCustomProperties,
+    mergeScoredResults,
+    sourceUrlFromInfo,
+    type DeterministicResults,
+    type ContextualDerivation,
+} from "./derivation-helpers.js";
 
 /**
  * Puts inputs in a temp folder to extract and work with them
@@ -69,24 +94,109 @@ const DISTRIBUTION_MAP: DerivationMap = {
         strategy: "Contextual",
         contextMessage: "Spatial resolution in meters.",
     },
+    uri: {
+        strategy: "Deterministic",
+        returnType: z.string(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).uri,
+    },
+    accessURL: {
+        strategy: "Deterministic",
+        returnType: z.string(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).accessURL,
+    },
+    downloadURL: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).downloadURL,
+    },
+    title: {
+        strategy: "Deterministic",
+        returnType: z.string(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).title,
+    },
+    mediaType: {
+        strategy: "Deterministic",
+        returnType: z.string(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).mediaType,
+    },
+    format: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).format,
+    },
+    packageFormat: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).packageFormat,
+    },
+    compressFormat: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).compressFormat,
+    },
+    byteSize: {
+        strategy: "Deterministic",
+        returnType: z.number(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).byteSize,
+    },
+    modified: {
+        strategy: "Deterministic",
+        returnType: z.string(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).modified,
+    },
+    issued: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionDeterministicInput) => inferDistributionMetadata(input).issued,
+    },
 };
 
 const DATASET_MAP: DerivationMap = {
     title: {
         strategy: "Contextual",
-        contextMessage: "Name of the dataset.",
+        contextMessage: "Short title describing what the dataset is about."
     },
     description: {
         strategy: "Contextual",
-        contextMessage: "Short description of the dataset.",
+        contextMessage: "Short general description of the dataset's content, coverage, and purpose.",
+    },
+    identifier: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetIdentifier(input),
+    },
+    issued: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetIssued(input),
+    },
+    modified: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetModified(input),
+    },
+    language: {
+        strategy: "Deterministic",
+        returnType: z.array(z.string()).nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetLanguage(input),
+    },
+    conformsTo: {
+        strategy: "Deterministic",
+        returnType: z.array(z.string()).nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetConformsTo(input),
+    },
+    accessRights: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetAccessRights(input),
     },
     keyword: {
         strategy: "Contextual",
-        contextMessage: "Keywords that describe the dataset.",
+        contextMessage: "Keywords that describe the dataset's content and topics.",
     },
     theme: {
         strategy: "Contextual",
-        contextMessage: "Themes or categories for the dataset.",
+        contextMessage: "Themes or categories for the dataset (e.g., Environment, Health, Economics).",
     },
     publisher: {
         strategy: "Contextual",
@@ -96,13 +206,19 @@ const DATASET_MAP: DerivationMap = {
         strategy: "Contextual",
         contextMessage: "Primary creator or author of the dataset.",
     },
-    license: {
+    type: {
         strategy: "Contextual",
-        contextMessage: "License terms for the dataset.",
+        contextMessage: "Type or classification of the dataset (e.g., numerical, categorical, geographic).",
+    },
+    license: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetLicense(input),
     },
     rights: {
-        strategy: "Contextual",
-        contextMessage: "Rights or access restrictions for the dataset.",
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetRights(input),
     },
     contactPoint: {
         strategy: "Contextual",
@@ -113,12 +229,24 @@ const DATASET_MAP: DerivationMap = {
         contextMessage: "Landing page URL with more details about the dataset.",
     },
     temporal: {
-        strategy: "Contextual",
-        contextMessage: "Time period covered by the dataset.",
+        strategy: "Deterministic",
+        returnType: z.object({
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
+        }).nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetTemporal(input),
     },
     spatial: {
+        strategy: "Deterministic",
+        returnType: z.object({
+            bbox: z.string().optional(),
+            centroid: z.string().optional(),
+        }).nullable(),
+        derivationFunction: (input: DistributionResultsFlat[]) => inferDatasetSpatial(input),
+    },
+    accrualPeriodicity: {
         strategy: "Contextual",
-        contextMessage: "Spatial coverage of the dataset.",
+        contextMessage: "Frequency at which the dataset is updated (e.g., monthly, yearly, never).",
     },
 };
 
@@ -183,77 +311,6 @@ const CONTEXT_MAPS: Record<CustomPropertyContext, DerivationMap> = {
     catalogRecord: CATALOG_RECORD_MAP,
 };
 
-type ContextualDerivation = {
-    key: string;
-    info: ContextualKeyProcessInformation;
-};
-
-function splitPropertyKey(key: string): { context: CustomPropertyContext; prop: string } | null {
-    if (!key.includes('.')) {
-        return null
-    }
-    const idx = key.indexOf(".");
-    if (idx <= 0) return null;
-    const context = key.slice(0, idx) as CustomPropertyContext;
-    const prop = key.slice(idx + 1);
-    if (!prop) return null;
-    return { context, prop };
-}
-
-function collectContextualDerivations(
-    selected: Record<string, boolean>,
-    context: CustomPropertyContext,
-    map: DerivationMap
-): ContextualDerivation[] {
-    const results: ContextualDerivation[] = [];
-    for (const [key, enabled] of Object.entries(selected)) {
-        if (!enabled) continue;
-        const split = splitPropertyKey(key);
-        if (!split || split.context !== context) continue;
-        const info = map[split.prop];
-        if (info?.strategy === "Contextual") {
-            results.push({
-                key,
-                info,
-            });
-        }
-    }
-    return results;
-}
-
-function collectDeterministicDerivations(
-    selected: Record<string, boolean>,
-    context: CustomPropertyContext,
-    map: DerivationMap
-): Array<{ key: string; info: DeterministicKeyProcessInformation<any, any> }> {
-    const results: Array<{ key: string; info: DeterministicKeyProcessInformation<any, any> }> = [];
-    for (const [key, enabled] of Object.entries(selected)) {
-        if (!enabled) continue;
-        const split = splitPropertyKey(key);
-        if (!split || split.context !== context) continue;
-        const info = map[split.prop];
-        if (info?.strategy === "Deterministic") {
-            results.push({
-                key,
-                info,
-            });
-        }
-    }
-    return results;
-}
-function groupCustomProperties(customProperties: CustomProperty[]): Record<CustomPropertyContext, string[]> {
-    return customProperties.reduce((acc, prop) => {
-        acc[prop.context] = acc[prop.context] ?? [];
-        acc[prop.context].push(prop.iri);
-        return acc;
-    }, {
-        dataset: [],
-        distribution: [],
-        dataService: [],
-        catalogRecord: [],
-    } as Record<CustomPropertyContext, string[]>);
-}
-
 type DerivationPlan = {
     contextual_derivations: ContextualDerivation[];
     deterministic_derivations: Array<{ key: string; info: DeterministicKeyProcessInformation<any, any> }>;
@@ -263,7 +320,7 @@ export async function inferDcatFromFiles(
     absFilePath: string[],
     opts: InferOptions = {},
     tmpDir: string,
-    logProgress: (prc: number, message: string) => void,
+    logProgress: (message: string) => Promise<void>,
     selectedProperties: Record<string, boolean>,
     sourceInfo?: { accessUrl?: string; downloadUrl?: string },
     originalNames?: Record<string, string>,
@@ -318,7 +375,7 @@ export async function inferDcatFromFiles(
     // Now that we have the plan of deriving, we will do the deriving!
     type ContextualResultsTypeInfoType = {
         contextual_derivations: ContextualResults,
-        deterministic_derivations: ContextualResults,
+        deterministic_derivations: DeterministicResults,
         additional_derivations: ContextualResults,
     }
 
@@ -347,118 +404,152 @@ export async function inferDcatFromFiles(
         },
     };
 
+    await logProgress("Starting inference")
+
     // Distribution contextual results
-    for (let filePath of absFilePath) {
+    // TODO: For contents of CSV's only return the columns and the first few rows.
+    for (let filePath of absFilePath) {        
+        if (!derivationPlan.distribution) {
+            continue
+        }
+        const displayName = originalNames?.[filePath] ?? path.basename(filePath);
+        await logProgress(`Processing ${displayName}`)
+
         const results: ContextualResultsTypeInfoType = {
             contextual_derivations: {},
             deterministic_derivations: {},
             additional_derivations: {}
         }
 
-        const fileContents = await extractFileText(filePath, 3000)
+        const fileContents = await extractFileText(filePath, 1500)
         const plan = derivationPlan.distribution
+        const deterministicInput: DistributionDeterministicInput = {
+            filePath,
+            sourceInfo,
+            originalName: originalNames?.[filePath],
+        }
 
-        // Compute/derive computable properties
-        //TODO!
+        if (plan.deterministic_derivations) {   
+            results.deterministic_derivations = collectDeterministicResults(
+                selectedProperties,
+                "distribution",
+                DISTRIBUTION_MAP,
+                deterministicInput
+            );
+        }
 
-        // Get contextual derivation
-        results.contextual_derivations = await processProperties(
-            "distribution",
-            plan.contextual_derivations,
-            fileContents,
-            undefined,
-            path.basename(filePath)
-        );
+        if (plan.contextual_derivations.length > 0) {
+            // Get contextual derivation
+            results.contextual_derivations = await processProperties(
+                "distribution",
+                plan.contextual_derivations,
+                fileContents,
+                undefined,
+                path.basename(filePath)
+            );
+        }
 
-        // Then obtain extra properties
-        results.additional_derivations = await processProperties(
-            "distribution",
-            plan.additional_derivations.map(x => {
-                return {
-                    key: x
-                }
-            }),
-            fileContents,
-            "These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
-            path.basename(filePath)
-        )
+        if (plan.additional_derivations.length > 0) {
+            // Then obtain extra properties
+            results.additional_derivations = await processProperties(
+                "distribution",
+                plan.additional_derivations.map(x => {
+                    return {
+                        key: x
+                    }
+                }),
+                fileContents,
+                "These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
+                path.basename(filePath)
+            )
+        }
 
         // Push to large object
         contextualResultsCollection.distribution.push(results)
     }
 
-    console.log(contextualResultsCollection.distribution)
+    // Dataset derivation
+    // Dataset properties are derived by the info about all the files.
+    logProgress("Processing dataset")
+    const flatKeysDistribution = contextualResultsCollection
+    .distribution
+    .map(distribution => {
+        return {
+            ...distribution.deterministic_derivations,
+            ...distribution.contextual_derivations,
+            ...distribution.additional_derivations
+        }
+    })
+    if (derivationPlan.dataset) {
+        
+        // Collect deterministic derivations from distribution data
+        contextualResultsCollection.dataset.deterministic_derivations = 
+            collectDeterministicResults(selectedProperties, "dataset", DATASET_MAP, flatKeysDistribution);
+        
+        // Collect contextual derivations from file contents
+        if (derivationPlan.dataset.contextual_derivations.length > 0) {
+            const distributionContents = JSON.stringify(flatKeysDistribution)
+            
+            contextualResultsCollection.dataset.contextual_derivations = await processProperties(
+                "dataset",
+                derivationPlan.dataset.contextual_derivations,
+                distributionContents,
+                `Use the aggregated file contents descriptions to derive dataset-level metadata in DCAT. 
+                Consider all files as a single collection. 
+                If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
+                "dataset"
+            );
+        }
+        
+        // Collect additional custom properties for dataset
+        if (derivationPlan.dataset.additional_derivations.length > 0) {
+            const allFileContents = (await Promise.all(
+                absFilePath.map(filePath => extractFileText(filePath, 3000))
+            )).join("\n\n");
+            
+            contextualResultsCollection.dataset.additional_derivations = await processProperties(
+                "dataset",
+                derivationPlan.dataset.additional_derivations.map(x => ({
+                    key: x
+                })),
+                allFileContents,
+                "These properties have a custom DCAT IRI for the dataset. Use the IRI local name as the main semantic clue and return a nonzero confidence when the files provide any useful signal.",
+                "dataset"
+            );
+        }
+    }
+
+    // Data provider
+    logProgress("Processing data provider")
+    {
+        const providerUrl = sourceUrlFromInfo(sourceInfo);
+        const providerContextualDerivations = derivationPlan.dataService.contextual_derivations.length > 0
+            ? derivationPlan.dataService.contextual_derivations
+            : collectAllContextualDerivations(DATA_SERVICE_MAP);
+
+        contextualResultsCollection.dataService.deterministic_derivations = {
+            ...(providerUrl ? {
+                "dataService.endpointURL": {
+                    value: providerUrl,
+                    confidence: 1,
+                },
+            } : {}),
+        };
+
+        const providerContent = providerUrl
+            ? await fetchRemoteText(providerUrl, 2000) ?? JSON.stringify(flatKeysDistribution)
+            : JSON.stringify(flatKeysDistribution);
+
+        contextualResultsCollection.dataService.contextual_derivations = await processProperties(
+            "dataService",
+            providerContextualDerivations,
+            providerContent,
+            providerUrl
+                ? "This content was fetched from the data provider URL. Use it to infer the provider title, description, endpoint description, and related metadata."
+                : "No provider URL was available. Infer contextual information about the data provider from the dataset files, filenames, and embedded references.",
+            providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService"
+        );
+    }
+
     return contextualResultsCollection
-
-//     { schemas:                                                                                           14:58:30
-//    { 'dataset.versionNotes': true,
-//      'dataset.hasCurrentVersion': true,
-//      'dataset.hasVersion': true,
-//      'dataset.previousVersion': true,
-//      'dataset.version': true,
-//      'dataset.creator': true,
-//      'dataset.description': true,
-//      'distribution.description': true,
-//      'dataService.description': true,
-//      'catalogRecord.description': true,
-//      'dataset.license': true,
-//      'distribution.license': true,
-//      'dataset.modified': true,
-//      'distribution.modified': true,
-//      'catalogRecord.modified': true,
-//      'dataset.publisher': true,
-//      'dataset.title': true,
-//      'distribution.title': true,
-//      'dataService.title': true,
-//      'catalogRecord.title': true,
-//      'distribution.accessService': true,
-//      'distribution.accessURL': true,
-//      'distribution.byteSize': true,
-//      'dataset.catalog': true,
-//      'dataService.catalog': true,
-//      'distribution.compressFormat': true,
-//      'dataset.contactPoint': true,
-//      'dataset.dataset': true,
-//      'dataService.dataset': true,
-//      'dataset.distribution': true,
-//      'dataService.distribution': true,
-//      'distribution.downloadURL': true,
-//      'dataset.endpointDescription': true,
-//      'dataService.endpointDescription': true,
-//      'dataset.endpointURL': true,
-//      'dataService.endpointURL': true,
-//      'dataset.first': true,
-//      'dataset.inSeries': true,
-//      'dataset.keyword': true,
-//      'dataset.landingPage': true,
-//      'dataset.last': true,
-//      'distribution.mediaType': true,
-//      'distribution.packageFormat': true,
-//      'dataset.prev': true,
-//      'dataset.qualifiedRelation': true,
-//      'dataService.qualifiedRelation': true,
-//      'dataset.record': true,
-//      'dataService.record': true,
-//      'dataset.resource': true,
-//      'dataService.resource': true,
-//      'dataset.servesDataset': true,
-//      'dataService.servesDataset': true,
-//      'dataset.service': true,
-//      'dataService.service': true,
-//      'dataset.spatialResolutionInMeters': true,
-//      'distribution.spatialResolutionInMeters': true,
-//      'dataset.temporalResolution': true,
-//      'distribution.temporalResolution': true,
-//      'dataset.theme': true,
-//      'dataset.themeTaxonomy': true,
-//      'dataService.themeTaxonomy': true,
-//      'dataset.uri': true,
-//      'distribution.uri': true,
-//      'catalogRecord.uri': true },
-//   customProperties:
-//    [ { iri: 'test1', context: 'dataset' },
-//      { iri: 'test2', context: 'dataService' },
-//      { iri: 'test345345', context: 'catalogRecord' } ],
-//   inferencePercentage: 60 }
-
 }

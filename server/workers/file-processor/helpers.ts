@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { parse } from 'csv-parse';
 
 export function titleFromStem(stem: string): string {
     return stem
@@ -62,14 +63,68 @@ export async function extractPdfText(filePath: string, maxChars = 4000): Promise
     }
 }
 
+export async function extractCSVText(filePath: string, maxChars = 4000): Promise<string> {
+    return new Promise((resolve, reject) => {
+        let columns: string[] = [];
+        let firstRow: Record<string, string> | null = null;
+
+        const parser = fs
+            .createReadStream(filePath)
+            .pipe(
+                parse({
+                    columns: true,
+                    trim: true
+                })
+            );
+
+        parser.on('headers', (headers: string[]) => {
+            columns = headers;
+        });
+
+        parser.on('data', (row: Record<string, string>) => {
+            if (!firstRow) {
+                firstRow = row;
+
+                const preview = columns
+                    .map((column) => `${column}="${row[column] ?? ''}"`)
+                    .join(', ');
+
+                resolve(
+                    (`CSV file with ${columns.length} columns: ${columns.join(', ')}. ` +
+                        `First row preview: ${preview}.`).trim().slice(0, maxChars)
+                );
+
+                parser.destroy();
+            }
+        });
+
+        parser.on('error', reject);
+
+        parser.on('end', () => {
+            if (!firstRow) {
+                resolve(
+                    columns.length > 0
+                        ? (`CSV file with ${columns.length} columns: ${columns.join(', ')}. No data rows found.`).trim().slice(0, maxChars)
+                        : 'Empty CSV file.'
+                );
+            }
+        });
+    });
+}
+
 export async function extractFileText(filePath: string, maxChars = 4000): Promise<string> {
     try {
         const ext = path.extname(filePath).toLowerCase();
-        if (ext === ".pdf") {
-            return await extractPdfText(filePath, maxChars);
+        switch (ext) {
+            case ".pdf":
+                return await extractPdfText(filePath, maxChars);
+            case ".csv":
+                return await extractCSVText(filePath, maxChars)
+            default:
+                return fs.readFileSync(filePath, "utf-8").replace(/\s+/g, " ").trim()
+                    .slice(0, maxChars);
         }
 
-        return fs.readFileSync(filePath, "utf-8").replace(/\s+/g, " ").trim().slice(0, maxChars);
     } catch {
         return "";
     }

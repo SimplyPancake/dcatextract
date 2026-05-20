@@ -4,6 +4,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getRedis } from '../utils/redis';
 import { extractFileText } from '../workers/file-processor/helpers';
+import { queuePreviousFilesForStop } from '../utils/files';
 
 
 export default defineEventHandler(async (event) => {
@@ -70,7 +71,7 @@ export default defineEventHandler(async (event) => {
         const fileText = await extractFileText(file.filepath, 100)
         console.log(fileText)
         if (fileText == '') {
-            noContains.push(file.originalFilename)
+            noContains.push(file.originalFilename ?? path.basename(file.filepath))
         }
     }
 
@@ -91,29 +92,14 @@ export default defineEventHandler(async (event) => {
             message: 'Session required'
         })
     }
-    const previousUnprocessed = await redis.smembers(
-        `session:${sessionId}:files:unprocessed`
-    )
-    if (previousUnprocessed.length > 0) {
-        await redis.sadd(
-            `session:${sessionId}:files:stopped`,
-            ...previousUnprocessed
-        )
-        await redis.srem(
-            `session:${sessionId}:files:unprocessed`,
-            ...previousUnprocessed
-        )
+    
+    await queuePreviousFilesForStop(sessionId)
 
-        await redis.hdel(
-            `session:${sessionId}:files:original-names`,
-            ...previousUnprocessed
-        )
-    }
     // Store file ownership in Redis (unprocessed queue)
     const filepaths = userFiles.map((file) => file.filepath);
     const originalNameEntries = userFiles
         .map((file) => {
-            const originalName = file.originalFilename ?? undefined;
+            const originalName = file.originalFilename ?? path.basename(file.filepath);
             return originalName ? [file.filepath, originalName] : null;
         })
         .filter((entry): entry is [string, string] => entry !== null);

@@ -1,14 +1,12 @@
 <template>
   <div class="flex flex-col w-full px-4">
     <div v-if="!processingDone && !processingFailed" class="flex flex-col items-center justify-center p-8 space-y-6">
-      <Loader2 class="animate-spin text-[var(--p-primary-color)]" :size="48" />
       <div class="text-xl font-medium tracking-tight">Processing your data...</div>
       <div class="w-full max-w-md">
         <div class="flex justify-between mb-2 text-sm text-surface-500">
           <span>{{ currentAction || 'Initializing...' }}</span>
-          <span>{{ Math.round(progress) }}%</span>
         </div>
-        <ProgressBar :value="progress" :showValue="false" class="h-2" />
+        <ProgressBar mode="indeterminate" :showValue="false" class="h-2" />
       </div>
     </div>
 
@@ -73,7 +71,7 @@ onMounted(async () => {
     progress.value = workerProgress.progress
     currentAction.value = workerProgress.message
     
-    processingDone.value = workerProgress.progress == 100
+    processingDone.value = workerProgress.progress == 1
 
     if (data.failedReason && data.failedReason != '') {
       processingDone.value = true
@@ -96,7 +94,7 @@ watch(socket, (newSocket) => {
         processingDone.value = false
         processingFailed.value = false
       } else if (data.type === 'completed') {
-        progress.value = 100
+        progress.value = 1
         currentAction.value = 'Finished!'
         processingDone.value = true
         processingFailed.value = false
