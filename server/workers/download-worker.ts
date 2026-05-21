@@ -260,6 +260,8 @@ export function startDownloadWorker() {
         },
         {
             connection: redis,
+            lockDuration: 5 * 60 * 1000,
+            lockRenewTime: 60 * 1000,
             removeOnComplete: {
                 age: 12 * 3600,
                 limit: 50

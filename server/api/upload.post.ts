@@ -69,7 +69,6 @@ export default defineEventHandler(async (event) => {
     let noContains = []
     for (const file of userFiles) {
         const fileText = await extractFileText(file.filepath, 100)
-        console.log(fileText)
         if (fileText == '') {
             noContains.push(file.originalFilename ?? path.basename(file.filepath))
         }

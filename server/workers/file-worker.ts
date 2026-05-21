@@ -45,7 +45,7 @@ export function startFileWorker() {
             await redis.sadd(`session:${sessionId}:files:processing`, ...paths)
             await redis.srem(`session:${sessionId}:files:unprocessed`, ...paths)
 
-            await updateProgress('Preparing temporary directory...')
+            await updateProgress('Preparing temporary directory')
 
             // Process all files (zips are extracted) to infer DCAT metadata
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
@@ -86,6 +86,8 @@ export function startFileWorker() {
         {
             connection: redis,
             concurrency: 3,
+            lockDuration: 5 * 60 * 1000,
+            lockRenewTime: 60 * 1000,
             // Save completed and failed jobs only a short time. Otherwise we might store more data than neccessary
             removeOnComplete: {
                 age: 12 * 3600, // 12 hours

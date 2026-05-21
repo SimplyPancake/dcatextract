@@ -23,3 +23,6 @@ logs
 .env.*
 !.env.example
 .nuxtrc
+
+.github/agents
+.github/instructions

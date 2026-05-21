@@ -15,8 +15,6 @@ export function getAI(): OpenAI {
 			apiKey: config.llmToken,
 			baseURL: config.llmUrl
 		})
-
-		console.log("Client created!")
 	}
 	return client
 }

@@ -32,6 +32,7 @@ import {
     sourceUrlFromInfo,
     type DeterministicResults,
     type ContextualDerivation,
+    type SourceInfo,
 } from "./derivation-helpers.js";
 
 /**
@@ -273,6 +274,36 @@ const DATA_SERVICE_MAP: DerivationMap = {
     },
 };
 
+type CatalogRecordDeterministicInput = {
+    distributions: DistributionResultsFlat[];
+    sourceInfo?: SourceInfo;
+};
+
+function inferCatalogRecordSource(input: CatalogRecordDeterministicInput): string | null {
+    const sourceUrl = sourceUrlFromInfo(input.sourceInfo);
+    if (sourceUrl) return sourceUrl;
+
+    const first = input.distributions[0];
+    const accessUrl = first?.["distribution.accessURL"]?.value;
+    if (typeof accessUrl === "string") return accessUrl;
+
+    const downloadUrl = first?.["distribution.downloadURL"]?.value;
+    if (typeof downloadUrl === "string") return downloadUrl;
+
+    return null;
+}
+
+function inferCatalogRecordUri(input: CatalogRecordDeterministicInput): string | null {
+    const sourceUrl = inferCatalogRecordSource(input);
+    if (sourceUrl) return `${sourceUrl}#record`;
+
+    const first = input.distributions[0];
+    const distUri = first?.["distribution.uri"]?.value;
+    if (typeof distUri === "string") return `${distUri}#record`;
+
+    return null;
+}
+
 const CATALOG_RECORD_MAP: DerivationMap = {
     title: {
         strategy: "Contextual",
@@ -283,20 +314,34 @@ const CATALOG_RECORD_MAP: DerivationMap = {
         contextMessage: "Short description of the catalog record.",
     },
     issued: {
-        strategy: "Contextual",
-        contextMessage: "Date the catalog record was issued.",
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferDatasetIssued(input.distributions),
     },
     modified: {
-        strategy: "Contextual",
-        contextMessage: "Date the catalog record was last modified.",
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferDatasetModified(input.distributions),
     },
     language: {
-        strategy: "Contextual",
-        contextMessage: "Language of the catalog record metadata. Answer in two-letter language code",
+        strategy: "Deterministic",
+        returnType: z.array(z.string()).nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferDatasetLanguage(input.distributions),
+    },
+    conformsTo: {
+        strategy: "Deterministic",
+        returnType: z.array(z.string()).nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferDatasetConformsTo(input.distributions),
+    },
+    uri: {
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferCatalogRecordUri(input),
     },
     source: {
-        strategy: "Contextual",
-        contextMessage: "Source from which the record metadata was derived.",
+        strategy: "Deterministic",
+        returnType: z.string().nullable(),
+        derivationFunction: (input: CatalogRecordDeterministicInput) => inferCatalogRecordSource(input),
     },
     status: {
         strategy: "Contextual",
@@ -333,12 +378,17 @@ export async function inferDcatFromFiles(
         throw new Error("No files provided for inference");
     }
 
+    await logProgress("Staging inputs")
     stageInputs(absFilePath, tmpDir, log, originalNames);
+    await logProgress("Inputs staged")
 
+    await logProgress("Scanning staged files")
     const allFiles = walk(tmpDir);
     log(`Found ${allFiles.length} total files`);
+    await logProgress(`Staged file count: ${allFiles.length}`)
 
     const customPropsByContext = groupCustomProperties(customProperties);
+    await logProgress("Grouped custom properties")
 
     const derivationPlan: Record<CustomPropertyContext, DerivationPlan> = {
         dataset: {
@@ -363,6 +413,7 @@ export async function inferDcatFromFiles(
         },
     };
 
+    await logProgress("Building derivation plan")
     for (const context of Object.keys(CONTEXT_MAPS) as CustomPropertyContext[]) {
         const map = CONTEXT_MAPS[context];
         derivationPlan[context] = {
@@ -371,6 +422,7 @@ export async function inferDcatFromFiles(
             additional_derivations: customPropsByContext[context] ?? [],
         };
     }
+    await logProgress("Derivation plan ready")
 
     // Now that we have the plan of deriving, we will do the deriving!
     type ContextualResultsTypeInfoType = {
@@ -405,6 +457,7 @@ export async function inferDcatFromFiles(
     };
 
     await logProgress("Starting inference")
+    await logProgress(`Processing ${absFilePath.length} distributions`)
 
     // Distribution contextual results
     // TODO: For contents of CSV's only return the columns and the first few rows.
@@ -421,7 +474,9 @@ export async function inferDcatFromFiles(
             additional_derivations: {}
         }
 
+        await logProgress(`Reading ${displayName}`)
         const fileContents = await extractFileText(filePath, 1500)
+        await logProgress(`Extracted text from ${displayName}`)
         const plan = derivationPlan.distribution
         const deterministicInput: DistributionDeterministicInput = {
             filePath,
@@ -430,16 +485,19 @@ export async function inferDcatFromFiles(
         }
 
         if (plan.deterministic_derivations) {   
+            await logProgress(`Deriving deterministic distribution metadata for ${displayName}`)
             results.deterministic_derivations = collectDeterministicResults(
                 selectedProperties,
                 "distribution",
                 DISTRIBUTION_MAP,
                 deterministicInput
             );
+            await logProgress(`Derived deterministic distribution metadata for ${displayName}`)
         }
 
         if (plan.contextual_derivations.length > 0) {
             // Get contextual derivation
+            await logProgress(`Deriving contextual distribution metadata for ${displayName}`)
             results.contextual_derivations = await processProperties(
                 "distribution",
                 plan.contextual_derivations,
@@ -447,30 +505,32 @@ export async function inferDcatFromFiles(
                 undefined,
                 path.basename(filePath)
             );
+            await logProgress(`Derived contextual distribution metadata for ${displayName}`)
         }
 
         if (plan.additional_derivations.length > 0) {
             // Then obtain extra properties
+            await logProgress(`Deriving custom distribution metadata for ${displayName}`)
             results.additional_derivations = await processProperties(
                 "distribution",
-                plan.additional_derivations.map(x => {
-                    return {
-                        key: x
-                    }
-                }),
+                plan.additional_derivations.map(x => ({
+                    key: x
+                })),
                 fileContents,
                 "These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
                 path.basename(filePath)
             )
+            await logProgress(`Derived custom distribution metadata for ${displayName}`)
         }
 
         // Push to large object
         contextualResultsCollection.distribution.push(results)
+        await logProgress(`Distribution metadata saved for ${displayName}`)
     }
 
     // Dataset derivation
     // Dataset properties are derived by the info about all the files.
-    logProgress("Processing dataset")
+    await logProgress("Processing dataset")
     const flatKeysDistribution = contextualResultsCollection
     .distribution
     .map(distribution => {
@@ -483,13 +543,16 @@ export async function inferDcatFromFiles(
     if (derivationPlan.dataset) {
         
         // Collect deterministic derivations from distribution data
+        await logProgress("Deriving deterministic dataset metadata")
         contextualResultsCollection.dataset.deterministic_derivations = 
             collectDeterministicResults(selectedProperties, "dataset", DATASET_MAP, flatKeysDistribution);
+        await logProgress("Derived deterministic dataset metadata")
         
         // Collect contextual derivations from file contents
         if (derivationPlan.dataset.contextual_derivations.length > 0) {
             const distributionContents = JSON.stringify(flatKeysDistribution)
             
+            await logProgress("Deriving contextual dataset metadata")
             contextualResultsCollection.dataset.contextual_derivations = await processProperties(
                 "dataset",
                 derivationPlan.dataset.contextual_derivations,
@@ -499,10 +562,12 @@ export async function inferDcatFromFiles(
                 If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
                 "dataset"
             );
+            await logProgress("Derived contextual dataset metadata")
         }
         
         // Collect additional custom properties for dataset
         if (derivationPlan.dataset.additional_derivations.length > 0) {
+            await logProgress("Deriving custom dataset metadata")
             const allFileContents = (await Promise.all(
                 absFilePath.map(filePath => extractFileText(filePath, 3000))
             )).join("\n\n");
@@ -516,17 +581,19 @@ export async function inferDcatFromFiles(
                 "These properties have a custom DCAT IRI for the dataset. Use the IRI local name as the main semantic clue and return a nonzero confidence when the files provide any useful signal.",
                 "dataset"
             );
+            await logProgress("Derived custom dataset metadata")
         }
     }
 
     // Data provider
-    logProgress("Processing data provider")
-    {
+    if (derivationPlan.dataService) {
+        await logProgress("Processing data provider")
         const providerUrl = sourceUrlFromInfo(sourceInfo);
         const providerContextualDerivations = derivationPlan.dataService.contextual_derivations.length > 0
             ? derivationPlan.dataService.contextual_derivations
             : collectAllContextualDerivations(DATA_SERVICE_MAP);
 
+        await logProgress("Deriving deterministic data provider metadata")
         contextualResultsCollection.dataService.deterministic_derivations = {
             ...(providerUrl ? {
                 "dataService.endpointURL": {
@@ -535,11 +602,15 @@ export async function inferDcatFromFiles(
                 },
             } : {}),
         };
+        await logProgress("Derived deterministic data provider metadata")
 
+        await logProgress("Fetching data provider context")
         const providerContent = providerUrl
             ? await fetchRemoteText(providerUrl, 2000) ?? JSON.stringify(flatKeysDistribution)
             : JSON.stringify(flatKeysDistribution);
+        await logProgress("Fetched data provider context")
 
+        await logProgress("Deriving contextual data provider metadata")
         contextualResultsCollection.dataService.contextual_derivations = await processProperties(
             "dataService",
             providerContextualDerivations,
@@ -549,6 +620,24 @@ export async function inferDcatFromFiles(
                 : "No provider URL was available. Infer contextual information about the data provider from the dataset files, filenames, and embedded references.",
             providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService"
         );
+        await logProgress("Derived contextual data provider metadata")
+        
+        await logProgress("Deriving custom data provider metadata")
+        contextualResultsCollection.dataService.additional_derivations = await processProperties(
+            "dataService",
+            derivationPlan.dataService.additional_derivations.map(x => ({
+                    key: x
+            })),
+            providerContent,
+            "These properties have a custom DCAT IRI for the dataset. Use the IRI local name as the main semantic clue and return a nonzero confidence when the files provide any useful signal.",
+        )
+        await logProgress("Derived custom data provider metadata")
+    }
+
+    // Catalog
+    if (derivationPlan.catalogRecord) {
+        await logProgress("Processing catalog record")
+        await logProgress("Catalog record processing complete")
     }
 
     return contextualResultsCollection

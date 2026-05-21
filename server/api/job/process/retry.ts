@@ -1,5 +1,5 @@
 import { fileQueue } from '~~/server/utils/bull';
-import { LatestJobDTO} from "~~/shared/types/dto"
+import { LatestJobDTO } from "~~/shared/types/dto"
 export default defineEventHandler(async (event) => {
   const sessionId = event.context.sessionId;
   if (!sessionId) {
@@ -7,14 +7,18 @@ export default defineEventHandler(async (event) => {
   }
 
   // Check BullMQ for running jobs for this session
-  const lastJob: LatestJobDTO = (await fileQueue.getCompleted())
-    .filter(j => j.data?.sessionId == sessionId && j.isFailed)
+  const lastJob: LatestJobDTO = (await fileQueue.getFailed())
+    .filter(j => j.data?.sessionId === sessionId)
     .sort((a, b) => b.finishedOn! - a.finishedOn! )[0]
   
   if (!lastJob) {
     throw createError('Could not find last job!')
   }
 
-  lastJob.retry()
+  if (!lastJob.isFailed) {
+    throw createError('Last job is not in failed state.')
+  }
+
+  await lastJob.retry()
   return lastJob
 });
