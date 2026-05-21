@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col w-full px-4">
     <div v-if="!processingDone && !processingFailed" class="flex flex-col items-center justify-center p-8 space-y-6">
-      <div class="text-xl font-medium tracking-tight">Processing your data...</div>
+      <div class="text-xl font-medium tracking-tight">Processing your data. This may take some time.</div>
       <div class="w-full max-w-md">
         <div class="flex justify-between mb-2 text-sm text-surface-500">
           <span>{{ currentAction || 'Initializing...' }}</span>

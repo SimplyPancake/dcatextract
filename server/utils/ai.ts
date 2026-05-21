@@ -2,7 +2,7 @@ import OpenAI from "openai"
 import { z } from "zod";
 import { zodTextFormat } from "openai/helpers/zod";
 
-const DEFAULT_MODEL = "qwen/qwen3.5-9b"
+const DEFAULT_MODEL = "qwen/qwen3-8b"
 
 let client: OpenAI | undefined
 let selectedModel: string | undefined
