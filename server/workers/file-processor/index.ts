@@ -369,7 +369,8 @@ export async function inferDcatFromFiles(
     selectedProperties: Record<string, boolean>,
     sourceInfo?: { accessUrl?: string; downloadUrl?: string },
     originalNames?: Record<string, string>,
-    customProperties: CustomProperty[] = []
+    customProperties: CustomProperty[] = [],
+    metadataFiles: string[] = []
 ) {
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };

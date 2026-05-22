@@ -24,6 +24,7 @@ export type FileProcessJobDataType = {
     customProperties: CustomProperty[]
     inferencePercentage: number
     downloadType: DownloadSourceType
+    metadataFiles: string[] // Paths of the related metadata files for the job
     downloadData?: DownloadJobDataType
 }
 

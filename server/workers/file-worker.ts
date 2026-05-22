@@ -6,6 +6,8 @@ import * as path from "node:path";
 import { inferDcatFromFiles } from './file-processor'
 import { notifySession } from '../utils/wsManager'
 import { FileProcessJobDataType, WorkerProgress } from "~~/shared/types/workers"
+import { extractFileText } from './file-processor/helpers';
+import { z } from "zod";
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -32,7 +34,11 @@ export function startFileWorker() {
             }
             
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+            const metadataFilepaths = Array.isArray(jobdata.metadataFiles) && jobdata.metadataFiles.length > 0
+                ? jobdata.metadataFiles
+                : await redis.smembers(`session:${sessionId}:files:metadata`)
             const originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)
+            console.log('Processing metadata files:', metadataFilepaths.length)
 
 
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
@@ -51,14 +57,47 @@ export function startFileWorker() {
             const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "dcat-infer-"));
             await job.updateData({ ...job.data, tmpDir });
 
-            await updateProgress('Inferring DCAT metadata...')
-
             const sourceInfo = jobdata.downloadData
                 ? {
                     accessUrl: jobdata.downloadData.accessUrl,
                     downloadUrl: jobdata.downloadData.downloadUrl,
                 }
                 : undefined
+
+            // Compress metadata
+            if (metadataFilepaths.length > 0) {
+                await updateProgress('Summarising additional metadata')
+            }
+
+            const compressedMetadatas = []
+
+            for(const filepath of metadataFilepaths) {
+                // Read file
+                const fileContents = await extractFileText(filepath, 3000)
+                const compressed = await queryModel(
+                    `You are a dataset metadata summarizer.
+                    Summarize files such as .txt, .md, or .pdf that describe datasets, providers, schemas, distributions, licenses, or processing details.
+                    Focus on:
+                    dataset purpose, provider, files/distributions, formats/schema, licenses/restrictions, update frequency,
+                    processing notes or warnings
+
+                    Rules:
+                    Be concise and accurate. Do not invent information. Mention missing details if relevant.
+
+                    Output:
+                    Overview, Metadata, Caveats`,
+                    `Summarize this dataset metadata file for ETL/data processing.
+                    Include if in file:
+                    purpose, provider, files/distributions, formats/schema, restrictions, warnings
+                
+                    File content:
+                    ${fileContents}`,
+                    z.string(),
+                    false,
+                    "qwen/qwen3-4b-2507"
+                )
+                compressedMetadatas.push(compressed)
+            }
 
             const catalog = await inferDcatFromFiles(
                 paths,
@@ -68,7 +107,8 @@ export function startFileWorker() {
                 jobdata.selectedMetadata,
                 sourceInfo,
                 originalNames,
-                jobdata.customProperties
+                jobdata.customProperties,
+                metadataFilepaths
             )
 
             await updateProgress('Saving catalog...')

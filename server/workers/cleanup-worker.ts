@@ -65,8 +65,9 @@ async function cleanupSession(sessionId: string) {
   const unprocessedFiles = await redis.smembers(`session:${sessionId}:files:unprocessed`)
   const processedFiles = await redis.smembers(`session:${sessionId}:files:processed`)
   const stoppedFiles = await redis.smembers(`session:${sessionId}:files:stopped`)
+  const stoppedMetadata = await redis.smembers(`session:${sessionId}:metadata:stopped`)
 
-  const allFiles = [...unprocessedFiles, ...processedFiles, ...stoppedFiles]
+  const allFiles = [...unprocessedFiles, ...processedFiles, ...stoppedFiles, ...stoppedMetadata]
 
   for (const file of allFiles) {
     try {
@@ -78,6 +79,7 @@ async function cleanupSession(sessionId: string) {
       await redis.srem(`session:${sessionId}:files:processed`, file)
       await redis.srem(`session:${sessionId}:files:stopped`, file)
       await redis.hdel(`session:${sessionId}:files:original-names`, file)
+      await redis.srem(`session:${sessionId}:metadata:stopped`, file)
     }
     catch (e) {
       console.error(e)
@@ -97,6 +99,11 @@ async function cleanupSession(sessionId: string) {
   const remainingStopped = await redis.scard(`session:${sessionId}:files:stopped`)
   if (remainingStopped === 0) {
     await redis.del(`session:${sessionId}:files:stopped`)
+  }
+
+  const remaningMetadata = await redis.scard(`session:${sessionId}:metadata:stopped`)
+  if (remaningMetadata === 0) {
+    await redis.del(`session:${sessionId}:metadata:stopped`)
   }
 
   console.log(

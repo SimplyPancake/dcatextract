@@ -19,9 +19,13 @@ export function getAI(): OpenAI {
 	return client
 }
 
-function scoreModelId(modelId: string): number {
+function scoreModelId(modelId: string, preferredModelName?: string): number {
 	const id = modelId.toLowerCase()
 	let score = 0
+
+	if (preferredModelName && id == preferredModelName) {
+		return 99
+	}
 
 	if (id.includes("deepseek")) score += 6
 	if (id.includes("qwen")) score += 5
@@ -56,7 +60,7 @@ function extractFirstJsonObject(text: string): string | null {
 	return null
 }
 
-async function selectBestModel(): Promise<string> {
+async function selectBestModel(preferredModelName?: string): Promise<string> {
 	if (selectedModel) return selectedModel
 
 	const ai = getAI()
@@ -73,7 +77,7 @@ async function selectBestModel(): Promise<string> {
 		}
 
 		if (models.length > 0) {
-			const sorted = [...models].sort((a, b) => scoreModelId(b.id) - scoreModelId(a.id))
+			const sorted = [...models].sort((a, b) => scoreModelId(b.id, preferredModelName) - scoreModelId(a.id, preferredModelName))
 			selectedModel = sorted[0]?.id ?? DEFAULT_MODEL
 			console.log("Selected model:", selectedModel)
 			return selectedModel
@@ -83,7 +87,7 @@ async function selectBestModel(): Promise<string> {
 		console.warn(`Failed to list models, falling back to default: ${message}`)
 	}
 
-	selectedModel = DEFAULT_MODEL
+	selectedModel = preferredModelName ?? DEFAULT_MODEL
 	console.log("Selected model:", selectedModel)
 	return selectedModel
 }
@@ -91,34 +95,39 @@ async function selectBestModel(): Promise<string> {
 export async function queryModel<T extends z.ZodTypeAny>(
 	system: string,
 	user: string,
-	schema: T
+	schema: T,
+	useJSONOutput = true,
+	preferredModelName?: string,
 ): Promise<z.infer<T>> {
-	const modelName = await selectBestModel()
+	const modelName = await selectBestModel(preferredModelName)
 
 	const schemaKeys =
 		schema instanceof z.ZodObject
 			? Object.keys(schema.shape).join(", ")
 			: "unknown"
 
-	const systemPrompt = `
-${system}
 
-You are also a JSON generation engine.
-
-STRICT RULES:
-- Return ONLY valid JSON
-- No markdown
-- Do NOT begin output with backticks
-- No explanations
-- No text before or after JSON
-- Do not use code blocks.
-- Do not wrap output in \`\`\` or any formatting.
-- Output must start with { and end with }.
-- All required fields must exist
-- No extra keys
-- Required keys: ${schemaKeys}
-- Return ONLY valid JSON
-`
+	let systemPrompt = system
+	if (useJSONOutput) {
+		
+		systemPrompt += `		
+		You are also a JSON generation engine.
+		
+		STRICT RULES:
+		- Return ONLY valid JSON
+		- No markdown
+		- Do NOT begin output with backticks
+		- No explanations
+		- No text before or after JSON
+		- Do not use code blocks.
+		- Do not wrap output in \`\`\` or any formatting.
+		- Output must start with { and end with }.
+		- All required fields must exist
+		- No extra keys
+		- Required keys: ${schemaKeys}
+		- Return ONLY valid JSON
+		`
+	}
 
 	const maxRetries = 3
 	let lastError: unknown

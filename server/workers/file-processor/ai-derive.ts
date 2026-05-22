@@ -152,7 +152,8 @@ export async function processProperties(
     keys: DerivationKey[],
     content: string,
     extraInstructions?: string,
-    sourceName?: string
+    sourceName?: string,
+    metadata?: string,
 ): Promise<ContextualResults> {
     const preparedKeys = prepareDerivationKeys(contextType, keys);
     const shape: Record<string, z.ZodTypeAny> = {};
@@ -173,6 +174,12 @@ Context class: ${contextType}.`;
 
     if (extraInstructions) {
         systemPrompt += "\n" + extraInstructions
+    }
+
+    if (metadata) {
+        systemPrompt += `
+        User provided (compressed) metadata:
+        ${metadata}`
     }
 
     const raw = await queryContextualResults(

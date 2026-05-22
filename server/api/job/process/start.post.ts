@@ -29,7 +29,8 @@ export default defineEventHandler(async (event) => {
 		selectedMetadata: schemas,
 		customProperties,
 		inferencePercentage,
-		downloadType: DownloadSourceType.LOCALFILE
+		downloadType: DownloadSourceType.LOCALFILE,
+		metadataFiles: []
 	}
 
 	// Check if there is already a job working
@@ -40,6 +41,7 @@ export default defineEventHandler(async (event) => {
 
 
 	const redis = getRedis()
+	queueData.metadataFiles = await redis.smembers(`session:${sessionId}:metadata:queued`)
 	const downloadJobId = await redis.get(`session:${sessionId}:download:jobId`)
 	if (downloadJobId) {
 		queueData.downloadType = DownloadSourceType.DOWNLOADSOURCE
