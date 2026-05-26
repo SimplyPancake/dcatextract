@@ -18,7 +18,7 @@ import {
     type DistributionResultsFlat,
 } from "./dataset-inference.js";
 import { CustomProperty, CustomPropertyContext } from "~~/shared/types/schema.js";
-import { DerivationMap, ContextualResults } from "~~/shared/types/workers.js";
+import { DerivationMap, ContextualResults, DeterministicResults } from "~~/shared/types/workers.js";
 import { z } from "zod";
 import { processCompactProperties, processProperties } from "./ai-derive.js";
 import {
@@ -30,7 +30,6 @@ import {
     groupCustomProperties,
     mergeScoredResults,
     sourceUrlFromInfo,
-    type DeterministicResults,
     type ContextualDerivation,
     type SourceInfo,
 } from "./derivation-helpers.js";

@@ -61,12 +61,14 @@ function extractFirstJsonObject(text: string): string | null {
 }
 
 async function selectBestModel(preferredModelName?: string): Promise<string> {
-	if (selectedModel) return selectedModel
-
 	const ai = getAI()
 	try {
 		const list = await ai.models.list()
 		const models = list?.data ?? []
+
+		if (models.map(x => x.id).includes(DEFAULT_MODEL)) {
+			return DEFAULT_MODEL
+		}
 
 		if (!modelsLogged) {
 			modelsLogged = true

@@ -67,6 +67,7 @@ export function startFileWorker() {
 
             // Compress metadata
             if (metadataFilepaths.length > 0) {
+                console.log(metadataFilepaths)
                 await updateProgress('Summarising additional metadata')
             }
 

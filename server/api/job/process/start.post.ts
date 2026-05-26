@@ -36,13 +36,19 @@ export default defineEventHandler(async (event) => {
 	// Check if there is already a job working
 	const runningJob = (await fileQueue.getActive()).some(x => (x.data as FileProcessJobDataType).sessionId == sessionId)
 	if (runningJob) {
-		throw createError('A job is already running')
+		const failError = new Error("Another job wants to run")
+		
+		const job = (await fileQueue.getActive()).filter(x => (x.data as FileProcessJobDataType).sessionId == sessionId)[0]!
+		job.moveToFailed(failError, job.token!)
 	}
 
 
 	const redis = getRedis()
 	queueData.metadataFiles = await redis.smembers(`session:${sessionId}:metadata:queued`)
+	queueData.filePaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+	queueData.originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)
 	const downloadJobId = await redis.get(`session:${sessionId}:download:jobId`)
+
 	if (downloadJobId) {
 		queueData.downloadType = DownloadSourceType.DOWNLOADSOURCE
 		const downloadJob = await downloadQueue.getJob(downloadJobId)

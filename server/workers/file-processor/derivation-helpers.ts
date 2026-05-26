@@ -5,14 +5,13 @@ import {
     DerivationMap,
     ScoredValue,
     ContextualResults,
+    DeterministicResults,
 } from "~~/shared/types/workers.js";
 
 export type ContextualDerivation = {
     key: string;
     info: ContextualKeyProcessInformation;
 };
-
-export type DeterministicResults = Record<string, ScoredValue<any>>;
 
 export type SourceInfo = { accessUrl?: string; downloadUrl?: string };
 

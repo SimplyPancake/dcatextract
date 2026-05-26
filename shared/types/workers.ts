@@ -25,10 +25,19 @@ export type FileProcessJobDataType = {
     inferencePercentage: number
     downloadType: DownloadSourceType
     metadataFiles: string[] // Paths of the related metadata files for the job
-    downloadData?: DownloadJobDataType
+    downloadData?: DownloadJobDataType,
+    filePaths: string[],
+    originalNames: Record<string, string>
 }
 
-export type FileProcessJobReturnType = Dataset
+export type processedFields = Record<string, ContextualResults | DeterministicResults>
+
+export type FileProcessJobReturnType = {
+    distributions: processedFields[],
+    dataset: processedFields,
+    dataService: processedFields,
+    catalogRecord: processedFields
+}
 
 export type FileProcessJob = Job<FileProcessJobDataType, FileProcessJobReturnType>
 
@@ -85,3 +94,4 @@ export type ScoredValue<T> = {
 };
 
 export type ContextualResults = Record<string, ScoredValue<string>>
+export type DeterministicResults = Record<string, ScoredValue<any>>;

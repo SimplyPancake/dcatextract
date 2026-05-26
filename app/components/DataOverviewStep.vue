@@ -29,7 +29,7 @@
 import { FileText, FolderOpen, Folders, type LucideIcon } from '@lucide/vue';
 import { Tag, Tree } from 'primevue';
 import type { TreeNode } from 'primevue/treenode';
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { LatestJobDTO } from '~~/shared/types/dto'
 import type { FileProcessJob } from '~~/shared/types/workers';
 
@@ -42,19 +42,22 @@ const props = defineProps<{
 const latestJob = ref<LatestJobDTO>(props.latestJob)
 
 if (!latestJob.value) {
-  const { data } = await useFetch<LatestJobDTO>(
+  const { data: latestJobData } = await useFetch<LatestJobDTO>(
     '/api/job/process/latest-completed'
   )
 
-  latestJob.value = data.value as FileProcessJob
+  latestJob.value = latestJobData.value as LatestJobDTO
 }
 
-const dataset = latestJob.value.returnvalue
+const latestJobData = computed(() => latestJob.value?.lastJob.data)
+const latestJobResults = computed(() => latestJob.value?.lastJob.returnvalue!)
+
 const distributions = computed(() => {
-  return dataset.distribution?.map(x => {
+  return (latestJobData.value?.filePaths || []).map(filename => {
+    const originalName = latestJob.value?.originalNames[filename]!
     return {
-      key: x.title ?? crypto.randomUUID(),
-      label: x.title,
+      key: originalName,
+      label: originalName,
       icon: FileText as any
     }
   })
