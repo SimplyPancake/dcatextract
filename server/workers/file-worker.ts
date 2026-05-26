@@ -8,6 +8,7 @@ import { notifySession } from '../utils/wsManager'
 import { FileProcessJobDataType, WorkerProgress } from "~~/shared/types/workers"
 import { extractFileText } from './file-processor/helpers';
 import { z } from "zod";
+import { queryModelNoSchema } from '../utils/ai';
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -69,12 +70,13 @@ export function startFileWorker() {
                 await updateProgress('Summarising additional metadata')
             }
 
-            const compressedMetadatas = []
+            let metadata = ''
 
-            for(const filepath of metadataFilepaths) {
+            for(let i = 0; i < metadataFilepaths.length; i++) {
                 // Read file
+                const filepath = metadataFilepaths[i]!
                 const fileContents = await extractFileText(filepath, 3000)
-                const compressed = await queryModel(
+                const compressed = await queryModelNoSchema(
                     `You are a dataset metadata summarizer.
                     Summarize files such as .txt, .md, or .pdf that describe datasets, providers, schemas, distributions, licenses, or processing details.
                     Focus on:
@@ -92,11 +94,14 @@ export function startFileWorker() {
                 
                     File content:
                     ${fileContents}`,
-                    z.string(),
-                    false,
                     "qwen/qwen3-4b-2507"
                 )
-                compressedMetadatas.push(compressed)
+
+                if (compressed) {
+                    metadata += `
+                    Metadata file ${i}/${metadataFilepaths.length}:
+                    ${compressed}`
+                }
             }
 
             const catalog = await inferDcatFromFiles(
@@ -108,7 +113,7 @@ export function startFileWorker() {
                 sourceInfo,
                 originalNames,
                 jobdata.customProperties,
-                metadataFilepaths
+                metadata
             )
 
             await updateProgress('Saving catalog...')

@@ -370,7 +370,7 @@ export async function inferDcatFromFiles(
     sourceInfo?: { accessUrl?: string; downloadUrl?: string },
     originalNames?: Record<string, string>,
     customProperties: CustomProperty[] = [],
-    metadataFiles: string[] = []
+    metadata: string = ""
 ) {
     const verbose = opts.verbose ?? false;
     const log = (msg: string) => { if (verbose) process.stderr.write(msg + "\n"); };
@@ -504,7 +504,8 @@ export async function inferDcatFromFiles(
                 plan.contextual_derivations,
                 fileContents,
                 "You are inferring properties regarding a DCAT distribution.",
-                path.basename(filePath)
+                path.basename(filePath),
+                metadata
             );
             await logProgress(`Derived contextual distribution metadata for ${displayName}`)
         }
@@ -519,7 +520,8 @@ export async function inferDcatFromFiles(
                 })),
                 fileContents,
                 "You are inferring properties regarding a DCAT distribution. These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
-                path.basename(filePath)
+                path.basename(filePath),
+                metadata
             )
             await logProgress(`Derived custom distribution metadata for ${displayName}`)
         }
@@ -561,7 +563,8 @@ export async function inferDcatFromFiles(
                 `You are inferring properties regarding a DCAT dataset. Use the aggregated file contents descriptions to derive dataset-level metadata in DCAT. 
                 Consider all files as a single collection. 
                 If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
-                "dataset"
+                "dataset",
+                metadata
             );
             await logProgress("Derived contextual dataset metadata")
         }
@@ -580,7 +583,8 @@ export async function inferDcatFromFiles(
                 })),
                 allFileContents,
                 "You are inferring properties regarding a DCAT dataset. These properties have a custom DCAT IRI for the dataset. Use the IRI local name as the main semantic clue and return a nonzero confidence when the files provide any useful signal.",
-                "dataset"
+                "dataset",
+                metadata
             );
             await logProgress("Derived custom dataset metadata")
         }
@@ -619,7 +623,8 @@ export async function inferDcatFromFiles(
             providerUrl
                 ? "You are inferring properties regarding a DCAT data service. This content was fetched from the data provider URL. Use it to infer the provider title, description, endpoint description, and related metadata."
                 : "You are inferring properties regarding a DCAT data service. No provider URL was available. Infer contextual information about the data provider from the dataset files, filenames, and embedded references.",
-            providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService"
+            providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService",
+            metadata
         );
         await logProgress("Derived contextual data provider metadata")
         
@@ -631,6 +636,7 @@ export async function inferDcatFromFiles(
             })),
             providerContent,
             "You are inferring properties regarding a DCAT data service. These properties have a custom DCAT IRI for the dataset. Use the IRI local name as the main semantic clue and return a nonzero confidence when the files provide any useful signal.",
+            metadata
         )
         await logProgress("Derived custom data provider metadata")
     }
@@ -647,7 +653,8 @@ export async function inferDcatFromFiles(
             "catalogRecord",
             contextualDerivs,
             JSON.stringify(contextualResultsCollection.dataset) + JSON.stringify(contextualResultsCollection.dataService),
-            "You are inferring properties regarding a DCAT catalog record. Given is information about the dataset and dataservice."
+            "You are inferring properties regarding a DCAT catalog record. Given is information about the dataset and dataservice.",
+            metadata
         )
         await logProgress("Catalog record processing complete")
     }

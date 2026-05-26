@@ -92,6 +92,60 @@ async function selectBestModel(preferredModelName?: string): Promise<string> {
 	return selectedModel
 }
 
+export async function queryModelNoSchema(
+	system: string,
+	user: string,
+	preferredModelName?: string,
+) {
+	const modelName = await selectBestModel(preferredModelName)
+	let systemPrompt = system
+
+	const maxRetries = 3
+	let lastError: unknown
+
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			const response = await getAI().responses.create({
+				model: modelName,
+				input: [
+					{
+						role: "system",
+						content: systemPrompt
+					},
+					{
+						role: "user",
+						content: user
+					}
+				],
+			})
+
+			if (response.error) {
+				throw new Error("Model returned error")
+			}
+
+			return response.output_text
+		} catch (error) {
+			lastError = error
+
+			// Retry hint
+			if (attempt < maxRetries) {
+				console.warn(
+					`Retry ${attempt}/${maxRetries} failed for model ${modelName}`
+				)
+			}
+		}
+	}
+
+	const message =
+		lastError instanceof Error
+			? lastError.message
+			: "Unknown error"
+
+	throw new Error(
+		`AI query failed after ${maxRetries} attempts for model ${modelName}: ${message}`
+	)
+}
+
 export async function queryModel<T extends z.ZodTypeAny>(
 	system: string,
 	user: string,
