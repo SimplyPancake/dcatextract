@@ -18,7 +18,7 @@ import {
     type DistributionResultsFlat,
 } from "./dataset-inference.js";
 import { CustomProperty, CustomPropertyContext } from "~~/shared/types/schema.js";
-import { DerivationMap, ContextualResults, DeterministicResults } from "~~/shared/types/workers.js";
+import { DerivationMap, ContextualResults, DeterministicResults, ProcessedFields, ProcessedField, DerivationStrategy, DistributionContextProcessedFields } from "~~/shared/types/workers.js";
 import { z } from "zod";
 import { processCompactProperties, processProperties } from "./ai-derive.js";
 import {
@@ -360,6 +360,43 @@ type DerivationPlan = {
     deterministic_derivations: Array<{ key: string; info: DeterministicKeyProcessInformation<any, any> }>;
     additional_derivations: string[];
 };
+
+// Now that we have the plan of deriving, we will do the deriving!
+type ContextualResultsTypeInfoType = {
+    contextual_derivations: ContextualResults,
+    deterministic_derivations: DeterministicResults,
+    additional_derivations: ContextualResults,
+}
+
+type ContextualResultsCollectionType = {
+    distribution: ContextualResultsTypeInfoType[],
+    dataset: ContextualResultsTypeInfoType,
+    dataService: ContextualResultsTypeInfoType,
+    catalogRecord: ContextualResultsTypeInfoType
+}
+
+function compileResults(info: ContextualResultsTypeInfoType): ProcessedFields {
+    const output: ProcessedFields = {}
+
+    const compileProcessedFields = (results: ContextualResults, strategy: DerivationStrategy) => {
+        for(const key in results) {
+            const ScoredValue = results[key]!
+            const processedField = {
+                result: ScoredValue,
+                strategy
+            } as ProcessedField
+    
+            output[key] = processedField
+        }
+    }
+
+    compileProcessedFields(info.contextual_derivations, 'Contextual')
+    compileProcessedFields(info.additional_derivations, 'Contextual')
+    compileProcessedFields(info.deterministic_derivations, 'Deterministic')
+
+    return output
+}
+
 export async function inferDcatFromFiles(
     absFilePath: string[],
     opts: InferOptions = {},
@@ -424,19 +461,6 @@ export async function inferDcatFromFiles(
     }
     await logProgress("Derivation plan ready")
 
-    // Now that we have the plan of deriving, we will do the deriving!
-    type ContextualResultsTypeInfoType = {
-        contextual_derivations: ContextualResults,
-        deterministic_derivations: DeterministicResults,
-        additional_derivations: ContextualResults,
-    }
-
-    type ContextualResultsCollectionType = {
-        distribution: ContextualResultsTypeInfoType[],
-        dataset: ContextualResultsTypeInfoType,
-        dataService: ContextualResultsTypeInfoType,
-        catalogRecord: ContextualResultsTypeInfoType
-    }
     const contextualResultsCollection: ContextualResultsCollectionType = {
         distribution: [],
         dataset: {
@@ -461,7 +485,7 @@ export async function inferDcatFromFiles(
 
     // Distribution contextual results
     // TODO: For contents of CSV's only return the columns and the first few rows.
-    for (let filePath of absFilePath) {        
+    for (let filePath of absFilePath) {
         if (!derivationPlan.distribution) {
             continue
         }
@@ -484,7 +508,7 @@ export async function inferDcatFromFiles(
             originalName: originalNames?.[filePath],
         }
 
-        if (plan.deterministic_derivations) {   
+        if (plan.deterministic_derivations) {
             await logProgress(`Deriving deterministic distribution metadata for ${displayName}`)
             results.deterministic_derivations = collectDeterministicResults(
                 selectedProperties,
@@ -534,26 +558,26 @@ export async function inferDcatFromFiles(
     // Dataset properties are derived by the info about all the files.
     await logProgress("Processing dataset")
     const flatKeysDistribution = contextualResultsCollection
-    .distribution
-    .map(distribution => {
-        return {
-            ...distribution.deterministic_derivations,
-            ...distribution.contextual_derivations,
-            ...distribution.additional_derivations
-        }
-    })
+        .distribution
+        .map(distribution => {
+            return {
+                ...distribution.deterministic_derivations,
+                ...distribution.contextual_derivations,
+                ...distribution.additional_derivations
+            }
+        })
     if (derivationPlan.dataset) {
-        
+
         // Collect deterministic derivations from distribution data
         await logProgress("Deriving deterministic dataset metadata")
-        contextualResultsCollection.dataset.deterministic_derivations = 
+        contextualResultsCollection.dataset.deterministic_derivations =
             collectDeterministicResults(selectedProperties, "dataset", DATASET_MAP, flatKeysDistribution);
         await logProgress("Derived deterministic dataset metadata")
-        
+
         // Collect contextual derivations from file contents
         if (derivationPlan.dataset.contextual_derivations.length > 0) {
             const distributionContents = JSON.stringify(flatKeysDistribution)
-            
+
             await logProgress("Deriving contextual dataset metadata")
             contextualResultsCollection.dataset.contextual_derivations = await processProperties(
                 "dataset",
@@ -567,14 +591,14 @@ export async function inferDcatFromFiles(
             );
             await logProgress("Derived contextual dataset metadata")
         }
-        
+
         // Collect additional custom properties for dataset
         if (derivationPlan.dataset.additional_derivations.length > 0) {
             await logProgress("Deriving custom dataset metadata")
             const allFileContents = (await Promise.all(
                 absFilePath.map(filePath => extractFileText(filePath, 3000))
             )).join("\n\n");
-            
+
             contextualResultsCollection.dataset.additional_derivations = await processProperties(
                 "dataset",
                 derivationPlan.dataset.additional_derivations.map(x => ({
@@ -626,7 +650,7 @@ export async function inferDcatFromFiles(
             metadata
         );
         await logProgress("Derived contextual data provider metadata")
-        
+
         await logProgress("Deriving custom data provider metadata")
         contextualResultsCollection.dataService.additional_derivations = await processProperties(
             "dataService",
@@ -658,5 +682,15 @@ export async function inferDcatFromFiles(
         await logProgress("Catalog record processing complete")
     }
 
-    return contextualResultsCollection
+    const results: FileProcessJobReturnType = {
+        catalogRecord: compileResults(contextualResultsCollection.catalogRecord),
+        dataService: compileResults(contextualResultsCollection.dataService),
+        dataset: compileResults(contextualResultsCollection.dataset),
+        distributions: contextualResultsCollection.distribution.map((x, i) => {
+            const compiled = compileResults(x) as DistributionContextProcessedFields
+            compiled._distributionFilepath = absFilePath[i] ?? ''
+            return compiled
+        })
+    }
+    return results
 }

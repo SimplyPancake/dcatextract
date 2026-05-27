@@ -30,13 +30,21 @@ export type FileProcessJobDataType = {
     originalNames: Record<string, string>
 }
 
-export type processedFields = Record<string, ContextualResults | DeterministicResults>
+export type ProcessedFields = Record<string, ProcessedField>
+export type ProcessedField = {
+    result: ContextualResult | DeterministicResult,
+    strategy: DerivationStrategy
+}
+
+export type DistributionContextProcessedFields = ProcessedFields & {
+    _distributionFilepath: string
+}
 
 export type FileProcessJobReturnType = {
-    distributions: processedFields[],
-    dataset: processedFields,
-    dataService: processedFields,
-    catalogRecord: processedFields
+    distributions: DistributionContextProcessedFields[]
+    dataset: ProcessedFields,
+    dataService: ProcessedFields,
+    catalogRecord: ProcessedFields
 }
 
 export type FileProcessJob = Job<FileProcessJobDataType, FileProcessJobReturnType>
@@ -93,5 +101,7 @@ export type ScoredValue<T> = {
     confidence: number;
 };
 
-export type ContextualResults = Record<string, ScoredValue<string>>
-export type DeterministicResults = Record<string, ScoredValue<any>>;
+export type ContextualResults = Record<string, ContextualResult>
+export type DeterministicResults = Record<string, DeterministicResult>;
+export type ContextualResult = ScoredValue<string>
+export type DeterministicResult = ScoredValue<any>

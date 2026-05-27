@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-row">
     <div class="basis-1/4">
-      <Tree :value="nodes" class="p-0" selection-mode="single">
+      <Tree :value="nodes" class="p-0" selection-mode="single" @node-select="onNodeSelect">
         <template #default="slotProps">
           <div class="flex flex-row gap-1">
             <component :is="(slotProps.node.icon as any as LucideIcon)"></component>
@@ -15,8 +15,7 @@
       </Tree>
     </div>
     <div class="basis-2/4">
-      {{ latestJob }}
-
+      <SingleOverview v-if="selectedData" :fields="selectedData" />
     </div>
     <div class="basis-1/4">
       Validation warnings
@@ -26,12 +25,13 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { FileText, FolderOpen, Folders, type LucideIcon } from '@lucide/vue';
+import { Database, FileText, FolderOpen, Folders, Server, type LucideIcon } from '@lucide/vue';
 import { Tag, Tree } from 'primevue';
 import type { TreeNode } from 'primevue/treenode';
 import { ref, computed } from 'vue'
 import type { LatestJobDTO } from '~~/shared/types/dto'
-import type { FileProcessJob } from '~~/shared/types/workers';
+import type { DistributionContextProcessedFields, ProcessedFields } from '~~/shared/types/workers';
+import SingleOverview from './overview/SingleOverview.vue';
 
 defineEmits(['next'])
 
@@ -39,7 +39,7 @@ const props = defineProps<{
   latestJob?: LatestJobDTO
 }>()
 
-const latestJob = ref<LatestJobDTO>(props.latestJob)
+const latestJob = ref<LatestJobDTO | undefined>(props.latestJob)
 
 if (!latestJob.value) {
   const { data: latestJobData } = await useFetch<LatestJobDTO>(
@@ -49,31 +49,61 @@ if (!latestJob.value) {
   latestJob.value = latestJobData.value as LatestJobDTO
 }
 
-const latestJobData = computed(() => latestJob.value?.lastJob.data)
-const latestJobResults = computed(() => latestJob.value?.lastJob.returnvalue!)
+console.log(latestJob.value)
+
+const latestJobData = computed(() => latestJob.value?.data)
+const latestJobResults = computed(() => latestJob.value?.returnvalue)
 
 const distributions = computed(() => {
-  return (latestJobData.value?.filePaths || []).map(filename => {
-    const originalName = latestJob.value?.originalNames[filename]!
+  return latestJobData?.value?.filePaths.map((filename, idx) => {
+    const originalName = latestJobData.value?.originalNames[filename]!
     return {
-      key: originalName,
+      key: `dist-${idx}`,
       label: originalName,
       icon: FileText as any
     }
   })
 })
+
+const selectedData = ref<ProcessedFields | DistributionContextProcessedFields>()
+
+const onNodeSelect = (node: TreeNode) => {
+  const nodeId = node.key
+  if (nodeId.includes('-')) {
+    // Distributions - index
+    const index = parseInt(nodeId.split('-')[1]!)
+    selectedData.value = latestJobResults.value?.distributions[index]!
+    return
+  }
+
+  // Dataset, or other
+  if (nodeId == 'dataset') selectedData.value = latestJobResults.value?.dataset;
+  if (nodeId == 'dataservice') selectedData.value = latestJobResults.value?.dataService;
+  if (nodeId == 'catalogrecord') selectedData.value = latestJobResults.value?.catalogRecord;
+};
+
 const nodes = ref<TreeNode[]>([
   {
-    key: '0',
+    key: 'distributions',
     label: 'Distributions',
     data: { amount: distributions.value?.length ?? 0 },
     icon: FolderOpen as any,
-    children: distributions.value
+    children: distributions.value,
   },
   {
-    key: '1',
+    key: 'dataset',
     label: 'Dataset',
     icon: Folders as any,
+  },
+  {
+    key: 'dataservice',
+    label: "Data Service",
+    icon: Server as any
+  },
+  {
+    key: 'catalogrecord',
+    label: "Catalog Record",
+    icon: Database as any
   }
 ])
 
