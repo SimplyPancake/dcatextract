@@ -36,12 +36,8 @@ export type ProcessedField = {
     strategy: DerivationStrategy
 }
 
-export type DistributionContextProcessedFields = ProcessedFields & {
-    _distributionFilepath: string
-}
-
 export type FileProcessJobReturnType = {
-    distributions: DistributionContextProcessedFields[]
+    distributions: ProcessedFields[]
     dataset: ProcessedFields,
     dataService: ProcessedFields,
     catalogRecord: ProcessedFields

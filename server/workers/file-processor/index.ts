@@ -688,7 +688,7 @@ export async function inferDcatFromFiles(
         dataset: compileResults(contextualResultsCollection.dataset),
         distributions: contextualResultsCollection.distribution.map((x, i) => {
             const compiled = compileResults(x) as DistributionContextProcessedFields
-            compiled._distributionFilepath = absFilePath[i] ?? ''
+            // compiled._distributionFilepath = absFilePath[i] ?? ''
             return compiled
         })
     }

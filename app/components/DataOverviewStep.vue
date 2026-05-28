@@ -1,6 +1,6 @@
 <template>
-  <div class="flex flex-row">
-    <div class="basis-1/4">
+  <div class="flex flex-row gap-2">
+    <div class="basis-1/5">
       <Tree :value="nodes" class="p-0" selection-mode="single" @node-select="onNodeSelect">
         <template #default="slotProps">
           <div class="flex flex-row gap-1">
@@ -14,12 +14,12 @@
 
       </Tree>
     </div>
-    <div class="basis-2/4">
+    <div class="flex-1">
       <SingleOverview v-if="selectedData" :fields="selectedData" />
     </div>
-    <div class="basis-1/4">
+    <!-- <div class="basis-1/5">
       Validation warnings
-    </div>
+    </div> -->
     <!-- TODO: Typed Jobs -->
     <!-- <DynamicForm v-if="latestJob" v-model="latestJob.returnvalue" /> -->
   </div>
