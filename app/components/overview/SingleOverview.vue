@@ -32,6 +32,11 @@
           <span v-if="isEdited(slotProps.data)" class="text-gray-300">
             ---
           </span>
+          <template v-else-if="isBelowThreshold(slotProps.data)">
+            <div class="flex flex-row gap-2">
+              <ArrowDownFromLine :size="20" class="text-orange-700" />
+            </div>
+          </template>
           <template v-else-if="slotProps.data.result && typeof slotProps.data.result.confidence === 'number' && slotProps.data.result.value">
             <span
               :class="[
@@ -58,13 +63,14 @@
 </template>
 
 <script lang="ts" setup>
-import { Bot, Undo } from '@lucide/vue';
+import { ArrowDownFromLine, Bot, CircleAlert, Undo } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { Tag, Button, DataTable, Column, InputText } from 'primevue';
 import type { ProcessedFields } from '~~/shared/types/workers';
 
 const props = defineProps<{
   fields: ProcessedFields
+  minConfidence?: number
 }>()
 
 const tableData = ref<any[]>([])
@@ -111,6 +117,25 @@ const confidenceClass = (confidence: number) => {
   if (confidence >= 0.6) return 'bg-amber-500'
   if (confidence >= 0.4) return 'bg-orange-500'
   return 'bg-red-500'
+}
+
+const hasValue = (value: any) => {
+  if (value === null || value === undefined) return false
+  if (Array.isArray(value)) return value.length > 0
+  if (typeof value === 'string') return value.trim().length > 0
+  return true
+}
+
+const isBelowThreshold = (rowData: any) => {
+  if (!rowData?.result) return false
+  if (isEdited(rowData)) return false
+  if (!hasValue(rowData.result.value)) return false
+
+  const min = props.minConfidence ?? 0
+  if (!isFinite(min) || min <= 0) return false
+  const confidence = rowData.result.confidence
+  if (typeof confidence !== 'number') return false
+  return confidence < min
 }
 </script>
 

@@ -1,5 +1,5 @@
 import { DataFactory, Writer } from "n3";
-import type { FileProcessJobReturnType, ProcessedFields } from "~~/shared/types/workers";
+import type { FileProcessJobReturnType, ProcessedField, ProcessedFields } from "~~/shared/types/workers";
 
 type KnownValue = string | number | boolean | Record<string, any> | Array<any> | null | undefined;
 
@@ -151,16 +151,30 @@ function valueToTerm(value: string | number | boolean) {
   return literalForValue(value);
 }
 
-function getValue(fields: ProcessedFields, key: string): KnownValue {
-  return fields[key]?.result?.value ?? null;
+function getValue(fields: ProcessedFields, key: string, minConfidence?: number): KnownValue {
+  const field = fields[key];
+  const value = field?.result?.value ?? null;
+  if (minConfidence === undefined) return value;
+
+  const confidence =
+    typeof field?.result?.confidence === "number" ? field.result.confidence : 0;
+  if (confidence < minConfidence) return null;
+  return value;
 }
 
-function subjectFromFields(fields: ProcessedFields, uriKey: string) {
-  const uriValue = getValue(fields, uriKey);
+function subjectFromFields(fields: ProcessedFields, uriKey: string, minConfidence: number) {
+  const uriValue = getValue(fields, uriKey, minConfidence);
   if (typeof uriValue === "string" && isIriValue(uriValue)) {
     return namedNode(uriValue);
   }
   return blankNode();
+}
+
+function meetsConfidence(field: ProcessedField | undefined, minConfidence: number): boolean {
+  if (!field?.result) return false;
+  const confidence =
+    typeof field.result.confidence === "number" ? field.result.confidence : 0;
+  return confidence >= minConfidence;
 }
 
 function addPeriodOfTime(writer: Writer, subject: any, predicate: string, value: Record<string, any>) {
@@ -263,10 +277,12 @@ function addFields(
   subject: any,
   fields: ProcessedFields,
   predicateMap: Record<string, string>,
+  minConfidence: number,
 ) {
   for (const [key, field] of Object.entries(fields)) {
     const value = field?.result?.value;
     if (value === null || value === undefined || value === "") continue;
+    if (!meetsConfidence(field, minConfidence)) continue;
 
     let predicate = "";
     if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("urn:")) {
@@ -293,7 +309,10 @@ function hasAnyValue(fields: ProcessedFields): boolean {
   });
 }
 
-export async function buildDcatTurtle(results: FileProcessJobReturnType): Promise<string> {
+export async function buildDcatTurtle(
+  results: FileProcessJobReturnType,
+  minConfidence = 0,
+): Promise<string> {
   const writer = new Writer({
     prefixes: {
       dcat: NS.dcat,
@@ -307,24 +326,24 @@ export async function buildDcatTurtle(results: FileProcessJobReturnType): Promis
     },
   });
 
-  const datasetSubject = subjectFromFields(results.dataset, "dataset.uri");
+  const datasetSubject = subjectFromFields(results.dataset, "dataset.uri", minConfidence);
   writer.addQuad(datasetSubject, namedNode(`${NS.rdf}type`), namedNode(`${NS.dcat}Dataset`));
-  addFields(writer, datasetSubject, results.dataset, DATASET_PREDICATES);
+  addFields(writer, datasetSubject, results.dataset, DATASET_PREDICATES, minConfidence);
 
   const distributionSubjects = results.distributions.map((dist) => {
-    const subject = subjectFromFields(dist, "distribution.uri");
+    const subject = subjectFromFields(dist, "distribution.uri", minConfidence);
     writer.addQuad(subject, namedNode(`${NS.rdf}type`), namedNode(`${NS.dcat}Distribution`));
-    addFields(writer, subject, dist, DISTRIBUTION_PREDICATES);
+    addFields(writer, subject, dist, DISTRIBUTION_PREDICATES, minConfidence);
     writer.addQuad(datasetSubject, namedNode(`${NS.dcat}distribution`), subject);
     return subject;
   });
 
   if (hasAnyValue(results.dataService)) {
-    const dataServiceSubject = subjectFromFields(results.dataService, "dataService.uri");
+    const dataServiceSubject = subjectFromFields(results.dataService, "dataService.uri", minConfidence);
     writer.addQuad(dataServiceSubject, namedNode(`${NS.rdf}type`), namedNode(`${NS.dcat}DataService`));
-    addFields(writer, dataServiceSubject, results.dataService, DATA_SERVICE_PREDICATES);
+    addFields(writer, dataServiceSubject, results.dataService, DATA_SERVICE_PREDICATES, minConfidence);
 
-    const servesDatasetValue = getValue(results.dataService, "dataService.servesDataset");
+    const servesDatasetValue = getValue(results.dataService, "dataService.servesDataset", minConfidence);
     const hasServesDataset = servesDatasetValue !== null && servesDatasetValue !== undefined;
     if (!hasServesDataset) {
       writer.addQuad(dataServiceSubject, namedNode(`${NS.dcat}servesDataset`), datasetSubject);
@@ -332,12 +351,12 @@ export async function buildDcatTurtle(results: FileProcessJobReturnType): Promis
   }
 
   if (hasAnyValue(results.catalogRecord)) {
-    const recordSubject = subjectFromFields(results.catalogRecord, "catalogRecord.uri");
+    const recordSubject = subjectFromFields(results.catalogRecord, "catalogRecord.uri", minConfidence);
     writer.addQuad(recordSubject, namedNode(`${NS.rdf}type`), namedNode(`${NS.dcat}CatalogRecord`));
     const catalogPredicates = { ...CATALOG_RECORD_PREDICATES, primaryTopic: "" };
-    addFields(writer, recordSubject, results.catalogRecord, catalogPredicates);
+    addFields(writer, recordSubject, results.catalogRecord, catalogPredicates, minConfidence);
 
-    const primaryTopicValue = getValue(results.catalogRecord, "catalogRecord.primaryTopic");
+    const primaryTopicValue = getValue(results.catalogRecord, "catalogRecord.primaryTopic", minConfidence);
     if (typeof primaryTopicValue === "string" && isIriValue(primaryTopicValue)) {
       writer.addQuad(recordSubject, namedNode(`${NS.foaf}primaryTopic`), namedNode(primaryTopicValue));
     } else {

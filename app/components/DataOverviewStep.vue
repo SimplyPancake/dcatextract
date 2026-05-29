@@ -45,7 +45,7 @@
         {{ exportError }}
       </div>
       <div v-if="selectedData">
-        <SingleOverview :fields="selectedData" />
+        <SingleOverview :fields="selectedData" :min-confidence="minConfidence" />
       </div>
       <span v-else class="w-full h-full text-center pt-8 text-lg text-gray-500">
         Open an item in the panel on the left to review generated results.
@@ -90,6 +90,13 @@ console.log(latestJob.value)
 
 const latestJobData = computed(() => latestJob.value?.data)
 const latestJobResults = computed(() => latestJob.value?.returnvalue)
+const minConfidence = computed(() => {
+  const pct = latestJobData.value?.inferencePercentage
+  if (typeof pct !== 'number') return 0
+  const normalized = pct / 100
+  if (!isFinite(normalized) || normalized <= 0) return 0
+  return Math.min(1, normalized)
+})
 
 const isExporting = ref(false)
 const exportError = ref('')
@@ -168,7 +175,7 @@ async function exportRdf() {
   isExporting.value = true
 
   try {
-    const turtle = await buildDcatTurtle(latestJobResults.value)
+    const turtle = await buildDcatTurtle(latestJobResults.value, minConfidence.value)
     const datasetTitle = latestJobResults.value.dataset?.['dataset.title']?.result?.value
     const baseName = typeof datasetTitle === 'string' && datasetTitle.trim().length > 0
       ? slugify(datasetTitle)
