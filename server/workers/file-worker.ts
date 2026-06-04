@@ -9,6 +9,7 @@ import { FileProcessJobDataType, WorkerProgress } from "~~/shared/types/workers"
 import { extractFileText } from './file-processor/helpers';
 import { z } from "zod";
 import { queryModelNoSchema } from '../utils/ai';
+import { summariseMetadata } from './file-processor/ai-derive';
 
 const redis = getRedis()
 export function startFileWorker() {
@@ -77,26 +78,7 @@ export function startFileWorker() {
                 // Read file
                 const filepath = metadataFilepaths[i]!
                 const fileContents = await extractFileText(filepath, 3000)
-                const compressed = await queryModelNoSchema(
-                    `You are a dataset metadata summarizer.
-                    Summarize files such as .txt, .md, or .pdf that describe datasets, providers, schemas, distributions, licenses, or processing details.
-                    Focus on:
-                    dataset purpose, provider, files/distributions, formats/schema, licenses/restrictions, update frequency,
-                    processing notes or warnings
-
-                    Rules:
-                    Be concise and accurate. Do not invent information. Mention missing details if relevant.
-
-                    Output:
-                    Overview, Metadata, Caveats`,
-                    `Summarize this dataset metadata file for ETL/data processing.
-                    Include if in file:
-                    purpose, provider, files/distributions, formats/schema, restrictions, warnings
-                
-                    File content:
-                    ${fileContents}`,
-                    "qwen/qwen3-4b-2507"
-                )
+                const compressed = await summariseMetadata(fileContents, path.basename(filepath))
 
                 if (compressed) {
                     metadata += `

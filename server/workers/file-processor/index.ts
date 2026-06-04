@@ -20,7 +20,7 @@ import {
 import { CustomProperty, CustomPropertyContext } from "~~/shared/types/schema.js";
 import { DerivationMap, ContextualResults, DeterministicResults } from "~~/shared/types/workers.js";
 import { z } from "zod";
-import { processCompactProperties, processProperties } from "./ai-derive.js";
+import { processCompactProperties, processProperties, summariseMetadata } from "./ai-derive.js";
 import {
     collectAllContextualDerivations,
     collectContextualDerivations,
@@ -459,6 +459,8 @@ export async function inferDcatFromFiles(
     await logProgress("Starting inference")
     await logProgress(`Processing ${absFilePath.length} distributions`)
 
+    const perFileSummaries: string[] = [];
+
     // Distribution contextual results
     // TODO: For contents of CSV's only return the columns and the first few rows.
     for (let filePath of absFilePath) {        
@@ -477,6 +479,12 @@ export async function inferDcatFromFiles(
         await logProgress(`Reading ${displayName}`)
         const fileContents = await extractFileText(filePath, 1500)
         await logProgress(`Extracted text from ${displayName}`)
+        await logProgress(`Summarising ${displayName}`)
+        const summary = await summariseMetadata(fileContents, displayName)
+        const summaryText = summary && summary.trim().length > 0 ? summary : fileContents
+        perFileSummaries.push(`File: ${displayName}
+    ${summaryText}`)
+        await logProgress(`Summarised ${displayName}`)
         const plan = derivationPlan.distribution
         const deterministicInput: DistributionDeterministicInput = {
             filePath,
@@ -501,7 +509,7 @@ export async function inferDcatFromFiles(
             results.contextual_derivations = await processProperties(
                 "distribution",
                 plan.contextual_derivations,
-                fileContents,
+                summaryText,
                 "You are inferring properties regarding a DCAT distribution.",
                 path.basename(filePath),
                 metadata
@@ -517,7 +525,7 @@ export async function inferDcatFromFiles(
                 plan.additional_derivations.map(x => ({
                     key: x
                 })),
-                fileContents,
+                summaryText,
                 "You are inferring properties regarding a DCAT distribution. These properties have a custom DCAT IRI that describe them. Use the IRI local name as the main semantic clue and return a nonzero confidence when the file provides any useful signal.",
                 path.basename(filePath),
                 metadata
@@ -553,12 +561,16 @@ export async function inferDcatFromFiles(
         // Collect contextual derivations from file contents
         if (derivationPlan.dataset.contextual_derivations.length > 0) {
             const distributionContents = JSON.stringify(flatKeysDistribution)
+            const summaryBundle = perFileSummaries.join("\n\n")
+            const datasetContext = summaryBundle.length > 0
+                ? `${distributionContents}\n\nFile summaries:\n${summaryBundle}`
+                : distributionContents
             
             await logProgress("Deriving contextual dataset metadata")
             contextualResultsCollection.dataset.contextual_derivations = await processProperties(
                 "dataset",
                 derivationPlan.dataset.contextual_derivations,
-                distributionContents,
+                datasetContext,
                 `You are inferring properties regarding a DCAT dataset. Use the aggregated file contents descriptions to derive dataset-level metadata in DCAT. 
                 Consider all files as a single collection. 
                 If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
@@ -571,9 +583,11 @@ export async function inferDcatFromFiles(
         // Collect additional custom properties for dataset
         if (derivationPlan.dataset.additional_derivations.length > 0) {
             await logProgress("Deriving custom dataset metadata")
-            const allFileContents = (await Promise.all(
-                absFilePath.map(filePath => extractFileText(filePath, 3000))
-            )).join("\n\n");
+            const allFileContents = perFileSummaries.length > 0
+                ? perFileSummaries.join("\n\n")
+                : (await Promise.all(
+                    absFilePath.map(filePath => extractFileText(filePath, 3000))
+                )).join("\n\n");
             
             contextualResultsCollection.dataset.additional_derivations = await processProperties(
                 "dataset",
@@ -611,7 +625,7 @@ export async function inferDcatFromFiles(
         await logProgress("Fetching data provider context")
         const providerContent = providerUrl
             ? await fetchRemoteText(providerUrl, 2000) ?? JSON.stringify(flatKeysDistribution)
-            : JSON.stringify(flatKeysDistribution);
+            : `${JSON.stringify(flatKeysDistribution)}\n\n${perFileSummaries.join("\n\n")}`.trim();
         await logProgress("Fetched data provider context")
 
         await logProgress("Deriving contextual data provider metadata")

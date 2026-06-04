@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { queryModel } from "../../utils/ai";
+import { queryModel, queryModelNoSchema } from "../../utils/ai";
 import { CustomPropertyContext } from "~~/shared/types/schema";
 import { ContextualResults } from "~~/shared/types/workers";
 
@@ -117,6 +117,31 @@ function buildPropertyHints(keys: DerivationKey[]): string {
         }
     }
     return lines.length ? `Property hints:\n${lines.join("\n")}` : "";
+}
+
+export async function summariseMetadata(contents: string, sourceName?: string) {
+    const sourceLine = sourceName ? `File name: ${sourceName}
+` : "";
+    return await queryModelNoSchema(
+        `You are a dataset (meta)data summarizer.
+Summarize files such as .txt, .md, .csv, .xlsx or .pdf that describe datasets, providers, schemas, distributions, licenses, or processing details. The data may also be the dataset data itself.
+Focus on:
+dataset purpose, provider, files/distributions, formats/schema, licenses/restrictions, update frequency,
+processing notes or warnings. This data will further be used to derive metadata around the given data.
+
+Rules:
+Be concise and accurate. Do not invent information. Mention missing details if relevant.
+
+Output:
+Overview, Metadata, Caveats`,
+        `Summarize this dataset metadata file for ETL/data processing.
+Include if in file:
+purpose, provider, files/distributions, formats/schema, restrictions, warnings
+
+${sourceLine}File content:
+${contents}`,
+        "qwen/qwen3-4b-2507"
+    );
 }
 
 async function queryContextualResults(
