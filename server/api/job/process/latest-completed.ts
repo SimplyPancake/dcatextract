@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Check BullMQ for running jobs for this session
-  const lastJob = (await fileQueue.getCompleted())
+  const lastJob = (await fileQueue.getCompleted() as FileProcessJob[])
     .filter(j => j.data?.sessionId == sessionId)
     .sort((a, b) => b.finishedOn! - a.finishedOn! )[0]
 
