@@ -35,7 +35,7 @@
             <Server :size="35" />
           </Tag>
         </div>
-        Link to datasets from kaggle, Hugging Face, CKAN, GitHub, Zenodo,
+        Link to datasets from kaggle, Hugging Face, GitHub, Zenodo,
         or other enterprise/government repositories via URL.
       </Fieldset>
     </div>
@@ -131,7 +131,7 @@ const downloadProgress = ref(0)
 const downloadMessage = ref('')
 const downloadError = ref('')
 const lastDownloadUrl = ref('')
-const supportedDownloadProviders = ['GitHub', 'Kaggle', 'HuggingFace']
+const supportedDownloadProviders = ['GitHub', 'Kaggle', 'HuggingFace', 'Zenodo']
 
 const { socket } = usePresenceSocket()
 

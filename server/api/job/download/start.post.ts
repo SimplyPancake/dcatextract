@@ -4,7 +4,7 @@ import { getRedis } from '~~/server/utils/redis'
 import type { DownloadJobDataType } from '~~/shared/types/workers'
 import type { DataProvider } from '~~/shared/types/url'
 
-const providerSchema = z.enum(['Kaggle', 'HuggingFace', 'CKAN', 'GitHub', 'Unknown'] as const)
+const providerSchema = z.enum(['Kaggle', 'HuggingFace', 'CKAN', 'GitHub', 'Zenodo', 'Unknown'] as const)
 
 const bodySchema = z.object({
   url: z.url(),

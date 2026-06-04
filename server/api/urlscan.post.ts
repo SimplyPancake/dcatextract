@@ -50,6 +50,7 @@ function getProviderFromHostname(hostname: string): DataProvider {
 	if (hostname === 'github.com' || hostname.endsWith('.github.com') || hostname === 'raw.githubusercontent.com') {
 		return 'GitHub'
 	}
+	if (hostname === 'zenodo.org' || hostname.endsWith('.zenodo.org')) return 'Zenodo'
 	return 'Unknown'
 }
 
@@ -68,5 +69,8 @@ function getIdentifier(url: string, provider: DataProvider): string {
 	if (!match) {
 		return ''
 	}
-	return `${match[1]!}/${match[2]!}`;
+	if (match[1] && match[2]) {
+		return `${match[1]!}/${match[2]!}`
+	}
+	return match[1] ?? ''
 }

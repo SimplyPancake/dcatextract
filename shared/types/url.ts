@@ -1,4 +1,4 @@
-export type DataProvider = 'Kaggle' | 'HuggingFace' | 'CKAN' | 'GitHub' | 'Unknown'
+export type DataProvider = 'Kaggle' | 'HuggingFace' | 'GitHub' | 'Zenodo' | 'Unknown'
 
 export type URLScanResult = {
 	sourceType: DataProvider
@@ -66,12 +66,27 @@ export const datasetProviders: DatasetProviderConfig[] = [
     example:
       "https://github.com/user/repo",
   },
+
+  {
+    provider: "Zenodo",
+    baseUrl: "https://zenodo.org/records/",
+
+    // Matches records:
+    // https://zenodo.org/records/1234567
+    // https://zenodo.org/record/1234567
+    identifierRegex:
+      /^https:\/\/zenodo\.org\/(?:records|record)\/([0-9]+)(?:\/.*)?$/,
+
+    example:
+      "https://zenodo.org/records/1234567",
+  },
 ];
 
 export const PROVIDER_BASE_URLS: Record<DataProvider, string | null> = {
   Kaggle: "https://www.kaggle.com/datasets/",
   HuggingFace: "https://huggingface.co/datasets/",
   GitHub: "https://github.com/",
+  Zenodo: "https://zenodo.org/records/",
   CKAN: null,
   Unknown: null,
 };
@@ -80,6 +95,7 @@ export const PROVIDER_DOWNLOAD_BASE_URLS: Record<DataProvider, string | null> = 
   Kaggle: "https://www.kaggle.com/api/v1/datasets/download/",
   HuggingFace: "https://huggingface.co/datasets/",
   GitHub: "https://codeload.github.com/",
+  Zenodo: "https://zenodo.org/api/records/",
   CKAN: null,
   Unknown: null,
 };
@@ -116,6 +132,9 @@ export function buildProviderDownloadUrl(
     return `${base}${identifier}/archive/refs/heads/${branch}.zip`;
   }
   if (provider === "Kaggle") {
+    return `${base}${identifier}`;
+  }
+  if (provider === "Zenodo") {
     return `${base}${identifier}`;
   }
   return null;
