@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises'
 import AdmZip from 'adm-zip'
 import { getRedis } from '../utils/redis'
 import { notifySession } from '../utils/wsManager'
-import type { DownloadJobDataType, DownloadJobReturnType, WorkerProgress } from '~~/shared/types/workers'
+import type { DownloadJobDataType, DownloadJobReturnType, DownloadedSchema, WorkerProgress } from '~~/shared/types/workers'
 import type { DataProvider } from '~~/shared/types/url'
 import {
     buildProviderAccessUrl,
@@ -17,9 +17,11 @@ import {
     getProviderBaseUrl
 } from '~~/shared/types/url'
 import { queuePreviousFilesForStop } from '../utils/files'
+import { convertCroissantToDcatTurtle } from '../utils/croissant'
 
 const redis = getRedis()
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024
+const MAX_SCHEMA_BYTES = 0.2 * 1024 * 1024
 const PROGRESS_UNK_BYTES_STEP = 5 * 1024 * 1024
 
 // ---------------------------------------------------------------------------
@@ -36,10 +38,17 @@ type DownloadPlan =
     | { kind: 'archive'; url: string; headers: Record<string, string>; downloadUrl: string }
     | { kind: 'files'; files: ZenodoFile[]; headers: Record<string, string>; downloadUrl: string }
 
+type SchemaPlan = {
+    kind: 'croissant' | 'dcat'
+    candidates: string[]
+    headers: Record<string, string>
+}
+
 type ResolvedPlan = {
     plan: DownloadPlan
     accessUrl: string
     providerBaseUrl?: string
+    schemaPlans?: SchemaPlan[]
 }
 
 interface ProviderStrategy {
@@ -52,6 +61,7 @@ interface ProviderStrategy {
 
 const GitHubProvider: ProviderStrategy = {
     async resolve(identifier, sourceUrl) {
+        const branches = ['main', 'master'] as const
         const response = await fetch(`https://api.github.com/repos/${identifier}`, {
             headers: { 'User-Agent': 'dcatextract' }
         })
@@ -59,7 +69,9 @@ const GitHubProvider: ProviderStrategy = {
             throw new Error(`Failed to resolve GitHub repository: ${response.status}`)
         }
         const repo = await response.json() as { default_branch?: string }
-        const branch = repo.default_branch || 'main'
+        const branch = (repo.default_branch && branches.includes(repo.default_branch as typeof branches[number]))
+            ? (repo.default_branch as typeof branches[number])
+            : 'main'
         const url = buildProviderDownloadUrl('GitHub', identifier, branch)
         if (!url) throw new Error('Failed to build GitHub download URL')
 
@@ -81,7 +93,8 @@ const HuggingFaceProvider: ProviderStrategy = {
             headers.Authorization = `Bearer ${config.huggingFaceToken}`
         }
 
-        for (const branch of ['main', 'master']) {
+        const branches = ['main', 'master'] as const
+        for (const branch of branches) {
             const url = buildProviderDownloadUrl('HuggingFace', identifier, branch)
             if (!url) throw new Error('Failed to build Hugging Face download URL')
             const response = await fetch(url, { method: 'HEAD', headers })
@@ -89,7 +102,17 @@ const HuggingFaceProvider: ProviderStrategy = {
                 return {
                     plan: { kind: 'archive', url, headers, downloadUrl: url },
                     accessUrl: buildProviderAccessUrl('HuggingFace', identifier, sourceUrl) ?? sourceUrl,
-                    providerBaseUrl: getProviderBaseUrl('HuggingFace') ?? undefined
+                    providerBaseUrl: getProviderBaseUrl('HuggingFace') ?? undefined,
+                    schemaPlans: [
+                        {
+                            kind: 'croissant',
+                            headers,
+                            candidates: [
+                                `https://huggingface.co/datasets/${identifier}/resolve/${branch}/croissant.json`,
+                                `https://huggingface.co/datasets/${identifier}/raw/${branch}/croissant.json`
+                            ]
+                        }
+                    ]
                 }
             }
             if (response.status === 401 || response.status === 403) {
@@ -116,7 +139,19 @@ const KaggleProvider: ProviderStrategy = {
         return {
             plan: { kind: 'archive', url, headers, downloadUrl: url },
             accessUrl: buildProviderAccessUrl('Kaggle', identifier, sourceUrl) ?? sourceUrl,
-            providerBaseUrl: getProviderBaseUrl('Kaggle') ?? undefined
+            providerBaseUrl: getProviderBaseUrl('Kaggle') ?? undefined,
+            schemaPlans: [
+                {
+                    kind: 'croissant',
+                    headers,
+                    candidates: [
+                        `https://www.kaggle.com/api/v1/datasets/croissant/${identifier}`,
+                        `https://www.kaggle.com/api/v1/datasets/metadata/${identifier}`,
+                        `https://www.kaggle.com/datasets/${identifier}/croissant.json`,
+                        `https://www.kaggle.com/datasets/${identifier}/metadata/croissant.json`
+                    ]
+                }
+            ]
         }
     }
 }
@@ -143,7 +178,18 @@ const ZenodoProvider: ProviderStrategy = {
                 return {
                     plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}/files` },
                     accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
-                    providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined
+                    providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
+                    schemaPlans: [
+                        {
+                            kind: 'dcat',
+                            headers: { ...headers, Accept: 'text/turtle,application/ld+json,application/rdf+xml;q=0.9,*/*;q=0.8' },
+                            candidates: [
+                                `https://zenodo.org/records/${identifier}/export/dcat`,
+                                `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                                `https://zenodo.org/api/records/${identifier}?format=dcat`
+                            ]
+                        }
+                    ]
                 }
             }
         }
@@ -167,7 +213,18 @@ const ZenodoProvider: ProviderStrategy = {
         return {
             plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}` },
             accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
-            providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined
+            providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
+            schemaPlans: [
+                {
+                    kind: 'dcat',
+                    headers: { ...headers, Accept: 'text/turtle,application/ld+json,application/rdf+xml;q=0.9,*/*;q=0.8' },
+                    candidates: [
+                        `https://zenodo.org/records/${identifier}/export/dcat`,
+                        `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                        `https://zenodo.org/api/records/${identifier}?format=dcat`
+                    ]
+                }
+            ]
         }
     }
 }
@@ -232,6 +289,10 @@ function buildArchivePath(downloadDir: string, identifier: string): string {
 
 function buildExtractDir(downloadDir: string, identifier: string): string {
     return path.join(downloadDir, `${identifier.replace('/', '-')}-${Date.now()}`)
+}
+
+function buildSchemaPath(downloadDir: string, identifier: string, extension: string): string {
+    return path.join(downloadDir, `${identifier.replace('/', '-')}-schema-${Date.now()}.${extension}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -309,6 +370,60 @@ async function downloadToFile(
     return totalBytes
 }
 
+async function fetchTextWithLimit(url: string, headers: Record<string, string>, maxBytes: number): Promise<string> {
+    const response = await fetch(url, { redirect: 'follow', headers })
+    if (!response.ok) throw new Error(`Failed to download schema: ${response.status}`)
+    const contentLength = Number(response.headers.get('content-length')) || 0
+    if (contentLength > maxBytes) throw new Error('Schema exceeds size limit')
+    const buffer = Buffer.from(await response.arrayBuffer())
+    if (buffer.byteLength > maxBytes) throw new Error('Schema exceeds size limit')
+    return buffer.toString('utf8')
+}
+
+async function downloadSchemaPlans(
+    schemaPlans: SchemaPlan[] | undefined,
+    downloadDir: string,
+    identifier: string
+): Promise<DownloadedSchema[]> {
+    if (!schemaPlans || schemaPlans.length === 0) return []
+    const results: DownloadedSchema[] = []
+
+    for (const plan of schemaPlans) {
+        for (const url of plan.candidates) {
+            try {
+                if (plan.kind === 'croissant') {
+                    const text = await fetchTextWithLimit(url, plan.headers, MAX_SCHEMA_BYTES)
+                    const json = JSON.parse(text) as unknown
+                    const turtle = await convertCroissantToDcatTurtle(json)
+                    const schemaPath = buildSchemaPath(downloadDir, identifier, 'ttl')
+                    await fsp.writeFile(schemaPath, turtle, 'utf8')
+                    results.push({
+                        format: 'dcat',
+                        originalUrl: url,
+                        localPath: schemaPath,
+                        convertedToDcat: true
+                    })
+                    break
+                }
+
+                const text = await fetchTextWithLimit(url, plan.headers, MAX_SCHEMA_BYTES)
+                const schemaPath = buildSchemaPath(downloadDir, identifier, 'ttl')
+                await fsp.writeFile(schemaPath, text, 'utf8')
+                results.push({
+                    format: 'dcat',
+                    originalUrl: url,
+                    localPath: schemaPath
+                })
+                break
+            } catch {
+                continue
+            }
+        }
+    }
+
+    return results
+}
+
 async function extractArchive(targetFile: string, extractDir: string) {
     await fsp.mkdir(extractDir, { recursive: true })
     new AdmZip(targetFile).extractAllTo(extractDir, true)
@@ -342,9 +457,15 @@ export function startDownloadWorker() {
             if (!sessionId) throw new Error('Session ID is required for download')
 
             const config = useRuntimeConfig()
-            const { plan, accessUrl, providerBaseUrl } = await resolveDownloadPlan(provider, identifier, sourceUrl, config)
+            const { plan, accessUrl, providerBaseUrl, schemaPlans } = await resolveDownloadPlan(provider, identifier, sourceUrl, config)
 
-            await job.updateData({ ...job.data, accessUrl, downloadUrl: plan.downloadUrl, providerBaseUrl })
+            await job.updateData({
+                ...job.data,
+                accessUrl,
+                downloadUrl: plan.downloadUrl,
+                providerBaseUrl,
+                downloadedSchemas: []
+            })
 
             const downloadDir = await ensureDownloadDir(sessionId)
             const progress = createProgressReporter(job, sessionId)
@@ -373,6 +494,16 @@ export function startDownloadWorker() {
             const extractedFiles = listFiles(extractDir)
             if (extractedFiles.length === 0) throw new Error('Extracted archive is empty')
 
+            const downloadedSchemas = await downloadSchemaPlans(schemaPlans, downloadDir, identifier)
+
+            await job.updateData({
+                ...job.data,
+                accessUrl,
+                downloadUrl: plan.downloadUrl,
+                providerBaseUrl,
+                downloadedSchemas
+            })
+
             await queuePreviousFilesForStop(sessionId)
             await redis.sadd(`session:${sessionId}:files:unprocessed`, ...extractedFiles)
             await redis.hset(
@@ -385,7 +516,7 @@ export function startDownloadWorker() {
             await progress.report(100, 'Download completed')
             notifySession(sessionId, { type: 'download-completed', filePath: extractDir })
 
-            return { filePath: extractDir, byteSize: progress.getDownloaded() }
+            return { filePath: extractDir, byteSize: progress.getDownloaded(), downloadedSchemas }
         },
         {
             connection: redis,

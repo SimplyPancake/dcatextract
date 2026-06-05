@@ -53,14 +53,23 @@ export type DownloadJobDataType = {
     accessUrl?: string
     downloadUrl?: string
     providerBaseUrl?: string
+    downloadedSchemas?: DownloadedSchema[]
 }
 
 export type DownloadJobReturnType = {
     filePath: string
     byteSize: number
+    downloadedSchemas?: DownloadedSchema[]
 }
 
 export type DownloadJob = Job<DownloadJobDataType, DownloadJobReturnType>
+
+export type DownloadedSchema = {
+    format: 'dcat' | 'croissant'
+    originalUrl: string
+    localPath: string
+    convertedToDcat?: boolean
+}
 
 export type KaggleInformation = {
     croissant: Record<string, any>

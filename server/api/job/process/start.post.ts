@@ -59,6 +59,14 @@ export default defineEventHandler(async (event) => {
 
 			// Job is finished and has data!
 			queueData.downloadData = (downloadJob as DownloadJob).data
+			const downloadedSchemas = (downloadJob as DownloadJob).data.downloadedSchemas ?? []
+			if (downloadedSchemas.length > 0) {
+				const merged = new Set(queueData.metadataFiles)
+				for (const schema of downloadedSchemas) {
+					merged.add(schema.localPath)
+				}
+				queueData.metadataFiles = Array.from(merged)
+			}
 
 			const downloadState = await downloadJob.getState()
 			const shouldWaitForDownload = ['waiting', 'active', 'delayed', 'paused'].includes(downloadState)
