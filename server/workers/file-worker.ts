@@ -87,6 +87,9 @@ export function startFileWorker() {
                 }
             }
 
+            console.log("Compressed metadata")
+            console.log(metadata)
+
             const catalog = await inferDcatFromFiles(
                 paths,
                 { verbose: true },

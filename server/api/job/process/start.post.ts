@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
 	const runningJob = (await fileQueue.getActive()).some(x => (x.data as FileProcessJobDataType).sessionId == sessionId)
 	if (runningJob) {
 		const failError = new Error("Another job wants to run")
-		
+
 		const job = (await fileQueue.getActive()).filter(x => (x.data as FileProcessJobDataType).sessionId == sessionId)[0]!
 		job.moveToFailed(failError, job.token!)
 	}
@@ -60,10 +60,14 @@ export default defineEventHandler(async (event) => {
 			// Job is finished and has data!
 			queueData.downloadData = (downloadJob as DownloadJob).data
 			const downloadedSchemas = (downloadJob as DownloadJob).data.downloadedSchemas ?? []
-			if (downloadedSchemas.length > 0) {
+			const webpageSnapshot = (downloadJob as DownloadJob).returnvalue?.webpageSnapshot
+			if (downloadedSchemas.length > 0 || webpageSnapshot) {
 				const merged = new Set(queueData.metadataFiles)
 				for (const schema of downloadedSchemas) {
 					merged.add(schema.localPath)
+				}
+				if (webpageSnapshot) {
+					merged.add(webpageSnapshot)
 				}
 				queueData.metadataFiles = Array.from(merged)
 			}

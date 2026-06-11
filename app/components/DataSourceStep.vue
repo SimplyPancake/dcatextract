@@ -61,20 +61,6 @@
                 }" />
             </div>
           </div>
-          <div
-            class="mt-4 rounded-lg border border-dashed border-surface-300 bg-surface-50/70 p-4 dark:border-surface-700 dark:bg-surface-800/40">
-            <div class="text-sm font-medium">Optional contextual metadata</div>
-            <div class="mt-1 text-sm text-surface-500">
-              Upload README files, codebooks, dictionaries, or other notes that help the processor understand the data.
-            </div>
-            <FileUpload name="metadataFiles" mode="advanced" url="/api/metadata"
-              accept=".txt,.md,.csv,.json,.xml,.ttl,.rdf,.yaml,.yml,.pdf" :max-file-size="50 * 1024 * 1024"
-              :multiple="true" class="mt-3" :pt="{
-                input: {
-                  multiple: true
-                }
-              }" />
-          </div>
           <Message class="mt-2" v-if="uploadFinished" severity="success">Upload finished!</Message>
         </div>
         <div v-else>
@@ -92,8 +78,24 @@
         </div>
       </div>
     </Transition>
-    <div class="flex pt-6 justify-end">
-      <Button label="Next" :disabled="!mayContinue" @click="emitNext" />
+    <div class="flex flex-col gap-4">
+      <div
+            class="mt-4 rounded-lg border border-dashed border-surface-300 bg-surface-50/70 p-4 dark:border-surface-700 dark:bg-surface-800/40">
+            <div class="text-sm font-medium">Optional contextual metadata</div>
+            <div class="mt-1 text-sm text-surface-500">
+              Upload README files, codebooks, dictionaries, or other notes that help the processor understand the data.
+            </div>
+            <FileUpload name="metadataFiles" mode="advanced" url="/api/metadata"
+              accept=".txt,.md,.csv,.json,.xml,.ttl,.rdf,.yaml,.yml,.pdf" :max-file-size="50 * 1024 * 1024"
+              :multiple="true" class="mt-3" :pt="{
+                input: {
+                  multiple: true
+                }
+              }" />
+          </div>
+      <div class="flex pt-6 justify-end">
+        <Button label="Next" :disabled="!mayContinue" @click="emitNext" />
+      </div>
     </div>
   </div>
 </template>

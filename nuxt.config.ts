@@ -13,7 +13,8 @@ export default defineNuxtConfig({
     kaggleUsername: process.env.NUXT_KAGGLE_USERNAME || '',
     kaggleKey: process.env.NUXT_KAGGLE_KEY || '',
     huggingFaceToken: process.env.NUXT_HF_TOKEN || '',
-    useAi: !process.env.NUXT_REMOVE_AI
+    useAi: !process.env.NUXT_REMOVE_AI,
+    preferredModel: process.env.NUXT_LLM_MODEL || 'qwen/qwen3-8b'
   },
   nitro: {
     experimental: {

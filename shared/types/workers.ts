@@ -55,11 +55,11 @@ export type DownloadJobDataType = {
     providerBaseUrl?: string
     downloadedSchemas?: DownloadedSchema[]
 }
-
 export type DownloadJobReturnType = {
     filePath: string
     byteSize: number
     downloadedSchemas?: DownloadedSchema[]
+    webpageSnapshot?: string
 }
 
 export type DownloadJob = Job<DownloadJobDataType, DownloadJobReturnType>
