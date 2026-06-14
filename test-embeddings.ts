@@ -326,14 +326,16 @@ async function getDownloadJobResults(sessionId: string) {
 async function startProcessing(
   sessionId: string,
   schemas: Record<string, boolean>,
-  inferencePercentage: number
+  inferencePercentage: number,
+  stopMetadata?: boolean
 ) {
   console.log(`[${sessionId}] Starting file processing...`)
   
   const body = {
     schemas,
     customProperties: [],
-    inferencePercentage
+    inferencePercentage,
+    stopMetadata
   }
   // console.log(`[${sessionId}] DEBUG startProcessing - sending body:`, JSON.stringify(body))
 
@@ -521,7 +523,7 @@ async function main() {
       }
       
       console.log(`   📋 DEBUG Phase1 - about to call startProcessing with:`, {sessionId: sessionId1, schemas: Object.keys(SCHEMA_KEYS), inferencePercentage: INFERENCE_PERCENTAGE})
-      await startProcessing(sessionId1, SCHEMA_KEYS, INFERENCE_PERCENTAGE)
+      await startProcessing(sessionId1, SCHEMA_KEYS, INFERENCE_PERCENTAGE, true)
       // Give the queue a moment to pick up the job
       await new Promise(resolve => setTimeout(resolve, 1000))
       await waitForProcessingCompletion(sessionId1)

@@ -46,9 +46,13 @@ export function startFileWorker() {
             console.log(`[FILE_PROC] 🔍 DEBUG Files in unprocessed set:`, filepaths)
             console.log(`[FILE_PROC] 🔍 DEBUG Number of files:`, filepaths?.length || 0)
             
-            const metadataFilepaths = Array.isArray(jobdata.metadataFiles) && jobdata.metadataFiles.length > 0
+            let metadataFilepaths = Array.isArray(jobdata.metadataFiles) && jobdata.metadataFiles.length > 0
                 ? jobdata.metadataFiles
                 : await redis.smembers(`session:${sessionId}:files:metadata`)
+
+            if (jobdata.stopMetadata) {
+                metadataFilepaths = []
+            }
             console.log(`[FILE_PROC] 🔍 DEBUG Metadata files:`, metadataFilepaths)
             console.log(`[FILE_PROC] 🔍 DEBUG Number of metadata files:`, metadataFilepaths?.length || 0)
             

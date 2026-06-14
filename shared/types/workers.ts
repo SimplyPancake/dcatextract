@@ -27,7 +27,8 @@ export type FileProcessJobDataType = {
     metadataFiles: string[] // Paths of the related metadata files for the job
     downloadData?: DownloadJobDataType,
     filePaths: string[],
-    originalNames: Record<string, string>
+    originalNames: Record<string, string>,
+    stopMetadata?: boolean,
 }
 
 export type ProcessedFields = Record<string, ProcessedField>
