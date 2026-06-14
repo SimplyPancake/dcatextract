@@ -42,7 +42,7 @@ const TEST_DATASETS: TestDataset[] = [
       description: 'Archive containing all the contents of the Credit Card Fraud Detection dataset',
       keywords: ['finance', 'government', 'crime']
     },
-    processed: true
+    processed: false
   },
   {
     name: 'MedCost',
@@ -53,18 +53,18 @@ const TEST_DATASETS: TestDataset[] = [
       description: 'Medical Cost Personal Datasets Insurance Forecast by using Linear Regression',
       keywords: ['healthcare', 'finance', 'insurance', 'education', 'health']
     },
-    processed: true,
+    processed: false,
   },
-  { // This has bad metadata on Kaggle
+  {
     name: 'AES-data',
     kaggleUrl: 'https://www.kaggle.com/datasets/jaytonde/aes-dataset',
     publicationUrl: 'https://arxiv.org/pdf/1909.09482',
     publicationPdfPath: './publications/automatedessay.pdf',
     groundTruth: {
       description: 'Archive containing all the contents of the AES-DATASET dataset',
-      keywords: [] // Has no keywords
+      keywords: []
     },
-    processed: true,
+    processed: false,
   },
   {
     name: 'NoShows',
@@ -75,7 +75,7 @@ const TEST_DATASETS: TestDataset[] = [
       description: '10.527 medical appointments its 14 associated variables (characteristics). The most important one if the patient show-up or no-show to the appointment.',
       keywords: ['health', 'public health', 'healthcare']
     },
-    processed: true
+    processed: false
   }
 ]
 
@@ -467,6 +467,39 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+// ponytail: consolidated extraction phase (was duplicated for with/without metadata)
+async function runExtractionPhase(
+  sessionId: string,
+  dataset: TestDataset,
+  withMetadata: boolean
+): Promise<{ description?: string; keywords?: string | string[] }> {
+  const phase = withMetadata ? 2 : 1
+  console.log(`\n📝 Phase ${phase}: Testing ${withMetadata ? 'WITH' : 'WITHOUT'} additional metadata`)
+  
+  await startDownload(sessionId, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
+  await waitForDownloadCompletion(sessionId)
+  
+  if (withMetadata && dataset.publicationPdfPath) {
+    if (await fileExists(dataset.publicationPdfPath)) {
+      try {
+        await uploadMetadata(sessionId, dataset.publicationPdfPath)
+      } catch (err) {
+        console.log(`⚠️  Metadata upload failed: ${err instanceof Error ? err.message : err}`)
+      }
+    }
+  }
+  
+  await startProcessing(sessionId, SCHEMA_KEYS, INFERENCE_PERCENTAGE, !withMetadata)
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  await waitForProcessingCompletion(sessionId)
+  
+  const results = await getLatestJobResults(sessionId)
+  return {
+    description: results?.dataset?.['dataset.description']?.result?.value,
+    keywords: results?.dataset?.['dataset.theme']?.result?.value
+  }
+}
+
 async function uploadMetadata(sessionId: string, filePath: string): Promise<void> {
   console.log(`[${sessionId}] Uploading metadata file: ${filePath}`)
 
@@ -490,6 +523,18 @@ async function uploadMetadata(sessionId: string, filePath: string): Promise<void
   console.log(`[${sessionId}] Metadata uploaded successfully`)
 }
 
+// ponytail: extract similarity computation, used by both phases
+async function computeSimilarities(
+  extracted: string | string[] | undefined,
+  groundTruth: string | string[] | undefined
+): Promise<number | undefined> {
+  if (!extracted || !groundTruth) return undefined
+  const extractStr = Array.isArray(extracted) ? extracted.join(', ') : String(extracted)
+  const truthStr = Array.isArray(groundTruth) ? groundTruth.join(', ') : String(groundTruth)
+  const embeddings = await Promise.all([embed(extractStr), embed(truthStr)])
+  return cosineSimilarity(embeddings[0], embeddings[1])
+}
+
 async function main() {
   const results: TestResult[] = []
   console.log(`\n${'='.repeat(100)}`)
@@ -505,148 +550,22 @@ async function main() {
     console.log('─'.repeat(100))
 
     try {
-      // ─── Test WITHOUT metadata ───────────────────────────────────────────────
-      console.log('\n📝 Phase 1: Testing WITHOUT additional metadata')
       const sessionId1 = await createSession()
-      console.log(`   Session: ${sessionId1}`)
-
-      await startDownload(sessionId1, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
-      await waitForDownloadCompletion(sessionId1)
+      const sessionId2 = await createSession()
       
-      // DEBUG: verify download created files
-      console.log(`   📋 DEBUG Phase1 - sessionId: ${sessionId1}`)
-      try {
-        const dlResults1 = await getDownloadJobResults(sessionId1)
-        // console.log(`   📋 DEBUG Phase1 - download results:`, dlResults1)
-      } catch (e) {
-        console.log(`   📋 DEBUG Phase1 - error fetching download results:`, e instanceof Error ? e.message : e)
-      }
+      // Run both phases in parallel to save time
+      const [result1, result2] = await Promise.all([
+        runExtractionPhase(sessionId1, dataset, false),
+        runExtractionPhase(sessionId2, dataset, true)
+      ])
       
-      console.log(`   📋 DEBUG Phase1 - about to call startProcessing with:`, {sessionId: sessionId1, schemas: Object.keys(SCHEMA_KEYS), inferencePercentage: INFERENCE_PERCENTAGE})
-      await startProcessing(sessionId1, SCHEMA_KEYS, INFERENCE_PERCENTAGE, true)
-      // Give the queue a moment to pick up the job
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      await waitForProcessingCompletion(sessionId1)
-
-      const jobResults1 = await getLatestJobResults(sessionId1)
-      
-      // Debug: trace extraction step by step
-      // console.log(`   📋 DEBUG Step 1 - Full jobResults1:`, JSON.stringify(jobResults1, null, 2).substring(0, 500))
-      console.log(`   📋 DEBUG Step 2 - jobResults1.dataset exists?:`, !!jobResults1?.dataset)
-      if (jobResults1?.dataset) {
-        console.log(`   📋 DEBUG Step 3 - dataset keys:`, Object.keys(jobResults1.dataset))
-        console.log(`   📋 DEBUG Step 4 - dataset.description:`, JSON.stringify(jobResults1.dataset['dataset.description']))
-        console.log(`   📋 DEBUG Step 5 - dataset.description.result:`, JSON.stringify(jobResults1.dataset['dataset.description']?.result))
-        console.log(`   📋 DEBUG Step 6 - dataset.description.result.value:`, jobResults1.dataset['dataset.description']?.result?.value)
-      }
-      
-      const extractedDescription1 = jobResults1?.dataset?.['dataset.description']?.result?.value
-      const extractedKeywords1 = jobResults1?.dataset?.['dataset.theme']?.result?.value
-
-      let descriptionSimilarity1: number | undefined
-      let keywordsSimilarity1: number | undefined
-
-      if (extractedDescription1 && dataset.groundTruth?.description) {
-        const descEmbeddings = await Promise.all([
-          embed(typeof extractedDescription1 === 'string' ? extractedDescription1 : String(extractedDescription1)),
-          embed(dataset.groundTruth.description)
-        ])
-        descriptionSimilarity1 = cosineSimilarity(descEmbeddings[0], descEmbeddings[1])
-      }
-
-      if (extractedKeywords1 && dataset.groundTruth?.keywords) {
-        const keywordsStr = Array.isArray(extractedKeywords1) ? extractedKeywords1.join(', ') : String(extractedKeywords1)
-        const keywordsEmbeddings = await Promise.all([
-          embed(keywordsStr),
-          embed(dataset.groundTruth.keywords.join(', '))
-        ])
-        keywordsSimilarity1 = cosineSimilarity(keywordsEmbeddings[0], keywordsEmbeddings[1])
-      }
+      // Compute similarities
+      const descriptionSimilarity1 = await computeSimilarities(result1.description, dataset.groundTruth?.description)
+      const keywordsSimilarity1 = await computeSimilarities(result1.keywords, dataset.groundTruth?.keywords)
+      const descriptionSimilarity2 = await computeSimilarities(result2.description, dataset.groundTruth?.description)
+      const keywordsSimilarity2 = await computeSimilarities(result2.keywords, dataset.groundTruth?.keywords)
 
       console.log(`   ✅ Without metadata: desc_sim=${descriptionSimilarity1?.toFixed(4) || 'N/A'}, kw_sim=${keywordsSimilarity1?.toFixed(4) || 'N/A'}`)
-
-      // ─── Test WITH metadata ─────────────────────────────────────────────────
-      console.log('\n📝 Phase 2: Testing WITH additional metadata')
-      const sessionId2 = await createSession()
-      console.log(`   Session: ${sessionId2}`)
-
-      await startDownload(sessionId2, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
-      await waitForDownloadCompletion(sessionId2)
-      
-      // DEBUG: verify download created files before upload
-      console.log(`   📋 DEBUG Phase2 - sessionId: ${sessionId2}`)
-      try {
-        const dlResults2 = await getDownloadJobResults(sessionId2)
-        console.log(`   📋 DEBUG Phase2 - download results BEFORE upload:`, dlResults2)
-      } catch (e) {
-        console.log(`   📋 DEBUG Phase2 - error fetching download results:`, e instanceof Error ? e.message : e)
-      }
-
-      // Upload metadata if file path is provided and exists
-      if (dataset.publicationPdfPath) {
-        const exists = await fileExists(dataset.publicationPdfPath)
-        if (exists) {
-          try {
-            console.log(`   📋 DEBUG Phase2 - uploading metadata...`)
-            await uploadMetadata(sessionId2, dataset.publicationPdfPath)
-            console.log(`   📋 DEBUG Phase2 - metadata uploaded`)
-          } catch (err) {
-            console.log(`   ⚠️  Could not upload metadata: ${err instanceof Error ? err.message : err}`)
-          }
-        } else {
-          console.log(`   ⚠️  Metadata file not found: ${dataset.publicationPdfPath}`)
-        }
-      }
-
-      // DEBUG: verify download results after upload (files should still be there)
-      try {
-        const dlResults2After = await getDownloadJobResults(sessionId2)
-        console.log(`   📋 DEBUG Phase2 - download results AFTER upload:`, dlResults2After)
-      } catch (e) {
-        console.log(`   📋 DEBUG Phase2 - error fetching download results after upload:`, e instanceof Error ? e.message : e)
-      }
-      
-      // console.log(`   📋 DEBUG Phase2 - about to call startProcessing with:`, {sessionId: sessionId2, schemas: Object.keys(SCHEMA_KEYS), inferencePercentage: INFERENCE_PERCENTAGE})
-      await startProcessing(sessionId2, SCHEMA_KEYS, INFERENCE_PERCENTAGE)
-      // Give the queue a moment to pick up the job
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      await waitForProcessingCompletion(sessionId2)
-
-      const jobResults2 = await getLatestJobResults(sessionId2)
-      
-      // Debug: trace extraction step by step
-      // console.log(`   📋 DEBUG Step 1 - Full jobResults2:`, JSON.stringify(jobResults2, null, 2).substring(0, 500))
-      console.log(`   📋 DEBUG Step 2 - jobResults2.dataset exists?:`, !!jobResults2?.dataset)
-      if (jobResults2?.dataset) {
-        console.log(`   📋 DEBUG Step 3 - dataset keys:`, Object.keys(jobResults2.dataset))
-        console.log(`   📋 DEBUG Step 4 - dataset.description:`, JSON.stringify(jobResults2.dataset['dataset.description']))
-        console.log(`   📋 DEBUG Step 5 - dataset.description.result:`, JSON.stringify(jobResults2.dataset['dataset.description']?.result))
-        console.log(`   📋 DEBUG Step 6 - dataset.description.result.value:`, jobResults2.dataset['dataset.description']?.result?.value)
-      }
-      
-      const extractedDescription2 = jobResults2?.dataset?.['dataset.description']?.result?.value
-      const extractedKeywords2 = jobResults2?.dataset?.['dataset.theme']?.result?.value
-
-      let descriptionSimilarity2: number | undefined
-      let keywordsSimilarity2: number | undefined
-
-      if (extractedDescription2 && dataset.groundTruth?.description) {
-        const descEmbeddings = await Promise.all([
-          embed(typeof extractedDescription2 === 'string' ? extractedDescription2 : String(extractedDescription2)),
-          embed(dataset.groundTruth.description)
-        ])
-        descriptionSimilarity2 = cosineSimilarity(descEmbeddings[0], descEmbeddings[1])
-      }
-
-      if (extractedKeywords2 && dataset.groundTruth?.keywords) {
-        const keywordsStr = Array.isArray(extractedKeywords2) ? extractedKeywords2.join(', ') : String(extractedKeywords2)
-        const keywordsEmbeddings = await Promise.all([
-          embed(keywordsStr),
-          embed(dataset.groundTruth.keywords.join(', '))
-        ])
-        keywordsSimilarity2 = cosineSimilarity(keywordsEmbeddings[0], keywordsEmbeddings[1])
-      }
-
       console.log(`   ✅ With metadata: desc_sim=${descriptionSimilarity2?.toFixed(4) || 'N/A'}, kw_sim=${keywordsSimilarity2?.toFixed(4) || 'N/A'}`)
 
       // ─── Compute comparisons ────────────────────────────────────────────────
@@ -659,33 +578,28 @@ async function main() {
 
       if (descriptionSimilarity1 !== undefined && descriptionSimilarity2 !== undefined) {
         descriptionSimilarityDelta = descriptionSimilarity2 - descriptionSimilarity1
-        console.log(`   Description to ground truth delta: ${descriptionSimilarityDelta > 0 ? '📈' : '📉'} ${descriptionSimilarityDelta.toFixed(4)}`)
+        console.log(`   Description delta: ${descriptionSimilarityDelta > 0 ? '📈' : '📉'} ${descriptionSimilarityDelta.toFixed(4)}`)
       }
 
       if (keywordsSimilarity1 !== undefined && keywordsSimilarity2 !== undefined) {
         keywordsSimilarityDelta = keywordsSimilarity2 - keywordsSimilarity1
-        console.log(`   Keywords to ground truth delta: ${keywordsSimilarityDelta > 0 ? '📈' : '📉'} ${keywordsSimilarityDelta.toFixed(4)}`)
+        console.log(`   Keywords delta: ${keywordsSimilarityDelta > 0 ? '📈' : '📉'} ${keywordsSimilarityDelta.toFixed(4)}`)
       }
 
-      // Similarity between extracted features with/without metadata
-      if (extractedDescription1 && extractedDescription2) {
-        const descEmbeddings = await Promise.all([
-          embed(typeof extractedDescription1 === 'string' ? extractedDescription1 : String(extractedDescription1)),
-          embed(typeof extractedDescription2 === 'string' ? extractedDescription2 : String(extractedDescription2))
+      if (result1.description && result2.description) {
+        const embeddings = await Promise.all([
+          embed(String(result1.description)),
+          embed(String(result2.description))
         ])
-        descriptionFeatureSimilarity = cosineSimilarity(descEmbeddings[0], descEmbeddings[1])
-        console.log(`   Description extraction change: ${descriptionFeatureSimilarity.toFixed(4)}`)
+        descriptionFeatureSimilarity = cosineSimilarity(embeddings[0], embeddings[1])
       }
 
-      if (extractedKeywords1 && extractedKeywords2) {
-        const kw1Str = Array.isArray(extractedKeywords1) ? extractedKeywords1.join(', ') : String(extractedKeywords1)
-        const kw2Str = Array.isArray(extractedKeywords2) ? extractedKeywords2.join(', ') : String(extractedKeywords2)
-        const keywordEmbeddings = await Promise.all([
-          embed(kw1Str),
-          embed(kw2Str)
+      if (result1.keywords && result2.keywords) {
+        const embeddings = await Promise.all([
+          embed(Array.isArray(result1.keywords) ? result1.keywords.join(', ') : String(result1.keywords)),
+          embed(Array.isArray(result2.keywords) ? result2.keywords.join(', ') : String(result2.keywords))
         ])
-        keywordsFeatureSimilarity = cosineSimilarity(keywordEmbeddings[0], keywordEmbeddings[1])
-        console.log(`   Keywords extraction change: ${keywordsFeatureSimilarity.toFixed(4)}`)
+        keywordsFeatureSimilarity = cosineSimilarity(embeddings[0], embeddings[1])
       }
 
       const duration = Date.now() - startTime
@@ -693,15 +607,15 @@ async function main() {
         datasetName: dataset.name,
         withoutMetadata: {
           sessionId: sessionId1,
-          extractedDescription: typeof extractedDescription1 === 'string' ? extractedDescription1.substring(0, 80) : String(extractedDescription1),
-          extractedKeywords: extractedKeywords1,
+          extractedDescription: typeof result1.description === 'string' ? result1.description.substring(0, 80) : String(result1.description),
+          extractedKeywords: result1.keywords,
           descriptionSimilarity: descriptionSimilarity1,
           keywordsSimilarity: keywordsSimilarity1
         },
         withMetadata: {
           sessionId: sessionId2,
-          extractedDescription: typeof extractedDescription2 === 'string' ? extractedDescription2.substring(0, 80) : String(extractedDescription2),
-          extractedKeywords: extractedKeywords2,
+          extractedDescription: typeof result2.description === 'string' ? result2.description.substring(0, 80) : String(result2.description),
+          extractedKeywords: result2.keywords,
           descriptionSimilarity: descriptionSimilarity2,
           keywordsSimilarity: keywordsSimilarity2
         },
