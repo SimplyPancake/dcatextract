@@ -27,6 +27,9 @@ export function startFileWorker() {
                 return
             }
 
+            console.log(`[FILE_PROC] 🔍 DEBUG Starting file processing for session: ${sessionId}`)
+            console.log(`[FILE_PROC] 🔍 DEBUG Job data:`, JSON.stringify(jobdata, null, 2))
+
             async function updateProgress(message: string, prc: number = 0, ) {
                 await job.updateProgress({
                     progress: prc,
@@ -35,16 +38,31 @@ export function startFileWorker() {
                 notifySession(sessionId, { type: 'progress', progress: prc, message })
             }
             
+            // DEBUG: Check what keys exist in Redis for this session
+            const sessionKeys = await redis.keys(`session:${sessionId}:*`)
+            console.log(`[FILE_PROC] 🔍 DEBUG Redis keys for session ${sessionId}:`, sessionKeys)
+            
             const filepaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
+            console.log(`[FILE_PROC] 🔍 DEBUG Files in unprocessed set:`, filepaths)
+            console.log(`[FILE_PROC] 🔍 DEBUG Number of files:`, filepaths?.length || 0)
+            
             const metadataFilepaths = Array.isArray(jobdata.metadataFiles) && jobdata.metadataFiles.length > 0
                 ? jobdata.metadataFiles
                 : await redis.smembers(`session:${sessionId}:files:metadata`)
+            console.log(`[FILE_PROC] 🔍 DEBUG Metadata files:`, metadataFilepaths)
+            console.log(`[FILE_PROC] 🔍 DEBUG Number of metadata files:`, metadataFilepaths?.length || 0)
+            
             const originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)
+            console.log(`[FILE_PROC] 🔍 DEBUG Original names:`, originalNames)
             console.log('Processing metadata files:', metadataFilepaths.length)
 
 
             let paths: string[] = Array.isArray(filepaths) ? filepaths : []
+            console.log(`[FILE_PROC] 🔍 DEBUG Final paths array:`, paths)
+            console.log(`[FILE_PROC] 🔍 DEBUG paths.length:`, paths.length)
+            
             if (paths.length === 0) {
+                console.error(`[FILE_PROC] ❌ ERROR: No files found. sessionId=${sessionId}, filepaths=${JSON.stringify(filepaths)}, jobdata.metadataFiles=${JSON.stringify(jobdata.metadataFiles)}`)
                 throw new Error('No files found for processing')
             }
             console.log('Processing:', { filepaths, sessionId })

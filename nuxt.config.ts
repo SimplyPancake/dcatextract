@@ -14,7 +14,8 @@ export default defineNuxtConfig({
     kaggleKey: process.env.NUXT_KAGGLE_KEY || '',
     huggingFaceToken: process.env.NUXT_HF_TOKEN || '',
     useAi: !process.env.NUXT_REMOVE_AI,
-    preferredModel: process.env.NUXT_LLM_MODEL || 'qwen/qwen3-8b'
+    preferredModel: process.env.NUXT_LLM_MODEL || 'qwen/qwen3-8b',
+    useCleanup: !process.env.NUXT_STOP_CLEANUP,
   },
   nitro: {
     experimental: {

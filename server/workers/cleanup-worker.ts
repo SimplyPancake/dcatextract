@@ -8,6 +8,12 @@ export function startCleanupWorker() {
     'cleanup',
     async (job) => {
       console.log("[CLEAN] Running cleanup!")
+
+      const runtime = useRuntimeConfig()
+      if (!runtime.useCleanup) {
+        return
+      }
+
       // Find all file-related keys in Redis
       const keys = await redis.keys('session:*:files:*')
       const sessionIds = new Set<string>()

@@ -26,3 +26,6 @@ logs
 
 .github/agents
 .github/instructions
+
+publications/*
+publications
