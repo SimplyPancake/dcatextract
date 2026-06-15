@@ -7,7 +7,8 @@ import { CustomPropertySchema } from '~~/shared/types/schema';
 const dictSchema = z.object({
 	schemas: z.record(z.string(), z.boolean()),
 	customProperties: z.array(CustomPropertySchema),
-	inferencePercentage: z.number().min(0).max(100)
+	inferencePercentage: z.number().min(0).max(100),
+	stopMetadata: z.boolean()
 })
 
 export default defineEventHandler(async (event) => {
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
 		throw result.error.issues
 	}
 
-	const { schemas, customProperties, inferencePercentage } = result.data
+	const { schemas, customProperties, inferencePercentage, stopMetadata } = result.data
 
 	if (!sessionId) {
 		throw createError("Session ID is required to proceed.")
@@ -30,7 +31,8 @@ export default defineEventHandler(async (event) => {
 		customProperties,
 		inferencePercentage,
 		downloadType: DownloadSourceType.LOCALFILE,
-		metadataFiles: []
+		metadataFiles: [],
+		stopMetadata
 	}
 
 	// Check if there is already a job working

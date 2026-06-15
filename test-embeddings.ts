@@ -32,18 +32,41 @@ interface TestDataset {
   processed?: boolean
 }
 
+//   Overview with sources of these datasets:
+  // - https://www.kaggle.com/datasets/emnard1/stroke-based-handwritingdata-for-alzheimer-disease?utm_source=chatgpt.com
+  //  - https://www.sciencedirect.com/science/article/pii/S0010482525003907
+
 const TEST_DATASETS: TestDataset[] = [
   {
-    name: 'Credit card fraud',
-    kaggleUrl: 'https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud',
-    publicationUrl: 'https://arxiv.org/pdf/1904.10604',
-    publicationPdfPath: './publications/creditcard.pdf',
+    name: 'HTTPS',
+    kaggleUrl: "https://www.kaggle.com/datasets/inhngcn/https-traffic-classification",
+    publicationUrl: "https://www.nature.com/articles/s41598-025-21261-6",
+    publicationPdfPath: "./publications/https.pdf",
     groundTruth: {
-      description: 'Archive containing all the contents of the Credit Card Fraud Detection dataset',
-      keywords: ['finance', 'government', 'crime']
-    },
-    processed: false
+      description: 'Network Traffic Data to classify web activities',
+      keywords: ['business', 'internet', 'https']
+    }
   },
+  {
+    name: 'SHAAD',
+    kaggleUrl: 'https://www.kaggle.com/datasets/emnard1/stroke-based-handwritingdata-for-alzheimer-disease',
+    publicationPdfPath: "./publications/shaad.pdf",
+    groundTruth: {
+      description: "Stroke-Level Handwriting Dynamics for Early Alzheimer's Detection",
+      keywords: ['tabular', 'artificial intelligence', 'europe', 'diseases']
+    }
+  },
+  // {
+  //   name: 'Credit card fraud',
+  //   kaggleUrl: 'https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud',
+  //   publicationUrl: 'https://arxiv.org/pdf/1904.10604',
+  //   publicationPdfPath: './publications/creditcard.pdf',
+  //   groundTruth: {
+  //     description: 'Archive containing all the contents of the Credit Card Fraud Detection dataset',
+  //     keywords: ['finance', 'government', 'crime']
+  //   },
+  //   processed: false
+  // },
   {
     name: 'MedCost',
     kaggleUrl: 'https://www.kaggle.com/datasets/mirichoi0218/insurance',
@@ -178,29 +201,38 @@ const SCHEMA_KEYS = {
 }
 
 const INFERENCE_PERCENTAGE = 60
+const CACHE_FILE = './test-results-cache.json'
+
+interface CachedPhaseResult {
+  description?: string
+  descriptionConfidence?: number
+  descriptionSimilarity?: number
+  keywords?: string | string[]
+  keywordsConfidence?: number
+  keywordsSimilarity?: number
+  timestamp: number
+}
+
+interface ResultsCache {
+  [datasetName: string]: {
+    'no-metadata'?: CachedPhaseResult
+    'base-metadata'?: CachedPhaseResult
+    'with-pdf'?: CachedPhaseResult
+  }
+}
+
+interface TestRun {
+  descriptionSimilarity?: number
+  descriptionConfidence?: number
+  keywordsSimilarity?: number
+  keywordsConfidence?: number
+}
 
 interface TestResult {
   datasetName: string
-  withoutMetadata: {
-    sessionId: string
-    extractedDescription?: string
-    extractedKeywords?: string | string[]
-    descriptionSimilarity?: number
-    keywordsSimilarity?: number
-  }
-  withMetadata: {
-    sessionId: string
-    extractedDescription?: string
-    extractedKeywords?: string | string[]
-    descriptionSimilarity?: number
-    keywordsSimilarity?: number
-  }
-  comparison: {
-    descriptionSimilarityDelta?: number
-    keywordsSimilarityDelta?: number
-    descriptionFeatureSimilarity?: number
-    keywordsFeatureSimilarity?: number
-  }
+  noMetadata: TestRun
+  baseMetadata: TestRun
+  withPDF: TestRun
   status: 'success' | 'failed'
   error?: string
   duration: number
@@ -226,8 +258,6 @@ async function createSession(): Promise<string> {
 }
 
 async function startDownload(sessionId: string, url: string, provider: string, identifier: string) {
-  console.log(`[${sessionId}] Starting download from ${provider}...`)
-  
   const response = await fetch(`${API_BASE}/api/job/download/start`, {
     method: 'POST',
     headers: {
@@ -247,11 +277,10 @@ async function startDownload(sessionId: string, url: string, provider: string, i
   }
 
   const data = await response.json() as { jobId: string }
-  console.log(`[${sessionId}] Download job created: ${data.jobId}`)
   return data.jobId
 }
 
-async function waitForDownloadCompletion(sessionId: string, maxWaitSeconds: number = 300): Promise<void> {
+async function waitForDownloadCompletion(sessionId: string, maxWaitSeconds: number = 1200): Promise<void> {
   const startTime = Date.now()
   const maxWaitMs = maxWaitSeconds * 1000
 
@@ -281,13 +310,6 @@ async function waitForDownloadCompletion(sessionId: string, maxWaitSeconds: numb
       throw new Error(`Download failed: ${data.errorMessage || 'Unknown error'}`)
     }
 
-    // If there's a job object with progress
-    if (data.job?.progress !== undefined) {
-      const progress = typeof data.job.progress === 'number' ? data.job.progress : data.job.progress?.progress
-      const message = typeof data.job.progress === 'object' ? data.job.progress?.message : ''
-      console.log(`[${sessionId}] Download progress: ${progress}% - ${message || ''}`)
-    }
-
     // Wait 5 seconds before polling again
     await new Promise(resolve => setTimeout(resolve, 5000))
   }
@@ -296,8 +318,6 @@ async function waitForDownloadCompletion(sessionId: string, maxWaitSeconds: numb
 }
 
 async function getDownloadJobResults(sessionId: string) {
-  console.log(`[${sessionId}] Fetching download job results...`)
-
   const response = await fetch(`${API_BASE}/api/job/download/latest-completed`, {
     headers: {
       'Cookie': `sessionId=${sessionId}`
@@ -314,12 +334,7 @@ async function getDownloadJobResults(sessionId: string) {
   }
 
   const job = JSON.parse(text)
-  const downloadResults = job?.returnvalue
-  
-  console.log(`[${sessionId}] DEBUG getDownloadJobResults - job keys:`, Object.keys(job || {}))
-  console.log(`[${sessionId}] DEBUG getDownloadJobResults - returnvalue:`, downloadResults)
-  
-  return downloadResults
+  return job?.returnvalue
 }
 
 
@@ -329,15 +344,12 @@ async function startProcessing(
   inferencePercentage: number,
   stopMetadata?: boolean
 ) {
-  console.log(`[${sessionId}] Starting file processing...`)
-  
   const body = {
     schemas,
     customProperties: [],
     inferencePercentage,
     stopMetadata
   }
-  // console.log(`[${sessionId}] DEBUG startProcessing - sending body:`, JSON.stringify(body))
 
   const response = await fetch(`${API_BASE}/api/job/process/start`, {
     method: 'POST',
@@ -354,88 +366,117 @@ async function startProcessing(
   }
 
   const data = await response.json() as { message: string }
-  console.log(`[${sessionId}] ${data.message}`)
 }
 
-async function waitForProcessingCompletion(sessionId: string, maxWaitSeconds: number = 600): Promise<void> {
-  console.log('Waiting for process to finish...')
+async function waitForProcessingCompletion(sessionId: string, maxWaitSeconds: number = 1200): Promise<void> {
   const startTime = Date.now()
   const maxWaitMs = maxWaitSeconds * 1000
-  let checkCount = 0
+  let pollCount = 0
 
   while (Date.now() - startTime < maxWaitMs) {
-    checkCount++
-    const response = await fetch(`${API_BASE}/api/job/process/status`, {
+    pollCount++
+    try {
+      const response = await fetch(`${API_BASE}/api/job/process/status`, {
+        headers: {
+          'Cookie': `sessionId=${sessionId}`
+        }
+      })
+
+      if (!response.ok) {
+        console.log(`   [${sessionId}] Poll #${pollCount}: HTTP ${response.status} ${response.statusText} - waiting...`)
+        await new Promise(resolve => setTimeout(resolve, 20000))
+        continue
+      }
+
+      const text = await response.text()
+      if (!text) {
+        console.log(`   [${sessionId}] Poll #${pollCount}: Empty response - DONE`)
+        return
+      }
+
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseErr) {
+        console.log(`   [${sessionId}] Poll #${pollCount}: Parse error: ${parseErr instanceof Error ? parseErr.message : parseErr} - text: ${text.substring(0, 100)}`)
+        await new Promise(resolve => setTimeout(resolve, 20000))
+        continue
+      }
+      console.log(`   [${sessionId}] Poll #${pollCount}: ${JSON.stringify(data).substring(0, 120)}...`)
+
+      // If job has a returnvalue, it's definitely done
+      if (data?.returnvalue) {
+        console.log(`   [${sessionId}] COMPLETE: Has returnvalue after ${pollCount} polls`)
+        return
+      }
+
+      // If response is an empty object, no job running
+      if (typeof data === 'object' && data !== null && Object.keys(data).length === 0) {
+        console.log(`   [${sessionId}] COMPLETE: Empty object after ${pollCount} polls`)
+        return
+      }
+
+      // If we got here and it's null/falsy, job is done
+      if (!data) {
+        console.log(`   [${sessionId}] COMPLETE: Falsy response after ${pollCount} polls`)
+        return
+      }
+
+      const elapsed = (Date.now() - startTime) / 1000
+      console.log(`   [${sessionId}] Still running after ${elapsed.toFixed(0)}s (${pollCount} polls) - waiting...`)
+    } catch (err) {
+      console.log(`   [${sessionId}] Poll #${pollCount} ERROR: ${err instanceof Error ? err.message : err}`)
+      throw err
+    }
+    // Wait 20 seconds before polling again
+    await new Promise(resolve => setTimeout(resolve, 20000))
+  }
+
+  throw new Error(`Processing did not complete within ${maxWaitSeconds} seconds`)
+}
+
+async function getLatestJobResults(sessionId: string, maxRetries: number = 10) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(`${API_BASE}/api/job/process/latest-completed`, {
       headers: {
         'Cookie': `sessionId=${sessionId}`
       }
     })
 
     if (!response.ok) {
-      throw new Error(`Failed to check process status: ${response.statusText}`)
+      throw new Error(`Failed to fetch results: ${response.statusText}`)
     }
 
     const text = await response.text()
     if (!text) {
-      // Empty response means no active job - it's done
-      return
+      if (attempt < maxRetries) {
+        console.log(`   [${sessionId}] Attempt #${attempt}: Empty response from endpoint`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+      throw new Error('Results endpoint returned empty response after retries')
     }
 
-    const data = JSON.parse(text)
-    // console.log(`[${sessionId}] Process status check #${checkCount}:`, data.state || 'unknown')
-
-    // If response is an empty object, no job running
-    if (typeof data === 'object' && data !== null && Object.keys(data).length === 0) {
-      return
+    const job = JSON.parse(text)
+    console.log(`   [${sessionId}] Attempt #${attempt}: Job response: ${JSON.stringify(job).substring(0, 150)}...`)
+    const results = job?.returnvalue
+    
+    if (!results) {
+      console.log(`   [${sessionId}] Attempt #${attempt}: No returnvalue in job. Job keys: ${Object.keys(job).join(', ')}`)
+      if (attempt < maxRetries) {
+        console.log(`   [${sessionId}] Retrying... (${attempt}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+      throw new Error(`No results in job returnvalue after retries`)
     }
-
-    // If we got here and it's null/falsy, job is done
-    if (!data) {
-      return
-    }
-
-    // Check for progress in the job object
-    if (data.progress !== undefined) {
-      const progress = typeof data.progress === 'number' ? data.progress : data.progress?.progress
-      const message = typeof data.progress === 'object' ? data.progress?.message : ''
-      // console.log(`[${sessionId}] Processing progress: ${progress}% - ${message || ''}`)
-    }
-
-    // Wait 5 seconds before polling again
-    await new Promise(resolve => setTimeout(resolve, 5000))
-  }
-
-  throw new Error(`Processing did not complete within ${maxWaitSeconds} seconds`)
-}
-
-async function getLatestJobResults(sessionId: string) {
-  console.log(`[${sessionId}] Fetching latest job results...`)
-
-  const response = await fetch(`${API_BASE}/api/job/process/latest-completed`, {
-    headers: {
-      'Cookie': `sessionId=${sessionId}`
-    }
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch results: ${response.statusText}`)
-  }
-
-  const text = await response.text()
-  if (!text) {
-    throw new Error('Results endpoint returned empty response')
-  }
-
-  const job = JSON.parse(text)
-  
-  // Access the returnvalue from the Job object (same pattern as DataOverviewStep.vue)
-  const results = job?.returnvalue
-  
-  if (!results) {
-    throw new Error(`No results in job returnvalue`)
+    
+    console.log(`   [${sessionId}] ✓ Results found: dataset keys = ${results.dataset ? Object.keys(results.dataset).length : 0}, first 3 keys: ${results.dataset ? Object.keys(results.dataset).slice(0, 3).join(', ') : 'N/A'}`)
+    console.log(`   [${sessionId}] Results fetched successfully`)
+    return results
   }
   
-  return results
+  throw new Error('Failed to fetch results after max retries')
 }
 
 // ─── Embedding utilities ──────────────────────────────────────────────────────
@@ -457,7 +498,24 @@ async function embed(input: string): Promise<number[]> {
   return res.data[0].embedding
 }
 
-// Helper function to check if file exists
+async function loadCache(): Promise<ResultsCache> {
+  try {
+    const content = await fs.readFile(CACHE_FILE, 'utf-8')
+    return JSON.parse(content)
+  } catch {
+    return {}
+  }
+}
+
+async function saveCache(cache: ResultsCache): Promise<void> {
+  try {
+    await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2))
+    console.log(`💾 Cache saved to ${CACHE_FILE}`)
+  } catch (err) {
+    console.log(`⚠️ Failed to save cache: ${err instanceof Error ? err.message : err}`)
+  }
+}
+
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath)
@@ -467,42 +525,94 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-// ponytail: consolidated extraction phase (was duplicated for with/without metadata)
-async function runExtractionPhase(
+// ponytail: single extraction phase with flexible metadata control
+async function runPhase(
   sessionId: string,
   dataset: TestDataset,
-  withMetadata: boolean
-): Promise<{ description?: string; keywords?: string | string[] }> {
-  const phase = withMetadata ? 2 : 1
-  console.log(`\n📝 Phase ${phase}: Testing ${withMetadata ? 'WITH' : 'WITHOUT'} additional metadata`)
+  stopMetadata: boolean,
+  uploadPDF: boolean,
+  cache: ResultsCache
+): Promise<TestRun> {
+  const phase = stopMetadata ? 'no-metadata' : uploadPDF ? 'with-pdf' : 'base-metadata'
+  const cached = cache[dataset.name]?.[phase as keyof typeof cache[string]]
   
-  await startDownload(sessionId, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
-  await waitForDownloadCompletion(sessionId)
-  
-  if (withMetadata && dataset.publicationPdfPath) {
-    if (await fileExists(dataset.publicationPdfPath)) {
-      try {
-        await uploadMetadata(sessionId, dataset.publicationPdfPath)
-      } catch (err) {
-        console.log(`⚠️  Metadata upload failed: ${err instanceof Error ? err.message : err}`)
-      }
+  if (cached) {
+    console.log(`   [${sessionId}] Phase: ${phase} - CACHED (${((Date.now() - cached.timestamp) / 1000 / 60).toFixed(1)}min old)`)
+    return {
+      descriptionSimilarity: cached.descriptionSimilarity,
+      descriptionConfidence: cached.descriptionConfidence,
+      keywordsSimilarity: cached.keywordsSimilarity,
+      keywordsConfidence: cached.keywordsConfidence
     }
   }
   
-  await startProcessing(sessionId, SCHEMA_KEYS, INFERENCE_PERCENTAGE, !withMetadata)
+  // Add delay between phases to avoid backend queue issues
+  if (phase !== 'no-metadata') {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+  }
+  
+  console.log(`   [${sessionId}] Phase: ${phase} - Starting download...`)
+  
+  await startDownload(sessionId, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
+  await waitForDownloadCompletion(sessionId)
+  console.log(`   [${sessionId}] Download complete`)
+  
+  if (uploadPDF && dataset.publicationPdfPath && await fileExists(dataset.publicationPdfPath)) {
+    try {
+      console.log(`   [${sessionId}] Uploading PDF metadata...`)
+      await uploadMetadata(sessionId, dataset.publicationPdfPath)
+      console.log(`   [${sessionId}] PDF uploaded`)
+    } catch (err) {
+      console.log(`⚠️ Metadata upload failed: ${err instanceof Error ? err.message : err}`)
+    }
+  }
+  
+  console.log(`   [${sessionId}] Starting processing...`)
+  const processStartTime = Date.now()
+  await startProcessing(sessionId, SCHEMA_KEYS, INFERENCE_PERCENTAGE, stopMetadata)
   await new Promise(resolve => setTimeout(resolve, 1000))
+  console.log(`   [${sessionId}] Waiting for processing to complete...`)
   await waitForProcessingCompletion(sessionId)
+  const processDuration = (Date.now() - processStartTime) / 1000
+  console.log(`   [${sessionId}] Processing done after ${processDuration.toFixed(1)}s`)
+  // Buffer delay to ensure results are written before fetching
+  await new Promise(resolve => setTimeout(resolve, 2000))
   
   const results = await getLatestJobResults(sessionId)
-  return {
-    description: results?.dataset?.['dataset.description']?.result?.value,
-    keywords: results?.dataset?.['dataset.theme']?.result?.value
+  const description = results?.dataset?.['dataset.description']?.result?.value
+  const keywords = results?.dataset?.['dataset.theme']?.result?.value
+  
+  // Compute similarities
+  const descriptionSimilarity = await computeSimilarities(description, dataset.groundTruth?.description)
+  const keywordsSimilarity = await computeSimilarities(keywords, dataset.groundTruth?.keywords)
+  
+  const result: TestRun = {
+    descriptionSimilarity,
+    descriptionConfidence: results?.dataset?.['dataset.description']?.result?.confidence,
+    keywordsSimilarity,
+    keywordsConfidence: results?.dataset?.['dataset.theme']?.result?.confidence
   }
+  
+  // Cache this result with similarities
+  if (!cache[dataset.name]) cache[dataset.name] = {}
+  cache[dataset.name][phase as keyof typeof cache[string]] = {
+    description,
+    descriptionConfidence: result.descriptionConfidence,
+    descriptionSimilarity: result.descriptionSimilarity,
+    keywords,
+    keywordsConfidence: result.keywordsConfidence,
+    keywordsSimilarity: result.keywordsSimilarity,
+    timestamp: Date.now()
+  }
+  
+  // Save cache to file immediately
+  console.log(`   [${sessionId}] Phase: ${phase} - Saving to cache...`)
+  await saveCache(cache)
+  
+  return result
 }
 
 async function uploadMetadata(sessionId: string, filePath: string): Promise<void> {
-  console.log(`[${sessionId}] Uploading metadata file: ${filePath}`)
-
   const form = new FormData()
   const fileContent = await fs.readFile(filePath)
   const blob = new Blob([fileContent], { type: 'application/pdf' })
@@ -519,8 +629,6 @@ async function uploadMetadata(sessionId: string, filePath: string): Promise<void
   if (!response.ok) {
     throw new Error(`Metadata upload failed: ${response.statusText}`)
   }
-
-  console.log(`[${sessionId}] Metadata uploaded successfully`)
 }
 
 // ponytail: extract similarity computation, used by both phases
@@ -537,9 +645,11 @@ async function computeSimilarities(
 
 async function main() {
   const results: TestResult[] = []
+  const cache = await loadCache()
   console.log(`\n${'='.repeat(100)}`)
-  console.log('Dataset Extraction Test Runner (With & Without Additional Metadata)')
+  console.log('Dataset Extraction Test Runner (3 Metadata Scenarios)')
   console.log(`${'='.repeat(100)}\n`)
+  console.log(`📂 Cache file: ${CACHE_FILE}\n`)
 
   const unDoneDatasets = TEST_DATASETS.filter(x => !x.processed)
   for (let i = 0; i < unDoneDatasets.length; i++) {
@@ -550,107 +660,39 @@ async function main() {
     console.log('─'.repeat(100))
 
     try {
-      const sessionId1 = await createSession()
-      const sessionId2 = await createSession()
-      
-      // Run both phases in parallel to save time
-      const [result1, result2] = await Promise.all([
-        runExtractionPhase(sessionId1, dataset, false),
-        runExtractionPhase(sessionId2, dataset, true)
-      ])
-      
-      // Compute similarities
-      const descriptionSimilarity1 = await computeSimilarities(result1.description, dataset.groundTruth?.description)
-      const keywordsSimilarity1 = await computeSimilarities(result1.keywords, dataset.groundTruth?.keywords)
-      const descriptionSimilarity2 = await computeSimilarities(result2.description, dataset.groundTruth?.description)
-      const keywordsSimilarity2 = await computeSimilarities(result2.keywords, dataset.groundTruth?.keywords)
-
-      console.log(`   ✅ Without metadata: desc_sim=${descriptionSimilarity1?.toFixed(4) || 'N/A'}, kw_sim=${keywordsSimilarity1?.toFixed(4) || 'N/A'}`)
-      console.log(`   ✅ With metadata: desc_sim=${descriptionSimilarity2?.toFixed(4) || 'N/A'}, kw_sim=${keywordsSimilarity2?.toFixed(4) || 'N/A'}`)
-
-      // ─── Compute comparisons ────────────────────────────────────────────────
-      console.log('\n📊 Phase 3: Computing comparisons')
-
-      let descriptionSimilarityDelta: number | undefined
-      let keywordsSimilarityDelta: number | undefined
-      let descriptionFeatureSimilarity: number | undefined
-      let keywordsFeatureSimilarity: number | undefined
-
-      if (descriptionSimilarity1 !== undefined && descriptionSimilarity2 !== undefined) {
-        descriptionSimilarityDelta = descriptionSimilarity2 - descriptionSimilarity1
-        console.log(`   Description delta: ${descriptionSimilarityDelta > 0 ? '📈' : '📉'} ${descriptionSimilarityDelta.toFixed(4)}`)
-      }
-
-      if (keywordsSimilarity1 !== undefined && keywordsSimilarity2 !== undefined) {
-        keywordsSimilarityDelta = keywordsSimilarity2 - keywordsSimilarity1
-        console.log(`   Keywords delta: ${keywordsSimilarityDelta > 0 ? '📈' : '📉'} ${keywordsSimilarityDelta.toFixed(4)}`)
-      }
-
-      if (result1.description && result2.description) {
-        const embeddings = await Promise.all([
-          embed(String(result1.description)),
-          embed(String(result2.description))
-        ])
-        descriptionFeatureSimilarity = cosineSimilarity(embeddings[0], embeddings[1])
-      }
-
-      if (result1.keywords && result2.keywords) {
-        const embeddings = await Promise.all([
-          embed(Array.isArray(result1.keywords) ? result1.keywords.join(', ') : String(result1.keywords)),
-          embed(Array.isArray(result2.keywords) ? result2.keywords.join(', ') : String(result2.keywords))
-        ])
-        keywordsFeatureSimilarity = cosineSimilarity(embeddings[0], embeddings[1])
-      }
+      // Run 3 phases sequentially
+      const noMetadata = await runPhase(await createSession(), dataset, true, false, cache)    // No metadata
+      const baseMetadata = await runPhase(await createSession(), dataset, false, false, cache)   // Base metadata only
+      const withPDF = await runPhase(await createSession(), dataset, false, true, cache)    // Base + PDF metadata
 
       const duration = Date.now() - startTime
       const result: TestResult = {
         datasetName: dataset.name,
-        withoutMetadata: {
-          sessionId: sessionId1,
-          extractedDescription: typeof result1.description === 'string' ? result1.description.substring(0, 80) : String(result1.description),
-          extractedKeywords: result1.keywords,
-          descriptionSimilarity: descriptionSimilarity1,
-          keywordsSimilarity: keywordsSimilarity1
-        },
-        withMetadata: {
-          sessionId: sessionId2,
-          extractedDescription: typeof result2.description === 'string' ? result2.description.substring(0, 80) : String(result2.description),
-          extractedKeywords: result2.keywords,
-          descriptionSimilarity: descriptionSimilarity2,
-          keywordsSimilarity: keywordsSimilarity2
-        },
-        comparison: {
-          descriptionSimilarityDelta,
-          keywordsSimilarityDelta,
-          descriptionFeatureSimilarity,
-          keywordsFeatureSimilarity
-        },
+        noMetadata,
+        baseMetadata,
+        withPDF,
         status: 'success',
         duration
       }
 
       results.push(result)
+      console.log(`✅ Completed in ${(duration / 1000).toFixed(2)}s`)
     } catch (error) {
       const duration = Date.now() - startTime
       const result: TestResult = {
         datasetName: dataset.name,
-        withoutMetadata: {
-          sessionId: 'N/A'
-        },
-        withMetadata: {
-          sessionId: 'N/A'
-        },
-        comparison: {},
+        noMetadata: {},
+        baseMetadata: {},
+        withPDF: {},
         status: 'failed',
         error: error instanceof Error ? error.message : String(error),
         duration
       }
       results.push(result)
-      console.log(`❌ Failed: ${result.error}`)
+      console.log(`❌ Failed: ${result.error} - Partial results saved to cache`)
     }
   }
 
-  // Print results summary
   printResultsSummary(results)
 }
 
@@ -664,53 +706,29 @@ function printResultsSummary(results: TestResult[]) {
 
   console.log(`Total: ${results.length} | ✅ Successful: ${successful.length} | ❌ Failed: ${failed.length}\n`)
 
-  // Detailed results
   console.log('Detailed Results:')
   console.log('─'.repeat(100))
   
   for (const result of results) {
     console.log(`\n📊 ${result.datasetName}`)
-    console.log(`   Status: ${result.status === 'success' ? '✅ Success' : '❌ Failed'}`)
     console.log(`   Duration: ${(result.duration / 1000).toFixed(2)}s`)
     
     if (result.status === 'success') {
-      console.log(`\n   WITHOUT Metadata:`)
-      if (result.withoutMetadata.descriptionSimilarity !== undefined) {
-        console.log(`     • Description similarity to ground truth: ${result.withoutMetadata.descriptionSimilarity.toFixed(4)}`)
-      }
-      if (result.withoutMetadata.keywordsSimilarity !== undefined) {
-        console.log(`     • Keywords similarity to ground truth: ${result.withoutMetadata.keywordsSimilarity.toFixed(4)}`)
-      }
-
-      console.log(`\n   WITH Metadata:`)
-      if (result.withMetadata.descriptionSimilarity !== undefined) {
-        console.log(`     • Description similarity to ground truth: ${result.withMetadata.descriptionSimilarity.toFixed(4)}`)
-      }
-      if (result.withMetadata.keywordsSimilarity !== undefined) {
-        console.log(`     • Keywords similarity to ground truth: ${result.withMetadata.keywordsSimilarity.toFixed(4)}`)
-      }
-
-      console.log(`\n   Metadata Impact (Ground Truth Comparison):`)
-      if (result.comparison.descriptionSimilarityDelta !== undefined) {
-        const delta = result.comparison.descriptionSimilarityDelta
-        const trend = delta > 0 ? '📈 IMPROVED' : delta < 0 ? '📉 DECLINED' : '➡️  NO CHANGE'
-        console.log(`     • Description: ${trend} (${delta > 0 ? '+' : ''}${delta.toFixed(4)})`)
-      }
-      if (result.comparison.keywordsSimilarityDelta !== undefined) {
-        const delta = result.comparison.keywordsSimilarityDelta
-        const trend = delta > 0 ? '📈 IMPROVED' : delta < 0 ? '📉 DECLINED' : '➡️  NO CHANGE'
-        console.log(`     • Keywords: ${trend} (${delta > 0 ? '+' : ''}${delta.toFixed(4)})`)
-      }
-
-      console.log(`\n   Feature Extraction Consistency:`)
-      if (result.comparison.descriptionFeatureSimilarity !== undefined) {
-        console.log(`     • Description extraction similarity: ${result.comparison.descriptionFeatureSimilarity.toFixed(4)}`)
-      }
-      if (result.comparison.keywordsFeatureSimilarity !== undefined) {
-        console.log(`     • Keywords extraction similarity: ${result.comparison.keywordsFeatureSimilarity.toFixed(4)}`)
-      }
+      const fmt = (v?: number) => v !== undefined ? v.toFixed(4) : 'N/A'
+      
+      console.log(`\n   No Metadata:`)
+      console.log(`     • Description: ${fmt(result.noMetadata.descriptionSimilarity)} (conf: ${fmt(result.noMetadata.descriptionConfidence)})`)
+      console.log(`     • Keywords:    ${fmt(result.noMetadata.keywordsSimilarity)} (conf: ${fmt(result.noMetadata.keywordsConfidence)})`)
+      
+      console.log(`\n   Base Metadata:`)
+      console.log(`     • Description: ${fmt(result.baseMetadata.descriptionSimilarity)} (conf: ${fmt(result.baseMetadata.descriptionConfidence)})`)
+      console.log(`     • Keywords:    ${fmt(result.baseMetadata.keywordsSimilarity)} (conf: ${fmt(result.baseMetadata.keywordsConfidence)})`)
+      
+      console.log(`\n   With PDF:`)
+      console.log(`     • Description: ${fmt(result.withPDF.descriptionSimilarity)} (conf: ${fmt(result.withPDF.descriptionConfidence)})`)
+      console.log(`     • Keywords:    ${fmt(result.withPDF.keywordsSimilarity)} (conf: ${fmt(result.withPDF.keywordsConfidence)})`)
     } else {
-      console.log(`   Error: ${result.error}`)
+      console.log(`   ❌ Error: ${result.error}`)
     }
   }
 
@@ -719,40 +737,26 @@ function printResultsSummary(results: TestResult[]) {
     console.log(`\n${'─'.repeat(100)}`)
     console.log('Aggregate Statistics:')
     
-    const descDeltasWithout = successful.map(r => r.withoutMetadata.descriptionSimilarity).filter(v => v !== undefined) as number[]
-    const descDeltasWith = successful.map(r => r.withMetadata.descriptionSimilarity).filter(v => v !== undefined) as number[]
-    const kwDeltasWithout = successful.map(r => r.withoutMetadata.keywordsSimilarity).filter(v => v !== undefined) as number[]
-    const kwDeltasWith = successful.map(r => r.withMetadata.keywordsSimilarity).filter(v => v !== undefined) as number[]
+    const scenarios = [
+      { name: 'No Metadata', data: successful.map(r => ({ desc: r.noMetadata.descriptionSimilarity, descConf: r.noMetadata.descriptionConfidence, kw: r.noMetadata.keywordsSimilarity, kwConf: r.noMetadata.keywordsConfidence })) },
+      { name: 'Base Metadata', data: successful.map(r => ({ desc: r.baseMetadata.descriptionSimilarity, descConf: r.baseMetadata.descriptionConfidence, kw: r.baseMetadata.keywordsSimilarity, kwConf: r.baseMetadata.keywordsConfidence })) },
+      { name: 'With PDF', data: successful.map(r => ({ desc: r.withPDF.descriptionSimilarity, descConf: r.withPDF.descriptionConfidence, kw: r.withPDF.keywordsSimilarity, kwConf: r.withPDF.keywordsConfidence })) }
+    ]
 
-    if (descDeltasWithout.length > 0) {
-      const avgWithout = descDeltasWithout.reduce((a, b) => a + b) / descDeltasWithout.length
-      console.log(`\n  Description Similarity (Without Metadata): avg=${avgWithout.toFixed(4)}`)
-    }
-
-    if (descDeltasWith.length > 0) {
-      const avgWith = descDeltasWith.reduce((a, b) => a + b) / descDeltasWith.length
-      console.log(`  Description Similarity (With Metadata): avg=${avgWith.toFixed(4)}`)
+    for (const scenario of scenarios) {
+      const descScores = scenario.data.map(d => d.desc).filter(v => v !== undefined) as number[]
+      const descConfs = scenario.data.map(d => d.descConf).filter(v => v !== undefined) as number[]
+      const kwScores = scenario.data.map(d => d.kw).filter(v => v !== undefined) as number[]
+      const kwConfs = scenario.data.map(d => d.kwConf).filter(v => v !== undefined) as number[]
       
-      if (descDeltasWithout.length > 0) {
-        const avgWithout = descDeltasWithout.reduce((a, b) => a + b) / descDeltasWithout.length
-        const improvement = avgWith - avgWithout
-        console.log(`  Average Description Improvement: ${improvement > 0 ? '📈' : '📉'} ${improvement.toFixed(4)}`)
-      }
-    }
-
-    if (kwDeltasWithout.length > 0) {
-      const avgWithout = kwDeltasWithout.reduce((a, b) => a + b) / kwDeltasWithout.length
-      console.log(`\n  Keywords Similarity (Without Metadata): avg=${avgWithout.toFixed(4)}`)
-    }
-
-    if (kwDeltasWith.length > 0) {
-      const avgWith = kwDeltasWith.reduce((a, b) => a + b) / kwDeltasWith.length
-      console.log(`  Keywords Similarity (With Metadata): avg=${avgWith.toFixed(4)}`)
-      
-      if (kwDeltasWithout.length > 0) {
-        const avgWithout = kwDeltasWithout.reduce((a, b) => a + b) / kwDeltasWithout.length
-        const improvement = avgWith - avgWithout
-        console.log(`  Average Keywords Improvement: ${improvement > 0 ? '📈' : '📉'} ${improvement.toFixed(4)}`)
+      if (descScores.length > 0) {
+        const avgDesc = descScores.reduce((a, b) => a + b) / descScores.length
+        const avgDescConf = descConfs.length > 0 ? descConfs.reduce((a, b) => a + b) / descConfs.length : NaN
+        const avgKw = kwScores.length > 0 ? kwScores.reduce((a, b) => a + b) / kwScores.length : NaN
+        const avgKwConf = kwConfs.length > 0 ? kwConfs.reduce((a, b) => a + b) / kwConfs.length : NaN
+        console.log(`\n  ${scenario.name}:`)
+        console.log(`    • Description (avg): ${avgDesc.toFixed(4)} (conf: ${avgDescConf.toFixed(4)})`)
+        if (kwScores.length > 0) console.log(`    • Keywords (avg):    ${avgKw.toFixed(4)} (conf: ${avgKwConf.toFixed(4)})`)
       }
     }
   }
