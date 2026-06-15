@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises'
 import AdmZip from 'adm-zip'
 import { getRedis } from '../utils/redis'
 import { notifySession } from '../utils/wsManager'
-import type { DownloadJobDataType, DownloadJobReturnType, DownloadedSchema, WorkerProgress } from '~~/shared/types/workers'
+import type { DownloadJobDataType, DownloadJobReturnType, WorkerProgress } from '~~/shared/types/workers'
 import type { DataProvider } from '~~/shared/types/url'
 import {
     buildProviderAccessUrl,
@@ -17,7 +17,8 @@ import {
     getProviderBaseUrl
 } from '~~/shared/types/url'
 import { queuePreviousFilesForStop } from '../utils/files'
-import { convertCroissantToDcatTurtle } from '../utils/croissant'
+import { extractFromCroissant, extractFromDcat } from '../utils/schema-extractor'
+import type { ExtractedMetadata } from '~~/shared/types/workers'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,17 +39,11 @@ type DownloadPlan =
     | { kind: 'archive'; url: string; headers: Record<string, string>; downloadUrl: string }
     | { kind: 'files'; files: ZenodoFile[]; headers: Record<string, string>; downloadUrl: string }
 
-type SchemaPlan = {
-    kind: 'croissant' | 'dcat'
-    candidates: string[]
-    headers: Record<string, string>
-}
-
 type ResolvedPlan = {
     plan: DownloadPlan
     accessUrl: string
     providerBaseUrl?: string
-    schemaPlans?: SchemaPlan[]
+    schemaCandidates?: { type: 'croissant' | 'dcat'; urls: string[]; headers: Record<string, string> }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -111,17 +106,14 @@ async function resolvePlan(
             for (const branch of ['main', 'master'] as const) {
                 const url = buildProviderDownloadUrl('HuggingFace', identifier, branch)
                 if (!url) throw new Error('Failed to build Hugging Face download URL')
-                const res = await fetch(url, { method: 'HEAD', headers })
-                if (res.status === 401 || res.status === 403) throw new Error('Hugging Face dataset requires authentication. Set NUXT_HF_TOKEN.')
-                if (!res.ok) continue
                 return {
                     plan: { kind: 'archive', url, headers, downloadUrl: url },
                     accessUrl: buildProviderAccessUrl('HuggingFace', identifier, sourceUrl) ?? sourceUrl,
                     providerBaseUrl: getProviderBaseUrl('HuggingFace') ?? undefined,
-                    schemaPlans: [{
-                        kind: 'croissant',
+                    schemaCandidates: [{
+                        type: 'croissant',
                         headers,
-                        candidates: [
+                        urls: [
                             `https://huggingface.co/datasets/${identifier}/resolve/${branch}/croissant.json`,
                             `https://huggingface.co/datasets/${identifier}/raw/${branch}/croissant.json`
                         ]
@@ -141,10 +133,10 @@ async function resolvePlan(
                 plan: { kind: 'archive', url, headers, downloadUrl: url },
                 accessUrl: buildProviderAccessUrl('Kaggle', identifier, sourceUrl) ?? sourceUrl,
                 providerBaseUrl: getProviderBaseUrl('Kaggle') ?? undefined,
-                schemaPlans: [{
-                    kind: 'croissant',
+                schemaCandidates: [{
+                    type: 'croissant',
                     headers,
-                    candidates: [
+                    urls: [
                         `https://www.kaggle.com/api/v1/datasets/croissant/${identifier}`,
                         `https://www.kaggle.com/api/v1/datasets/metadata/${identifier}`,
                         `https://www.kaggle.com/datasets/${identifier}/croissant.json`,
@@ -156,15 +148,7 @@ async function resolvePlan(
 
         case 'Zenodo': {
             const headers = { 'User-Agent': 'dcatextract' }
-            const dcatSchemaPlans: SchemaPlan[] = [{
-                kind: 'dcat',
-                headers: { ...headers, Accept: 'text/turtle,application/ld+json,application/rdf+xml;q=0.9,*/*;q=0.8' },
-                candidates: [
-                    `https://zenodo.org/records/${identifier}/export/dcat`,
-                    `https://zenodo.org/records/${identifier}/export/dcat-ap`,
-                    `https://zenodo.org/api/records/${identifier}?format=dcat`
-                ]
-            }]
+            const dcatHeaders = { ...headers, Accept: 'text/turtle,application/ld+json,application/rdf+xml;q=0.9,*/*;q=0.8' }
 
             // Try InvenioRDM files endpoint first (new Zenodo)
             const filesRes = await fetch(`https://zenodo.org/api/records/${identifier}/files`, { headers })
@@ -180,7 +164,15 @@ async function resolvePlan(
                         plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}/files` },
                         accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
                         providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
-                        schemaPlans: dcatSchemaPlans
+                        schemaCandidates: [{
+                            type: 'dcat',
+                            headers: dcatHeaders,
+                            urls: [
+                                `https://zenodo.org/records/${identifier}/export/dcat`,
+                                `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                                `https://zenodo.org/api/records/${identifier}?format=dcat`
+                            ]
+                        }]
                     }
                 }
             }
@@ -199,7 +191,15 @@ async function resolvePlan(
                 plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}` },
                 accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
                 providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
-                schemaPlans: dcatSchemaPlans
+                schemaCandidates: [{
+                    type: 'dcat',
+                    headers: dcatHeaders,
+                    urls: [
+                        `https://zenodo.org/records/${identifier}/export/dcat`,
+                        `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                        `https://zenodo.org/api/records/${identifier}?format=dcat`
+                    ]
+                }]
             }
         }
 
@@ -290,36 +290,26 @@ async function downloadToFile(
     return totalBytes
 }
 
-async function downloadSchemas(
-    schemaPlans: SchemaPlan[] | undefined,
-    downloadDir: string,
-    identifier: string
-): Promise<DownloadedSchema[]> {
-    if (!schemaPlans?.length) return []
-    const results: DownloadedSchema[] = []
+async function extractSchemaMetadata(
+    schemaCandidates: { type: 'croissant' | 'dcat'; urls: string[]; headers: Record<string, string> }[] | undefined
+): Promise<ExtractedMetadata | undefined> {
+    if (!schemaCandidates?.length) return undefined;
 
-    for (const plan of schemaPlans) {
-        for (const url of plan.candidates) {
+    for (const candidate of schemaCandidates) {
+        for (const url of candidate.urls) {
             try {
-                const text = await fetchTextWithLimit(url, plan.headers, MAX_SCHEMA_BYTES)
-                const schemaPath = path.join(downloadDir, `${identifier.replace('/', '-')}-schema-${Date.now()}.ttl`)
-
-                if (plan.kind === 'croissant') {
-                    const turtle = await convertCroissantToDcatTurtle(JSON.parse(text) as unknown)
-                    await fsp.writeFile(schemaPath, turtle, 'utf8')
-                    results.push({ format: 'dcat', originalUrl: url, localPath: schemaPath, convertedToDcat: true })
+                const text = await fetchTextWithLimit(url, candidate.headers, MAX_SCHEMA_BYTES);
+                if (candidate.type === 'croissant') {
+                    return extractFromCroissant(JSON.parse(text) as unknown);
                 } else {
-                    await fsp.writeFile(schemaPath, text, 'utf8')
-                    results.push({ format: 'dcat', originalUrl: url, localPath: schemaPath })
+                    return extractFromDcat(text);
                 }
-                break
             } catch {
-                continue
+                continue;
             }
         }
     }
-
-    return results
+    return undefined;
 }
 
 async function downloadWebpageSnapshot(accessUrl: string, downloadDir: string, identifier: string): Promise<string | undefined> {
@@ -378,9 +368,7 @@ export function startDownloadWorker() {
             if (!sessionId) throw new Error('Session ID is required for download')
 
             const config = useRuntimeConfig()
-            const { plan, accessUrl, providerBaseUrl, schemaPlans } = await resolvePlan(provider, identifier, sourceUrl, config)
-
-            await job.updateData({ ...job.data, accessUrl, downloadUrl: plan.downloadUrl, providerBaseUrl, downloadedSchemas: [] })
+            const { plan, accessUrl, providerBaseUrl, schemaCandidates } = await resolvePlan(provider, identifier, sourceUrl, config)
 
             const downloadDir = path.join(os.tmpdir(), 'dcat-downloads', sessionId)
             await fsp.mkdir(downloadDir, { recursive: true })
@@ -413,12 +401,10 @@ export function startDownloadWorker() {
             const extractedFiles = listFiles(extractDir)
             if (extractedFiles.length === 0) throw new Error('Extracted archive is empty')
 
-            const [downloadedSchemas, webpageSnapshot] = await Promise.all([
-                downloadSchemas(schemaPlans, downloadDir, identifier),
-                downloadWebpageSnapshot(accessUrl, downloadDir, identifier)
-            ])
+            const prefilledMetadata = await extractSchemaMetadata(schemaCandidates)
+            const webpageSnapshot = await downloadWebpageSnapshot(accessUrl, downloadDir, identifier.replace('/', '-'))
 
-            await job.updateData({ ...job.data, accessUrl, downloadUrl: plan.downloadUrl, providerBaseUrl, downloadedSchemas, webpageSnapshot })
+            await job.updateData({ ...job.data, accessUrl, downloadUrl: plan.downloadUrl, providerBaseUrl, prefilledMetadata })
 
             await queuePreviousFilesForStop(sessionId)
             await redis.sadd(`session:${sessionId}:files:unprocessed`, ...extractedFiles)
@@ -430,9 +416,9 @@ export function startDownloadWorker() {
             await redis.del(`session:${sessionId}:download:error`)
 
             await progress.report(100, 'Download completed')
-            notifySession(sessionId, { type: 'download-completed', filePath: extractDir })
+            notifySession(sessionId, { type: 'download-completed', filePath: extractDir, webpageSnapshot })
 
-            return { filePath: extractDir, byteSize: progress.getDownloaded(), downloadedSchemas, webpageSnapshot }
+            return { filePath: extractDir, byteSize: progress.getDownloaded() }
         },
         {
             connection: redis,

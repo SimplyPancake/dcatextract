@@ -170,6 +170,23 @@
       </div>
     </div>
 
+    <!-- Provider metadata toggle -->
+    <Divider class="py-2" />
+    <div class="text-sm font-medium mb-3">Provider-Supplied Metadata</div>
+    <div class="flex flex-row items-center gap-4">
+      <div class="flex-auto">
+        <label for="useInheritedToggle" class="text-sm text-gray-700 dark:text-gray-300">
+          Use metadata values from data provider schemas (if available)
+        </label>
+        <div class="text-xs text-surface-500 mt-1">
+          When enabled, inherited values will be marked with "Inherited" strategy and skip LLM inference.
+        </div>
+      </div>
+      <div class="shrink-0">
+        <InputSwitch inputId="useInheritedToggle" v-model="useInheritedMetadata" />
+      </div>
+    </div>
+
     <div class="flex pt-6 justify-end">
       <Button label="Next" :disabled="!hasSelection" @click="startProcessing(); emitNext()" />
     </div>
@@ -190,13 +207,14 @@ import {
 } from '@lucide/vue'
 import type { CatalogRecordKey, DataServiceKey, DatasetKey, DistributionKey } from '#shared/utils/builder'
 import type { CustomPropertyContext, SchemaAnalysis, SchemaStoreResponse } from '~~/shared/types/schema'
-import { Divider, InputNumber, Slider } from 'primevue'
+import { Divider, InputNumber, Slider, InputSwitch } from 'primevue'
 
 type OwnTreeNode = { key: string; label: string; children?: OwnTreeNode[]; icon: any; extra?: string }
 interface Dictionary<T> { [Key: string]: T }
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const confidenceScore = ref(60)
+const useInheritedMetadata = ref(true)
 const selectedKeys = ref<Dictionary<boolean>>({})
 const schemaText = ref('')
 const schemaStatus = ref<'idle' | 'saving' | 'saved' | 'warning' | 'error'>('idle')
@@ -306,7 +324,8 @@ async function startProcessing() {
   processBody.value = {
     schemas: { ...selectedKeys.value },
     customProperties: customProperties.value,
-    inferencePercentage: confidenceScore.value
+    inferencePercentage: confidenceScore.value,
+    useInheritedMetadata: useInheritedMetadata.value
   }
   await startProcess()
 }

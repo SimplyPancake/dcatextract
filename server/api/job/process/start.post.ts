@@ -8,7 +8,8 @@ const dictSchema = z.object({
 	schemas: z.record(z.string(), z.boolean()),
 	customProperties: z.array(CustomPropertySchema),
 	inferencePercentage: z.number().min(0).max(100),
-	stopMetadata: z.boolean()
+	stopMetadata: z.boolean(),
+	useInheritedMetadata: z.boolean().default(true)
 })
 
 export default defineEventHandler(async (event) => {
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event) => {
 		throw result.error.issues
 	}
 
-	const { schemas, customProperties, inferencePercentage, stopMetadata } = result.data
+	const { schemas, customProperties, inferencePercentage, stopMetadata, useInheritedMetadata } = result.data
 
 	if (!sessionId) {
 		throw createError("Session ID is required to proceed.")
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
 		inferencePercentage,
 		downloadType: DownloadSourceType.LOCALFILE,
 		metadataFiles: [],
+		useInheritedMetadata,
 		stopMetadata
 	}
 
@@ -61,18 +63,17 @@ export default defineEventHandler(async (event) => {
 
 			// Job is finished and has data!
 			queueData.downloadData = (downloadJob as DownloadJob).data
-			const downloadedSchemas = (downloadJob as DownloadJob).data.downloadedSchemas ?? []
-			const webpageSnapshot = (downloadJob as DownloadJob).returnvalue?.webpageSnapshot
-			if (downloadedSchemas.length > 0 || webpageSnapshot) {
-				const merged = new Set(queueData.metadataFiles)
-				for (const schema of downloadedSchemas) {
-					merged.add(schema.localPath)
-				}
-				if (webpageSnapshot) {
-					merged.add(webpageSnapshot)
-				}
-				queueData.metadataFiles = Array.from(merged)
+			const prefilledMetadata = (downloadJob as DownloadJob).data.prefilledMetadata
+			if (prefilledMetadata) {
+				queueData.prefilledMetadata = prefilledMetadata
 			}
+			
+			// Add webpage snapshot to metadata files if available
+			const jobResult = (downloadJob as DownloadJob).returnvalue as { filePath: string; byteSize: number; webpageSnapshot?: string } | undefined
+			if (jobResult?.webpageSnapshot) {
+				queueData.metadataFiles.push(jobResult.webpageSnapshot)
+			}
+
 
 			const downloadState = await downloadJob.getState()
 			const shouldWaitForDownload = ['waiting', 'active', 'delayed', 'paused'].includes(downloadState)

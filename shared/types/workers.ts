@@ -18,17 +18,33 @@ export type WorkerProgress = {
     message: string
 }
 
+export type ExtractedMetadata = {
+    title?: string
+    description?: string
+    keywords?: string[]
+    creator?: { name?: string; url?: string }[]
+    publisher?: { name?: string; url?: string }[]
+    license?: string
+    issued?: string
+    modified?: string
+    inLanguage?: string[]
+    version?: string
+    conformsTo?: string[]
+}
+
 export type FileProcessJobDataType = {
     sessionId: string
     selectedMetadata: Dictionary<boolean>
     customProperties: CustomProperty[]
     inferencePercentage: number
     downloadType: DownloadSourceType
-    metadataFiles: string[] // Paths of the related metadata files for the job
+    metadataFiles: string[] // Paths of the related metadata files for the job (includes webpage snapshots)
     downloadData?: DownloadJobDataType,
     filePaths: string[],
     originalNames: Record<string, string>,
     stopMetadata?: boolean,
+    prefilledMetadata?: ExtractedMetadata,
+    useInheritedMetadata: boolean,
 }
 
 export type ProcessedFields = Record<string, ProcessedField>
@@ -54,23 +70,15 @@ export type DownloadJobDataType = {
     accessUrl?: string
     downloadUrl?: string
     providerBaseUrl?: string
-    downloadedSchemas?: DownloadedSchema[]
+    prefilledMetadata?: ExtractedMetadata
 }
 export type DownloadJobReturnType = {
     filePath: string
     byteSize: number
-    downloadedSchemas?: DownloadedSchema[]
     webpageSnapshot?: string
 }
 
 export type DownloadJob = Job<DownloadJobDataType, DownloadJobReturnType>
-
-export type DownloadedSchema = {
-    format: 'dcat' | 'croissant'
-    originalUrl: string
-    localPath: string
-    convertedToDcat?: boolean
-}
 
 export type KaggleInformation = {
     croissant: Record<string, any>
@@ -79,7 +87,7 @@ export type KaggleInformation = {
     files: string[]
 }
 
-export type DerivationStrategy = 'Contextual' | 'Deterministic'
+export type DerivationStrategy = 'Contextual' | 'Deterministic' | 'Inherited'
 
 // How to process a given key, for example distribution.title can be inferred from the file
 // But any custom property cannot.

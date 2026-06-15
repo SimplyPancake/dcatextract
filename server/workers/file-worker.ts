@@ -85,10 +85,12 @@ export function startFileWorker() {
                 ? {
                     accessUrl: jobdata.downloadData.accessUrl,
                     downloadUrl: jobdata.downloadData.downloadUrl,
+                    prefilledMetadata: jobdata.downloadData.prefilledMetadata,
+                    useInheritedMetadata: jobdata.useInheritedMetadata,
                 }
                 : undefined
 
-            // Compress metadata
+            // Summarise additional metadata files (if any)
             if (metadataFilepaths.length > 0) {
                 console.log(metadataFilepaths)
                 await updateProgress('Summarising additional metadata')

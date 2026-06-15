@@ -18,7 +18,7 @@ import {
     type DistributionResultsFlat,
 } from "./dataset-inference.js";
 import { CustomProperty, CustomPropertyContext } from "~~/shared/types/schema.js";
-import { DerivationMap, ContextualResults, DeterministicResults, ProcessedFields, ProcessedField, DerivationStrategy, DistributionContextProcessedFields } from "~~/shared/types/workers.js";
+import { DerivationMap, ContextualResults, DeterministicResults, ProcessedFields, ProcessedField, DerivationStrategy } from "~~/shared/types/workers.js";
 import { z } from "zod";
 import { processCompactProperties, processProperties } from "./ai-derive.js";
 import {
@@ -403,7 +403,7 @@ export async function inferDcatFromFiles(
     tmpDir: string,
     logProgress: (message: string) => Promise<void>,
     selectedProperties: Record<string, boolean>,
-    sourceInfo?: { accessUrl?: string; downloadUrl?: string },
+    sourceInfo?: { accessUrl?: string; downloadUrl?: string; prefilledMetadata?: any; useInheritedMetadata?: boolean },
     originalNames?: Record<string, string>,
     customProperties: CustomProperty[] = [],
     metadata: string = ""
@@ -419,7 +419,6 @@ export async function inferDcatFromFiles(
     stageInputs(absFilePath, tmpDir, log, originalNames);
     await logProgress("Inputs staged")
 
-    await logProgress("Scanning staged files")
     const allFiles = walk(tmpDir);
     log(`Found ${allFiles.length} total files`);
     await logProgress(`Staged file count: ${allFiles.length}`)
@@ -574,22 +573,86 @@ export async function inferDcatFromFiles(
             collectDeterministicResults(selectedProperties, "dataset", DATASET_MAP, flatKeysDistribution);
         await logProgress("Derived deterministic dataset metadata")
 
-        // Collect contextual derivations from file contents
+        // Apply prefilled metadata to dataset (only if useInheritedMetadata is enabled)
+        let pm = sourceInfo?.useInheritedMetadata === false ? undefined : sourceInfo?.prefilledMetadata;
+        if (pm) {
+            if (pm.title) contextualResultsCollection.dataset.contextual_derivations['dataset.title'] = { value: pm.title, confidence: 1.0 };
+            if (pm.description) contextualResultsCollection.dataset.contextual_derivations['dataset.description'] = { value: pm.description, confidence: 1.0 };
+            if (pm.identifier) contextualResultsCollection.dataset.contextual_derivations['dataset.identifier'] = { value: pm.identifier, confidence: 1.0 };
+            if (pm.version) contextualResultsCollection.dataset.contextual_derivations['dataset.version'] = { value: pm.version, confidence: 1.0 };
+            if (pm.keywords?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.keyword'] = pm.keywords;
+            if (pm.theme?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.theme'] = pm.theme;
+            if (pm.subject?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.subject'] = pm.subject;
+            if (pm.creator?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.creator'] = pm.creator;
+            if (pm.publisher?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.publisher'] = pm.publisher;
+            if (pm.contactPoint) contextualResultsCollection.dataset.contextual_derivations['dataset.contactPoint'] = pm.contactPoint;
+            if (pm.license) contextualResultsCollection.dataset.contextual_derivations['dataset.license'] = { value: pm.license, confidence: 1.0 };
+            if (pm.rights) contextualResultsCollection.dataset.contextual_derivations['dataset.rights'] = { value: pm.rights, confidence: 1.0 };
+            if (pm.accessRights) contextualResultsCollection.dataset.contextual_derivations['dataset.accessRights'] = { value: pm.accessRights, confidence: 1.0 };
+            if (pm.issued) contextualResultsCollection.dataset.contextual_derivations['dataset.issued'] = { value: pm.issued, confidence: 1.0 };
+            if (pm.modified) contextualResultsCollection.dataset.contextual_derivations['dataset.modified'] = { value: pm.modified, confidence: 1.0 };
+            if (pm.inLanguage?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.language'] = pm.inLanguage;
+            if (pm.conformsTo?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.conformsTo'] = pm.conformsTo;
+            if (pm.spatial) contextualResultsCollection.dataset.contextual_derivations['dataset.spatial'] = pm.spatial;
+            if (pm.temporal) contextualResultsCollection.dataset.contextual_derivations['dataset.temporal'] = pm.temporal;
+            if (pm.accrualPeriodicity) contextualResultsCollection.dataset.contextual_derivations['dataset.accrualPeriodicity'] = { value: pm.accrualPeriodicity, confidence: 1.0 };
+            if (pm.landingPage) contextualResultsCollection.dataset.contextual_derivations['dataset.landingPage'] = { value: pm.landingPage, confidence: 1.0 };
+            if (pm.documentation) contextualResultsCollection.dataset.contextual_derivations['dataset.documentation'] = { value: pm.documentation, confidence: 1.0 };
+            if (pm.type) contextualResultsCollection.dataset.contextual_derivations['dataset.type'] = { value: pm.type, confidence: 1.0 };
+        }
+
+        // Collect contextual derivations from file contents (skip fields already in prefilledMetadata)
         if (derivationPlan.dataset.contextual_derivations.length > 0) {
             const distributionContents = JSON.stringify(flatKeysDistribution)
 
-            await logProgress("Deriving contextual dataset metadata")
-            contextualResultsCollection.dataset.contextual_derivations = await processProperties(
-                "dataset",
-                derivationPlan.dataset.contextual_derivations,
-                distributionContents,
-                `You are inferring properties regarding a DCAT dataset. Use the aggregated file contents descriptions to derive dataset-level metadata in DCAT. 
-                Consider all files as a single collection. 
-                If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
-                "dataset",
-                metadata
+            const fieldsToSkip = new Set<string>();
+            if (pm) {
+                if (pm.title) fieldsToSkip.add('title');
+                if (pm.description) fieldsToSkip.add('description');
+                if (pm.identifier) fieldsToSkip.add('identifier');
+                if (pm.version) fieldsToSkip.add('version');
+                if (pm.keywords?.length) fieldsToSkip.add('keyword');
+                if (pm.theme?.length) fieldsToSkip.add('theme');
+                if (pm.subject?.length) fieldsToSkip.add('subject');
+                if (pm.creator?.length) fieldsToSkip.add('creator');
+                if (pm.publisher?.length) fieldsToSkip.add('publisher');
+                if (pm.contactPoint) fieldsToSkip.add('contactPoint');
+                if (pm.license) fieldsToSkip.add('license');
+                if (pm.rights) fieldsToSkip.add('rights');
+                if (pm.accessRights) fieldsToSkip.add('accessRights');
+                if (pm.issued) fieldsToSkip.add('issued');
+                if (pm.modified) fieldsToSkip.add('modified');
+                if (pm.inLanguage?.length) fieldsToSkip.add('language');
+                if (pm.conformsTo?.length) fieldsToSkip.add('conformsTo');
+                if (pm.spatial) fieldsToSkip.add('spatial');
+                if (pm.temporal) fieldsToSkip.add('temporal');
+                if (pm.accrualPeriodicity) fieldsToSkip.add('accrualPeriodicity');
+                if (pm.landingPage) fieldsToSkip.add('landingPage');
+                if (pm.documentation) fieldsToSkip.add('documentation');
+                if (pm.type) fieldsToSkip.add('type');
+            }
+
+            const filteredContextualDerivations = derivationPlan.dataset.contextual_derivations.filter(
+                d => !fieldsToSkip.has(d.key)
             );
-            await logProgress("Derived contextual dataset metadata")
+
+            if (filteredContextualDerivations.length > 0) {
+                await logProgress("Deriving contextual dataset metadata")
+                const llmResults = await processProperties(
+                    "dataset",
+                    filteredContextualDerivations,
+                    distributionContents,
+                    `You are inferring properties regarding a DCAT dataset. Use the aggregated file contents descriptions to derive dataset-level metadata in DCAT. 
+                    Consider all files as a single collection. 
+                    If properties are not specifically stated, give a plausible value for the property with lower confidence (0.2 - 0.4)`,
+                    "dataset",
+                    metadata
+                );
+                contextualResultsCollection.dataset.contextual_derivations = { ...contextualResultsCollection.dataset.contextual_derivations, ...llmResults };
+                await logProgress("Derived contextual dataset metadata")
+            } else {
+                await logProgress("All dataset contextual fields already provided")
+            }
         }
 
         // Collect additional custom properties for dataset
@@ -682,15 +745,69 @@ export async function inferDcatFromFiles(
         await logProgress("Catalog record processing complete")
     }
 
+    // Helper function to compile results and mark inherited fields
+    function compileResultsWithInherited(info: ContextualResultsTypeInfoType, inheritedFields?: Set<string>): ProcessedFields {
+        const output: ProcessedFields = {}
+
+        const compileProcessedFields = (results: ContextualResults, strategy: DerivationStrategy) => {
+            for(const key in results) {
+                const ScoredValue = results[key]!
+                const finalStrategy = inheritedFields?.has(key) ? 'Inherited' : strategy
+                const processedField = {
+                    result: ScoredValue,
+                    strategy: finalStrategy
+                } as ProcessedField
+        
+                output[key] = processedField
+            }
+        }
+
+        compileProcessedFields(info.contextual_derivations, 'Contextual')
+        compileProcessedFields(info.additional_derivations, 'Contextual')
+        compileProcessedFields(info.deterministic_derivations, 'Deterministic')
+
+        return output
+    }
+
+    // Track which dataset fields were inherited from prefilled metadata
+    const inheritedDatasetFields = new Set<string>();
+    if (sourceInfo?.useInheritedMetadata !== false && sourceInfo?.prefilledMetadata) {
+        const pm = sourceInfo.prefilledMetadata;
+        if (pm.title) inheritedDatasetFields.add('dataset.title');
+        if (pm.description) inheritedDatasetFields.add('dataset.description');
+        if (pm.identifier) inheritedDatasetFields.add('dataset.identifier');
+        if (pm.version) inheritedDatasetFields.add('dataset.version');
+        if (pm.keywords?.length) inheritedDatasetFields.add('dataset.keyword');
+        if (pm.theme?.length) inheritedDatasetFields.add('dataset.theme');
+        if (pm.subject?.length) inheritedDatasetFields.add('dataset.subject');
+        if (pm.creator?.length) inheritedDatasetFields.add('dataset.creator');
+        if (pm.publisher?.length) inheritedDatasetFields.add('dataset.publisher');
+        if (pm.contactPoint) inheritedDatasetFields.add('dataset.contactPoint');
+        if (pm.license) inheritedDatasetFields.add('dataset.license');
+        if (pm.rights) inheritedDatasetFields.add('dataset.rights');
+        if (pm.accessRights) inheritedDatasetFields.add('dataset.accessRights');
+        if (pm.issued) inheritedDatasetFields.add('dataset.issued');
+        if (pm.modified) inheritedDatasetFields.add('dataset.modified');
+        if (pm.inLanguage?.length) inheritedDatasetFields.add('dataset.language');
+        if (pm.conformsTo?.length) inheritedDatasetFields.add('dataset.conformsTo');
+        if (pm.spatial) inheritedDatasetFields.add('dataset.spatial');
+        if (pm.temporal) inheritedDatasetFields.add('dataset.temporal');
+        if (pm.accrualPeriodicity) inheritedDatasetFields.add('dataset.accrualPeriodicity');
+        if (pm.landingPage) inheritedDatasetFields.add('dataset.landingPage');
+        if (pm.documentation) inheritedDatasetFields.add('dataset.documentation');
+        if (pm.type) inheritedDatasetFields.add('dataset.type');
+    }
+
     const results: FileProcessJobReturnType = {
         catalogRecord: compileResults(contextualResultsCollection.catalogRecord),
         dataService: compileResults(contextualResultsCollection.dataService),
-        dataset: compileResults(contextualResultsCollection.dataset),
+        dataset: compileResultsWithInherited(contextualResultsCollection.dataset, inheritedDatasetFields),
         distributions: contextualResultsCollection.distribution.map((x, i) => {
-            const compiled = compileResults(x) as DistributionContextProcessedFields
+            const compiled = compileResults(x) as ProcessedFields & { _distributionFilepath?: string }
             compiled._distributionFilepath = absFilePath[i] ?? ''
             return compiled
         })
     }
+
     return results
 }
