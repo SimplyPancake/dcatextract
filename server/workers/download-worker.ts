@@ -17,7 +17,7 @@ import {
     getProviderBaseUrl
 } from '~~/shared/types/url'
 import { queuePreviousFilesForStop } from '../utils/files'
-import { extractFromCroissant, extractFromDcat } from '../utils/schema-extractor'
+import { extractFromCroissant, extractFromDcat, extractFromZenodo } from '../utils/schema-extractor'
 import type { ExtractedMetadata } from '~~/shared/types/workers'
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ type ResolvedPlan = {
     plan: DownloadPlan
     accessUrl: string
     providerBaseUrl?: string
-    schemaCandidates?: { type: 'croissant' | 'dcat'; urls: string[]; headers: Record<string, string> }[]
+    schemaCandidates?: { type: 'croissant' | 'dcat' | 'zenodo'; urls: string[]; headers: Record<string, string>; payload?: any }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -137,10 +137,7 @@ async function resolvePlan(
                     type: 'croissant',
                     headers,
                     urls: [
-                        `https://www.kaggle.com/api/v1/datasets/croissant/${identifier}`,
-                        `https://www.kaggle.com/api/v1/datasets/metadata/${identifier}`,
-                        `https://www.kaggle.com/datasets/${identifier}/croissant.json`,
-                        `https://www.kaggle.com/datasets/${identifier}/metadata/croissant.json`
+                        `https://www.kaggle.com/datasets/${identifier}/croissant/download`
                     ]
                 }]
             }
@@ -150,7 +147,18 @@ async function resolvePlan(
             const headers = { 'User-Agent': 'dcatextract' }
             const dcatHeaders = { ...headers, Accept: 'text/turtle,application/ld+json,application/rdf+xml;q=0.9,*/*;q=0.8' }
 
+            // Always fetch metadata payload first for schema extraction
+            console.log(`[zenodo] Fetching metadata for record ${identifier}`)
+            let metadataPayload: any = undefined
+            try {
+                metadataPayload = await fetchJson<any>(`https://zenodo.org/api/records/${identifier}`, headers)
+                console.log(`[zenodo] Metadata payload fetched successfully`)
+            } catch (err) {
+                console.log(`[zenodo] Failed to fetch metadata payload: ${err instanceof Error ? err.message : String(err)}`)
+            }
+
             // Try InvenioRDM files endpoint first (new Zenodo)
+            console.log(`[zenodo] Trying new /api/records/{id}/files endpoint`)
             const filesRes = await fetch(`https://zenodo.org/api/records/${identifier}/files`, { headers })
             if (filesRes.ok) {
                 const payload = await filesRes.json() as {
@@ -160,46 +168,67 @@ async function resolvePlan(
                     .map(f => ({ name: f.key ?? '', url: f.links?.content ?? '', size: f.size ?? 0 }))
                     .filter(f => f.name && f.url)
                 if (files.length > 0) {
+                    console.log(`[zenodo] Found ${files.length} files via new endpoint`)
                     return {
                         plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}/files` },
                         accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
                         providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
-                        schemaCandidates: [{
-                            type: 'dcat',
-                            headers: dcatHeaders,
-                            urls: [
-                                `https://zenodo.org/records/${identifier}/export/dcat`,
-                                `https://zenodo.org/records/${identifier}/export/dcat-ap`,
-                                `https://zenodo.org/api/records/${identifier}?format=dcat`
-                            ]
-                        }]
+                        schemaCandidates: [
+                            ...(metadataPayload ? [{
+                                type: 'zenodo' as const,
+                                headers: dcatHeaders,
+                                urls: [],
+                                payload: metadataPayload
+                            }] : []),
+                            {
+                                type: 'dcat' as const,
+                                headers: dcatHeaders,
+                                urls: [
+                                    `https://zenodo.org/records/${identifier}/export/dcat`,
+                                    `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                                    `https://zenodo.org/api/records/${identifier}?format=dcat`
+                                ]
+                            }
+                        ]
                     }
                 }
+                console.log(`[zenodo] New endpoint returned no files, trying fallback`)
             }
 
             // Fall back to legacy API
-            const payload = await fetchJson<{
-                files?: Array<{ key?: string; links?: { download?: string }; size?: number }>
-            }>(`https://zenodo.org/api/records/${identifier}`, headers)
+            if (!metadataPayload) {
+                console.log(`[zenodo] Trying legacy /api/records/{id} endpoint`)
+                metadataPayload = await fetchJson<any>(`https://zenodo.org/api/records/${identifier}`, headers)
+            }
 
-            const files: ZenodoFile[] = (payload.files ?? [])
-                .map(f => ({ name: f.key ?? '', url: f.links?.download ?? '', size: f.size ?? 0 }))
-                .filter(f => f.name && f.url)
+            const files: ZenodoFile[] = (metadataPayload.files ?? [])
+                .map((f: any) => ({ name: f.key ?? '', url: f.links?.download ?? '', size: f.size ?? 0 }))
+                .filter((f: any) => f.name && f.url)
             if (files.length === 0) throw new Error('Zenodo record has no downloadable files')
+            console.log(`[zenodo] Found ${files.length} files via legacy endpoint`)
 
+            // Extract metadata from Zenodo JSON payload and DCAT export
             return {
                 plan: { kind: 'files', files, headers, downloadUrl: `https://zenodo.org/api/records/${identifier}` },
                 accessUrl: buildProviderAccessUrl('Zenodo', identifier, sourceUrl) ?? sourceUrl,
                 providerBaseUrl: getProviderBaseUrl('Zenodo') ?? undefined,
-                schemaCandidates: [{
-                    type: 'dcat',
-                    headers: dcatHeaders,
-                    urls: [
-                        `https://zenodo.org/records/${identifier}/export/dcat`,
-                        `https://zenodo.org/records/${identifier}/export/dcat-ap`,
-                        `https://zenodo.org/api/records/${identifier}?format=dcat`
-                    ]
-                }]
+                schemaCandidates: [
+                    {
+                        type: 'zenodo',
+                        headers: dcatHeaders,
+                        urls: [],
+                        payload: metadataPayload
+                    } as any,
+                    {
+                        type: 'dcat',
+                        headers: dcatHeaders,
+                        urls: [
+                            `https://zenodo.org/records/${identifier}/export/dcat`,
+                            `https://zenodo.org/records/${identifier}/export/dcat-ap`,
+                            `https://zenodo.org/api/records/${identifier}?format=dcat`
+                        ]
+                    }
+                ]
             }
         }
 
@@ -291,24 +320,49 @@ async function downloadToFile(
 }
 
 async function extractSchemaMetadata(
-    schemaCandidates: { type: 'croissant' | 'dcat'; urls: string[]; headers: Record<string, string> }[] | undefined
+    schemaCandidates: { type: 'croissant' | 'dcat' | 'zenodo'; urls: string[]; headers: Record<string, string>; payload?: any }[] | undefined
 ): Promise<ExtractedMetadata | undefined> {
-    if (!schemaCandidates?.length) return undefined;
+    if (!schemaCandidates?.length) {
+        console.log(`[schema-extract] No schemaCandidates provided`);
+        return undefined;
+    }
+
+    console.log(`[schema-extract] Attempting to extract from ${schemaCandidates.length} candidate(s)`);
 
     for (const candidate of schemaCandidates) {
+        // Handle Zenodo JSON payload extraction
+        if (candidate.type === 'zenodo' && candidate.payload) {
+            try {
+                const extracted = extractFromZenodo(candidate.payload);
+                console.log(`[schema-extract] Zenodo JSON extracted:`, JSON.stringify(extracted, null, 2));
+                return extracted;
+            } catch (err) {
+                console.log(`[schema-extract] Failed to extract from Zenodo JSON:`, err instanceof Error ? err.message : String(err));
+                continue;
+            }
+        }
+
         for (const url of candidate.urls) {
             try {
                 const text = await fetchTextWithLimit(url, candidate.headers, MAX_SCHEMA_BYTES);
+                console.log(`[schema-extract] Fetched ${candidate.type} from ${url}`);
                 if (candidate.type === 'croissant') {
-                    return extractFromCroissant(JSON.parse(text) as unknown);
+                    const parsed = JSON.parse(text) as unknown;
+                    const extracted = extractFromCroissant(parsed);
+                    console.log(`[schema-extract] Croissant extracted:`, JSON.stringify(extracted, null, 2));
+                    return extracted;
                 } else {
-                    return extractFromDcat(text);
+                    const extracted = extractFromDcat(text);
+                    console.log(`[schema-extract] DCAT extracted:`, JSON.stringify(extracted, null, 2));
+                    return extracted;
                 }
-            } catch {
+            } catch (err) {
+                console.log(`[schema-extract] Failed to extract from ${url}:`, err instanceof Error ? err.message : String(err));
                 continue;
             }
         }
     }
+    console.log(`[schema-extract] No schemas extracted from any candidate`);
     return undefined;
 }
 
@@ -330,8 +384,49 @@ async function downloadWebpageSnapshot(accessUrl: string, downloadDir: string, i
 
 async function extractArchive(archivePath: string, extractDir: string) {
     await fsp.mkdir(extractDir, { recursive: true })
-    new AdmZip(archivePath).extractAllTo(extractDir, true)
+    console.log(`[download-worker] Extracting main archive to: ${extractDir}`)
+    try {
+        new AdmZip(archivePath).extractAllTo(extractDir, true)
+        console.log(`[download-worker] Main archive extracted successfully`)
+    } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        console.error(`[download-worker] Failed to extract main archive: ${errMsg}`)
+        throw err
+    }
     await fsp.rm(archivePath, { force: true })
+    
+    // Recursively extract any nested zips found in the extracted directory
+    console.log(`[download-worker] Checking for nested zips...`)
+    await extractNestedZips(extractDir)
+}
+
+async function extractNestedZips(dir: string, maxDepth: number = 10, currentDepth: number = 0): Promise<void> {
+    if (currentDepth >= maxDepth) {
+        console.warn(`[download-worker] Max extraction depth (${maxDepth}) reached at: ${dir}`);
+        return;
+    }
+    
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+            await extractNestedZips(fullPath, maxDepth, currentDepth + 1)
+        } else if (entry.name.toLowerCase().endsWith('.zip')) {
+            try {
+                const extractSubDir = path.join(dir, entry.name.replace(/\.zip$/i, ''));
+                console.log(`[download-worker] Extracting nested zip: ${entry.name} to ${extractSubDir}`);
+                new AdmZip(fullPath).extractAllTo(extractSubDir, true);
+                console.log(`[download-worker] Successfully extracted ${entry.name}, removing zip...`);
+                await fsp.rm(fullPath, { force: true });
+                console.log(`[download-worker] Removed ${entry.name}`);
+                // Recursively check the newly extracted directory for more zips
+                await extractNestedZips(extractSubDir, maxDepth, currentDepth + 1)
+            } catch (err) {
+                const errMsg = err instanceof Error ? err.message : String(err);
+                console.error(`[download-worker] Failed to extract nested zip ${entry.name}: ${errMsg}`);
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -340,10 +435,20 @@ async function extractArchive(archivePath: string, extractDir: string) {
 
 function listFiles(dir: string): string[] {
     const results: string[] = []
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const fullPath = path.join(dir, entry.name)
-        entry.isDirectory() ? results.push(...listFiles(fullPath)) : results.push(fullPath)
+    
+    function walkDir(dirPath: string) {
+        for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+            const fullPath = path.join(dirPath, entry.name)
+            if (entry.isDirectory()) {
+                walkDir(fullPath)
+            } else {
+                // Include all files, including zips (file processor can handle extraction)
+                results.push(fullPath)
+            }
+        }
     }
+    
+    walkDir(dir)
     return results
 }
 
@@ -396,12 +501,35 @@ export function startDownloadWorker() {
                     await progress.report(0, `Downloading ${path.basename(file.name)}...`)
                     await downloadToFile(file.url, plan.headers, path.join(extractDir, path.basename(file.name)), provider, progress)
                 }
+                // Extract any zips that were downloaded
+                await progress.report(95, 'Extracting nested zips...')
+                await extractNestedZips(extractDir)
+            }
+
+            // Diagnostics: Show what was extracted
+            console.log(`[download-worker] Listing extracted contents of ${extractDir}:`)
+            const allEntries = fs.readdirSync(extractDir, { withFileTypes: true })
+            for (const entry of allEntries) {
+                const fullPath = path.join(extractDir, entry.name)
+                if (entry.isDirectory()) {
+                    const fileCount = fs.readdirSync(fullPath, { withFileTypes: true }).length
+                    console.log(`  [DIR] ${entry.name}/ (${fileCount} items)`)
+                } else {
+                    const stats = fs.statSync(fullPath)
+                    console.log(`  [FILE] ${entry.name} (${formatBytes(stats.size)})`)
+                }
             }
 
             const extractedFiles = listFiles(extractDir)
+            console.log(`[download-worker] Found ${extractedFiles.length} total files to process`)
+            if (extractedFiles.length > 0) {
+                console.log(`[download-worker] First 5 files:`, extractedFiles.slice(0, 5).map(f => f.replace(extractDir, '').slice(1)))
+            }
+            
             if (extractedFiles.length === 0) throw new Error('Extracted archive is empty')
 
             const prefilledMetadata = await extractSchemaMetadata(schemaCandidates)
+            console.log(`[download-worker] prefilledMetadata:`, JSON.stringify(prefilledMetadata, null, 2))
             const webpageSnapshot = await downloadWebpageSnapshot(accessUrl, downloadDir, identifier.replace('/', '-'))
 
             await job.updateData({ ...job.data, accessUrl, downloadUrl: plan.downloadUrl, providerBaseUrl, prefilledMetadata })

@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import AdmZip from "adm-zip";
 import { Distribution, InferOptions } from "../../../shared/types/dcat3.js";
 import { extractFileText, walk } from "./helpers.js";
 import { inferDistributionMetadata, type DistributionDeterministicInput } from "./distribution-inference.js";
@@ -48,11 +49,24 @@ function stageInputs(
 ): void {
     for (const [index, filePath] of filePaths.entries()) {
         const baseName = path.basename(originalNames?.[filePath] ?? filePath);
-
         const targetDir = filePaths.length === 1 ? tmpDir : path.join(tmpDir, `file-${index}`);
         fs.mkdirSync(targetDir, { recursive: true });
-        const targetPath = path.join(targetDir, baseName);
-        fs.copyFileSync(filePath, targetPath);
+
+        // If file is a zip, extract it; otherwise copy it
+        if (baseName.toLowerCase().endsWith('.zip')) {
+            try {
+                const zip = new AdmZip(filePath);
+                log(`Extracting zip: ${baseName}`);
+                zip.extractAllTo(targetDir, true);
+            } catch (err) {
+                log(`Failed to extract zip ${baseName}, copying as regular file: ${err instanceof Error ? err.message : String(err)}`);
+                const targetPath = path.join(targetDir, baseName);
+                fs.copyFileSync(filePath, targetPath);
+            }
+        } else {
+            const targetPath = path.join(targetDir, baseName);
+            fs.copyFileSync(filePath, targetPath);
+        }
     }
 }
 
@@ -397,6 +411,45 @@ function compileResults(info: ContextualResultsTypeInfoType): ProcessedFields {
     return output
 }
 
+// Track inherited fields: for each key in list, if metadata[key] exists, add prefix.key to set
+function trackInheritedFields(
+    metadata: Record<string, any> | undefined,
+    prefix: string,
+    keys: string[],
+    set: Set<string>
+) {
+    if (!metadata) return;
+    for (const k of keys) {
+        if (metadata[k]) set.add(`${prefix}.${k}`);
+    }
+}
+
+// Get keys from metadata that have truthy values
+function getExistingKeys(metadata: Record<string, any> | undefined, keys: string[]): Set<string> {
+    const existing = new Set<string>();
+    if (!metadata) return existing;
+    for (const k of keys) {
+        if (metadata[k]) existing.add(k);
+    }
+    return existing;
+}
+
+// Apply prefilled metadata values to contextual derivations with 100% confidence, only if field is empty
+function applyPrefillToContextual(
+    metadata: Record<string, any> | undefined,
+    prefix: string,
+    keys: string[],
+    contextualDerivations: Record<string, any>
+) {
+    if (!metadata) return;
+    for (const k of keys) {
+        const fieldKey = `${prefix}.${k}`;
+        if (metadata[k] && metadata[k] != '' && !contextualDerivations[fieldKey]) {
+            contextualDerivations[fieldKey] = { value: metadata[k], confidence: 1.0 };
+        }
+    }
+}
+
 export async function inferDcatFromFiles(
     absFilePath: string[],
     opts: InferOptions = {},
@@ -479,12 +532,19 @@ export async function inferDcatFromFiles(
         },
     };
 
+    // Track which fields were inherited from prefilled metadata across all contexts
+    const inheritedDatasetFields = new Set<string>();
+    const inheritedDistributionFields: Set<string>[] = [];
+    const inheritedCatalogRecordFields = new Set<string>();
+    const inheritedDataServiceFields = new Set<string>();
+
     await logProgress("Starting inference")
     await logProgress(`Processing ${absFilePath.length} distributions`)
 
     // Distribution contextual results
     // TODO: For contents of CSV's only return the columns and the first few rows.
-    for (let filePath of absFilePath) {
+    for (let distIndex = 0; distIndex < absFilePath.length; distIndex++) {
+        const filePath = absFilePath[distIndex]!;
         if (!derivationPlan.distribution) {
             continue
         }
@@ -518,17 +578,39 @@ export async function inferDcatFromFiles(
             await logProgress(`Derived deterministic distribution metadata for ${displayName}`)
         }
 
+        // Apply prefilled distribution metadata BEFORE LLM (if available for this distribution index)
+        const prefillDist = sourceInfo?.prefilledMetadata?.distributions?.[distIndex];
+        const distributionInheritedFields = new Set<string>();
+        if (prefillDist && sourceInfo?.useInheritedMetadata !== false) {
+            const distKeys = ['title', 'description', 'format', 'mediaType', 'license', 'accessURL', 'downloadURL', 'byteSize'];
+            applyPrefillToContextual(prefillDist, 'distribution', distKeys, results.contextual_derivations);
+            trackInheritedFields(prefillDist, 'distribution', distKeys, distributionInheritedFields);
+            inheritedDistributionFields[distIndex] = distributionInheritedFields;
+        } else {
+            inheritedDistributionFields[distIndex] = new Set<string>();
+        }
+
         if (plan.contextual_derivations.length > 0) {
-            // Get contextual derivation
+            // Get contextual derivation - skip fields that are already inherited with 100% confidence
             await logProgress(`Deriving contextual distribution metadata for ${displayName}`)
-            results.contextual_derivations = await processProperties(
-                "distribution",
-                plan.contextual_derivations,
-                fileContents,
-                "You are inferring properties regarding a DCAT distribution.",
-                path.basename(filePath),
-                metadata
-            );
+            const filteredPlanDerivations = plan.contextual_derivations.filter(d => !distributionInheritedFields.has(d.key));
+            
+            if (filteredPlanDerivations.length > 0) {
+                const llmResults = await processProperties(
+                    "distribution",
+                    filteredPlanDerivations,
+                    fileContents,
+                    "You are inferring properties regarding a DCAT distribution.",
+                    path.basename(filePath),
+                    metadata
+                );
+                // Merge LLM results but don't overwrite inherited values (confidence 1.0)
+                for (const [key, value] of Object.entries(llmResults)) {
+                    if (!results.contextual_derivations[key] || results.contextual_derivations[key]!.confidence < 1.0) {
+                        results.contextual_derivations[key] = value;
+                    }
+                }
+            }
             await logProgress(`Derived contextual distribution metadata for ${displayName}`)
         }
 
@@ -574,66 +656,19 @@ export async function inferDcatFromFiles(
         await logProgress("Derived deterministic dataset metadata")
 
         // Apply prefilled metadata to dataset (only if useInheritedMetadata is enabled)
-        let pm = sourceInfo?.useInheritedMetadata === false ? undefined : sourceInfo?.prefilledMetadata;
-        if (pm) {
-            if (pm.title) contextualResultsCollection.dataset.contextual_derivations['dataset.title'] = { value: pm.title, confidence: 1.0 };
-            if (pm.description) contextualResultsCollection.dataset.contextual_derivations['dataset.description'] = { value: pm.description, confidence: 1.0 };
-            if (pm.identifier) contextualResultsCollection.dataset.contextual_derivations['dataset.identifier'] = { value: pm.identifier, confidence: 1.0 };
-            if (pm.version) contextualResultsCollection.dataset.contextual_derivations['dataset.version'] = { value: pm.version, confidence: 1.0 };
-            if (pm.keywords?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.keyword'] = pm.keywords;
-            if (pm.theme?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.theme'] = pm.theme;
-            if (pm.subject?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.subject'] = pm.subject;
-            if (pm.creator?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.creator'] = pm.creator;
-            if (pm.publisher?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.publisher'] = pm.publisher;
-            if (pm.contactPoint) contextualResultsCollection.dataset.contextual_derivations['dataset.contactPoint'] = pm.contactPoint;
-            if (pm.license) contextualResultsCollection.dataset.contextual_derivations['dataset.license'] = { value: pm.license, confidence: 1.0 };
-            if (pm.rights) contextualResultsCollection.dataset.contextual_derivations['dataset.rights'] = { value: pm.rights, confidence: 1.0 };
-            if (pm.accessRights) contextualResultsCollection.dataset.contextual_derivations['dataset.accessRights'] = { value: pm.accessRights, confidence: 1.0 };
-            if (pm.issued) contextualResultsCollection.dataset.contextual_derivations['dataset.issued'] = { value: pm.issued, confidence: 1.0 };
-            if (pm.modified) contextualResultsCollection.dataset.contextual_derivations['dataset.modified'] = { value: pm.modified, confidence: 1.0 };
-            if (pm.inLanguage?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.language'] = pm.inLanguage;
-            if (pm.conformsTo?.length) contextualResultsCollection.dataset.contextual_derivations['dataset.conformsTo'] = pm.conformsTo;
-            if (pm.spatial) contextualResultsCollection.dataset.contextual_derivations['dataset.spatial'] = pm.spatial;
-            if (pm.temporal) contextualResultsCollection.dataset.contextual_derivations['dataset.temporal'] = pm.temporal;
-            if (pm.accrualPeriodicity) contextualResultsCollection.dataset.contextual_derivations['dataset.accrualPeriodicity'] = { value: pm.accrualPeriodicity, confidence: 1.0 };
-            if (pm.landingPage) contextualResultsCollection.dataset.contextual_derivations['dataset.landingPage'] = { value: pm.landingPage, confidence: 1.0 };
-            if (pm.documentation) contextualResultsCollection.dataset.contextual_derivations['dataset.documentation'] = { value: pm.documentation, confidence: 1.0 };
-            if (pm.type) contextualResultsCollection.dataset.contextual_derivations['dataset.type'] = { value: pm.type, confidence: 1.0 };
+        if (sourceInfo?.useInheritedMetadata !== false && sourceInfo?.prefilledMetadata) {
+            const datasetKeys = ['title', 'description', 'identifier', 'version', 'keywords', 'theme', 'subject', 'creator', 'publisher', 'contactPoint', 'license', 'rights', 'accessRights', 'issued', 'modified', 'inLanguage', 'conformsTo', 'spatial', 'temporal', 'accrualPeriodicity', 'landingPage', 'documentation', 'type'];
+            applyPrefillToContextual(sourceInfo.prefilledMetadata, 'dataset', datasetKeys, contextualResultsCollection.dataset.contextual_derivations);
+            trackInheritedFields(sourceInfo.prefilledMetadata, 'dataset', datasetKeys, inheritedDatasetFields);
         }
 
         // Collect contextual derivations from file contents (skip fields already in prefilledMetadata)
         if (derivationPlan.dataset.contextual_derivations.length > 0) {
             const distributionContents = JSON.stringify(flatKeysDistribution)
 
-            const fieldsToSkip = new Set<string>();
-            if (pm) {
-                if (pm.title) fieldsToSkip.add('title');
-                if (pm.description) fieldsToSkip.add('description');
-                if (pm.identifier) fieldsToSkip.add('identifier');
-                if (pm.version) fieldsToSkip.add('version');
-                if (pm.keywords?.length) fieldsToSkip.add('keyword');
-                if (pm.theme?.length) fieldsToSkip.add('theme');
-                if (pm.subject?.length) fieldsToSkip.add('subject');
-                if (pm.creator?.length) fieldsToSkip.add('creator');
-                if (pm.publisher?.length) fieldsToSkip.add('publisher');
-                if (pm.contactPoint) fieldsToSkip.add('contactPoint');
-                if (pm.license) fieldsToSkip.add('license');
-                if (pm.rights) fieldsToSkip.add('rights');
-                if (pm.accessRights) fieldsToSkip.add('accessRights');
-                if (pm.issued) fieldsToSkip.add('issued');
-                if (pm.modified) fieldsToSkip.add('modified');
-                if (pm.inLanguage?.length) fieldsToSkip.add('language');
-                if (pm.conformsTo?.length) fieldsToSkip.add('conformsTo');
-                if (pm.spatial) fieldsToSkip.add('spatial');
-                if (pm.temporal) fieldsToSkip.add('temporal');
-                if (pm.accrualPeriodicity) fieldsToSkip.add('accrualPeriodicity');
-                if (pm.landingPage) fieldsToSkip.add('landingPage');
-                if (pm.documentation) fieldsToSkip.add('documentation');
-                if (pm.type) fieldsToSkip.add('type');
-            }
-
+            // Filter out any contextual derivations that are already inherited (prefixed keys match inheritedDatasetFields)
             const filteredContextualDerivations = derivationPlan.dataset.contextual_derivations.filter(
-                d => !fieldsToSkip.has(d.key)
+                d => !inheritedDatasetFields.has(d.key)
             );
 
             if (filteredContextualDerivations.length > 0) {
@@ -648,7 +683,12 @@ export async function inferDcatFromFiles(
                     "dataset",
                     metadata
                 );
-                contextualResultsCollection.dataset.contextual_derivations = { ...contextualResultsCollection.dataset.contextual_derivations, ...llmResults };
+                // Merge LLM results but don't overwrite inherited values (confidence 1.0)
+                for (const [key, value] of Object.entries(llmResults)) {
+                    if (!contextualResultsCollection.dataset.contextual_derivations[key] || contextualResultsCollection.dataset.contextual_derivations[key]!.confidence < 1.0) {
+                        contextualResultsCollection.dataset.contextual_derivations[key] = value;
+                    }
+                }
                 await logProgress("Derived contextual dataset metadata")
             } else {
                 await logProgress("All dataset contextual fields already provided")
@@ -680,11 +720,15 @@ export async function inferDcatFromFiles(
     if (derivationPlan.dataService) {
         await logProgress("Processing data provider")
         const providerUrl = sourceUrlFromInfo(sourceInfo);
-        const providerContextualDerivations = derivationPlan.dataService.contextual_derivations.length > 0
-            ? derivationPlan.dataService.contextual_derivations
-            : collectAllContextualDerivations(DATA_SERVICE_MAP);
+        
+        // Apply prefilled dataService metadata FIRST (inherited from provider schemas)
+        if (sourceInfo?.useInheritedMetadata !== false && sourceInfo?.prefilledMetadata) {
+            const serviceKeys = ['title', 'description'];
+            applyPrefillToContextual(sourceInfo.prefilledMetadata, 'dataService', serviceKeys, contextualResultsCollection.dataService.contextual_derivations);
+            trackInheritedFields(sourceInfo.prefilledMetadata, 'dataService', serviceKeys, inheritedDataServiceFields);
+        }
 
-        await logProgress("Deriving deterministic data provider metadata")
+        await logProgress("Derived deterministic data provider metadata")
         contextualResultsCollection.dataService.deterministic_derivations = {
             ...(providerUrl ? {
                 "dataService.endpointURL": {
@@ -701,18 +745,33 @@ export async function inferDcatFromFiles(
             : JSON.stringify(flatKeysDistribution);
         await logProgress("Fetched data provider context")
 
-        await logProgress("Deriving contextual data provider metadata")
-        contextualResultsCollection.dataService.contextual_derivations = await processProperties(
-            "dataService",
-            providerContextualDerivations,
-            providerContent,
-            providerUrl
-                ? "You are inferring properties regarding a DCAT data service. This content was fetched from the data provider URL. Use it to infer the provider title, description, endpoint description, and related metadata."
-                : "You are inferring properties regarding a DCAT data service. No provider URL was available. Infer contextual information about the data provider from the dataset files, filenames, and embedded references.",
-            providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService",
-            metadata
-        );
-        await logProgress("Derived contextual data provider metadata")
+        // Filter out inherited fields from LLM derivation
+        const providerContextualDerivations = derivationPlan.dataService.contextual_derivations.length > 0
+            ? derivationPlan.dataService.contextual_derivations.filter(d => !inheritedDataServiceFields.has(d.key))
+            : [];
+
+        if (providerContextualDerivations.length > 0) {
+            await logProgress("Deriving contextual data provider metadata")
+            const llmResults = await processProperties(
+                "dataService",
+                providerContextualDerivations,
+                providerContent,
+                providerUrl
+                    ? "You are inferring properties regarding a DCAT data service. This content was fetched from the data provider URL. Use it to infer the provider title, description, endpoint description, and related metadata."
+                    : "You are inferring properties regarding a DCAT data service. No provider URL was available. Infer contextual information about the data provider from the dataset files, filenames, and embedded references.",
+                providerUrl ? path.basename(new URL(providerUrl).pathname || providerUrl) : "dataService",
+                metadata
+            );
+            // Merge LLM results but don't overwrite inherited values (confidence 1.0)
+            for (const [key, value] of Object.entries(llmResults)) {
+                if (!contextualResultsCollection.dataService.contextual_derivations[key] || contextualResultsCollection.dataService.contextual_derivations[key]!.confidence < 1.0) {
+                    contextualResultsCollection.dataService.contextual_derivations[key] = value;
+                }
+            }
+            await logProgress("Derived contextual data provider metadata")
+        } else {
+            await logProgress("All data provider contextual fields already provided")
+        }
 
         await logProgress("Deriving custom data provider metadata")
         contextualResultsCollection.dataService.additional_derivations = await processProperties(
@@ -734,6 +793,13 @@ export async function inferDcatFromFiles(
         const contextualDerivs = derivationPlan.catalogRecord.contextual_derivations.length > 0
             ? derivationPlan.catalogRecord.contextual_derivations
             : collectAllContextualDerivations(CATALOG_RECORD_MAP);
+
+        // Apply prefilled catalog record metadata (if useInheritedMetadata is enabled)
+        if (sourceInfo?.useInheritedMetadata !== false && sourceInfo?.prefilledMetadata) {
+            const pm = sourceInfo.prefilledMetadata;
+            // Note: Catalog record metadata can be derived from dataset/dataService, but we don't have explicit catalog fields in prefilledMetadata
+            // Catalog metadata like title, description, issued, modified can be inferred from dataset if needed
+        }
 
         contextualResultsCollection.catalogRecord.contextual_derivations = await processProperties(
             "catalogRecord",
@@ -769,41 +835,14 @@ export async function inferDcatFromFiles(
         return output
     }
 
-    // Track which dataset fields were inherited from prefilled metadata
-    const inheritedDatasetFields = new Set<string>();
-    if (sourceInfo?.useInheritedMetadata !== false && sourceInfo?.prefilledMetadata) {
-        const pm = sourceInfo.prefilledMetadata;
-        if (pm.title) inheritedDatasetFields.add('dataset.title');
-        if (pm.description) inheritedDatasetFields.add('dataset.description');
-        if (pm.identifier) inheritedDatasetFields.add('dataset.identifier');
-        if (pm.version) inheritedDatasetFields.add('dataset.version');
-        if (pm.keywords?.length) inheritedDatasetFields.add('dataset.keyword');
-        if (pm.theme?.length) inheritedDatasetFields.add('dataset.theme');
-        if (pm.subject?.length) inheritedDatasetFields.add('dataset.subject');
-        if (pm.creator?.length) inheritedDatasetFields.add('dataset.creator');
-        if (pm.publisher?.length) inheritedDatasetFields.add('dataset.publisher');
-        if (pm.contactPoint) inheritedDatasetFields.add('dataset.contactPoint');
-        if (pm.license) inheritedDatasetFields.add('dataset.license');
-        if (pm.rights) inheritedDatasetFields.add('dataset.rights');
-        if (pm.accessRights) inheritedDatasetFields.add('dataset.accessRights');
-        if (pm.issued) inheritedDatasetFields.add('dataset.issued');
-        if (pm.modified) inheritedDatasetFields.add('dataset.modified');
-        if (pm.inLanguage?.length) inheritedDatasetFields.add('dataset.language');
-        if (pm.conformsTo?.length) inheritedDatasetFields.add('dataset.conformsTo');
-        if (pm.spatial) inheritedDatasetFields.add('dataset.spatial');
-        if (pm.temporal) inheritedDatasetFields.add('dataset.temporal');
-        if (pm.accrualPeriodicity) inheritedDatasetFields.add('dataset.accrualPeriodicity');
-        if (pm.landingPage) inheritedDatasetFields.add('dataset.landingPage');
-        if (pm.documentation) inheritedDatasetFields.add('dataset.documentation');
-        if (pm.type) inheritedDatasetFields.add('dataset.type');
-    }
+    // Note: catalogRecord and dataService fields are typically derived, not directly inherited from provider metadata
 
     const results: FileProcessJobReturnType = {
-        catalogRecord: compileResults(contextualResultsCollection.catalogRecord),
-        dataService: compileResults(contextualResultsCollection.dataService),
+        catalogRecord: compileResultsWithInherited(contextualResultsCollection.catalogRecord, inheritedCatalogRecordFields),
+        dataService: compileResultsWithInherited(contextualResultsCollection.dataService, inheritedDataServiceFields),
         dataset: compileResultsWithInherited(contextualResultsCollection.dataset, inheritedDatasetFields),
         distributions: contextualResultsCollection.distribution.map((x, i) => {
-            const compiled = compileResults(x) as ProcessedFields & { _distributionFilepath?: string }
+            const compiled = compileResultsWithInherited(x, inheritedDistributionFields[i]) as ProcessedFields & { _distributionFilepath?: string }
             compiled._distributionFilepath = absFilePath[i] ?? ''
             return compiled
         })

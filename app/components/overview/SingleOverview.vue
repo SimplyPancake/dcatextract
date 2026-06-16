@@ -34,7 +34,8 @@
           </span>
           <template v-else-if="isBelowThreshold(slotProps.data)">
             <div class="flex flex-row gap-2">
-              <ArrowDownFromLine :size="20" class="text-orange-700" />
+              <ArrowDownFromLine v-tooltip.top="'The confidence falls below your treshhold.'" :size="20" class="text-orange-700" />
+              <span class="text-sm text-gray-500">({{ Math.round(slotProps.data.result.confidence * 100) }}%)</span>
             </div>
           </template>
           <template v-else-if="slotProps.data.result && typeof slotProps.data.result.confidence === 'number' && slotProps.data.result.value">

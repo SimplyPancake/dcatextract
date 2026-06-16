@@ -136,6 +136,7 @@ export function extractFromCroissant(croissant: unknown): ExtractedMetadata {
   if (!datasetNode || typeof datasetNode !== "object") return {};
 
   const ds = datasetNode as AnyRecord;
+  console.log(`[croissant-extract] Dataset node keys:`, Object.keys(ds).sort());
 
   // Extract distributions if present
   const distributions: ExtractedDistribution[] = [];
@@ -161,33 +162,19 @@ export function extractFromCroissant(croissant: unknown): ExtractedMetadata {
     description: stringValue(ds.description) ?? undefined,
     identifier: stringValue(ds.identifier ?? ds["@id"]) ?? undefined,
     version: stringValue(ds.version) ?? undefined,
-    keywords: asArray(ds.keywords)
-      .map((k) => extractStringFromValue(k))
-      .filter((k): k is string => k !== null),
-    theme: asArray(ds.theme ?? ds.subject)
-      .map((t) => extractStringFromValue(t))
-      .filter((t): t is string => t !== null),
-    subject: asArray(ds.subject)
-      .map((s) => extractStringFromValue(s))
-      .filter((s): s is string => s !== null),
-    creator: asArray(ds.creator)
-      .map((c) => extractAgent(c))
-      .filter((c): c is ExtractedAgent => c !== null),
-    publisher: asArray(ds.publisher)
-      .map((p) => extractAgent(p))
-      .filter((p): p is ExtractedAgent => p !== null),
+    keywords: (() => { const vals = asArray(ds.keywords).map((k) => extractStringFromValue(k)).filter((k): k is string => k !== null); return vals.length > 0 ? vals : undefined; })(),
+    theme: (() => { const vals = asArray(ds.theme ?? ds.subject).map((t) => extractStringFromValue(t)).filter((t): t is string => t !== null); return vals.length > 0 ? vals : undefined; })(),
+    subject: (() => { const vals = asArray(ds.subject).map((s) => extractStringFromValue(s)).filter((s): s is string => s !== null); return vals.length > 0 ? vals : undefined; })(),
+    creator: (() => { const vals = asArray(ds.creator).map((c) => extractAgent(c)).filter((c): c is ExtractedAgent => c !== null); return vals.length > 0 ? vals : undefined; })(),
+    publisher: (() => { const vals = asArray(ds.publisher).map((p) => extractAgent(p)).filter((p): p is ExtractedAgent => p !== null); return vals.length > 0 ? vals : undefined; })(),
     contactPoint: extractAgent(ds.contactPoint) ?? undefined,
     license: extractStringFromValue(ds.license) ?? undefined,
     rights: stringValue(ds.rights) ?? undefined,
     accessRights: stringValue(ds.accessRights) ?? undefined,
     issued: stringValue(ds.datePublished) ?? undefined,
     modified: stringValue(ds.dateModified) ?? undefined,
-    inLanguage: asArray(ds.inLanguage)
-      .map((lang) => extractStringFromValue(lang))
-      .filter((lang): lang is string => lang !== null),
-    conformsTo: asArray(ds.conformsTo)
-      .map((c) => extractStringFromValue(c))
-      .filter((c): c is string => c !== null),
+    inLanguage: (() => { const vals = asArray(ds.inLanguage).map((lang) => extractStringFromValue(lang)).filter((lang): lang is string => lang !== null); return vals.length > 0 ? vals : undefined; })(),
+    conformsTo: (() => { const vals = asArray(ds.conformsTo).map((c) => extractStringFromValue(c)).filter((c): c is string => c !== null); return vals.length > 0 ? vals : undefined; })(),
     spatial: ds.spatialCoverage ? {
       bbox: stringValue(ds.spatialCoverage.box) ?? undefined,
       centroid: stringValue(ds.spatialCoverage.centroid) ?? undefined,
@@ -201,6 +188,72 @@ export function extractFromCroissant(croissant: unknown): ExtractedMetadata {
     documentation: extractStringFromValue(ds.documentation) ?? undefined,
     type: stringValue(ds.type) ?? undefined,
     distributions: distributions.length > 0 ? distributions : undefined,
+  };
+}
+
+/**
+ * Extract metadata values from Zenodo JSON API format.
+ * Zenodo's API returns rich metadata about datasets.
+ */
+export function extractFromZenodo(zenodoJson: unknown): ExtractedMetadata {
+  if (!zenodoJson || typeof zenodoJson !== "object") return {};
+
+  const z = zenodoJson as AnyRecord;
+  console.log(`[zenodo-extract] Extracting from Zenodo JSON`);
+
+  // Extract creators/contributors as agents
+  const creators: ExtractedAgent[] = [];
+  for (const creator of asArray(z.creators)) {
+    if (typeof creator === "object" && creator !== null) {
+      creators.push({
+        name: stringValue(creator.name) ?? stringValue(creator.given_name) ?? undefined,
+        url: stringValue(creator.orcid) ?? undefined,
+      });
+    }
+  }
+
+  // Extract contributors
+  const contributors: ExtractedAgent[] = [];
+  for (const contrib of asArray(z.contributors)) {
+    if (typeof contrib === "object" && contrib !== null) {
+      contributors.push({
+        name: stringValue(contrib.name) ?? stringValue(contrib.given_name) ?? undefined,
+        url: stringValue(contrib.orcid) ?? undefined,
+      });
+    }
+  }
+
+  // Combine creators and contributors, use creators as primary
+  const allCreators = creators.length > 0 ? creators : contributors.length > 0 ? contributors : undefined;
+
+  // Extract dates
+  let issued = stringValue(z.publication_date) ?? stringValue(z.created);
+  let modified = stringValue(z.updated);
+
+  // Extract keywords/subjects
+  const keywords = asArray(z.keywords).map((k) => stringValue(k)).filter((k): k is string => k !== undefined);
+  const subjects = asArray(z.subjects).filter((s) => typeof s === "object").map((s) => stringValue((s as AnyRecord).term)).filter((s): s is string => s !== undefined);
+
+  return {
+    title: stringValue(z.title) ?? undefined,
+    description: stringValue(z.description) ?? undefined,
+    identifier: stringValue(z.doi) ?? stringValue(z.record_id) ?? undefined,
+    version: stringValue(z.version) ?? undefined,
+    keywords: keywords.length > 0 ? keywords : undefined,
+    theme: subjects.length > 0 ? subjects : undefined,
+    subject: subjects.length > 0 ? subjects : undefined,
+    creator: allCreators,
+    publisher: z.communities && Array.isArray(z.communities) && z.communities.length > 0 ? [{
+      name: z.communities.map((c: any) => c.title ?? c.id).join(", "),
+      url: "https://zenodo.org"
+    }] : undefined,
+    license: stringValue(z.license?.id ?? z.license) ?? undefined,
+    rights: stringValue(z.access_right) ?? undefined,
+    issued,
+    modified,
+    inLanguage: z.language ? [z.language] : undefined,
+    // Note: Zenodo doesn't explicitly provide spatial/temporal in standard fields
+    type: "Dataset",
   };
 }
 

@@ -8,7 +8,7 @@ const dictSchema = z.object({
 	schemas: z.record(z.string(), z.boolean()),
 	customProperties: z.array(CustomPropertySchema),
 	inferencePercentage: z.number().min(0).max(100),
-	stopMetadata: z.boolean(),
+	stopMetadata: z.boolean().default(false),
 	useInheritedMetadata: z.boolean().default(true)
 })
 

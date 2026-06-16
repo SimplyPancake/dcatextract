@@ -72,8 +72,9 @@ async function cleanupSession(sessionId: string) {
   const processedFiles = await redis.smembers(`session:${sessionId}:files:processed`)
   const stoppedFiles = await redis.smembers(`session:${sessionId}:files:stopped`)
   const stoppedMetadata = await redis.smembers(`session:${sessionId}:metadata:stopped`)
+  const queuedMetadata = await redis.smembers(`session:${sessionId}:metadata:queued`)
 
-  const allFiles = [...unprocessedFiles, ...processedFiles, ...stoppedFiles, ...stoppedMetadata]
+  const allFiles = [...unprocessedFiles, ...processedFiles, ...stoppedFiles, ...stoppedMetadata, ...queuedMetadata]
 
   for (const file of allFiles) {
     try {
@@ -110,6 +111,20 @@ async function cleanupSession(sessionId: string) {
   const remaningMetadata = await redis.scard(`session:${sessionId}:metadata:stopped`)
   if (remaningMetadata === 0) {
     await redis.del(`session:${sessionId}:metadata:stopped`)
+  }
+
+  const remainingQueued = await redis.scard(`session:${sessionId}:metadata:queued`)
+  if (remainingQueued === 0) {
+    await redis.del(`session:${sessionId}:metadata:queued`)
+  }
+
+  // Stop all file jobs with that sessionId
+  const sessionJobs = (await fileQueue.getCompleted() as FileProcessJob[])
+    .filter(j => j.data?.sessionId == sessionId)
+
+  for (let index = 0; index < sessionJobs.length; index++) {
+    sessionJobs[index]?.moveToFailed(new Error("The job was running but the session wasn't up."), sessionJobs[index]?.token!)
+    
   }
 
   console.log(
