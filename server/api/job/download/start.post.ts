@@ -32,6 +32,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const redis = getRedis()
+  
+  // Move previously queued data to stopped to prevent processing old files
+  const queuedMetadata = await redis.smembers(`session:${sessionId}:metadata:queued`)
+  for (const file of queuedMetadata) {
+    await redis.sadd(`session:${sessionId}:metadata:stopped`, file)
+  }
+  await redis.del(`session:${sessionId}:metadata:queued`)
+  await redis.del(`session:${sessionId}:files:unprocessed`)
+  await redis.del(`session:${sessionId}:files:original-names`)
+  
   const jobData: DownloadJobDataType = {
     sessionId,
     sourceUrl: url,
