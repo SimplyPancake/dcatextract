@@ -213,12 +213,20 @@ interface CachedPhaseResult {
   timestamp: number
 }
 
+interface CachedRun {
+  'no-metadata'?: CachedPhaseResult
+  'base-metadata'?: CachedPhaseResult
+  'with-pdf'?: CachedPhaseResult
+}
+
+interface DistStats {
+  values: number[]
+  mean: number
+  sigma: number
+}
+
 interface ResultsCache {
-  [datasetName: string]: {
-    'no-metadata'?: CachedPhaseResult
-    'base-metadata'?: CachedPhaseResult
-    'with-pdf'?: CachedPhaseResult
-  }
+  [datasetName: string]: CachedRun[] | DistStats[] | undefined
 }
 
 interface TestRun {
@@ -510,7 +518,6 @@ async function loadCache(): Promise<ResultsCache> {
 async function saveCache(cache: ResultsCache): Promise<void> {
   try {
     await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2))
-    console.log(`💾 Cache saved to ${CACHE_FILE}`)
   } catch (err) {
     console.log(`⚠️ Failed to save cache: ${err instanceof Error ? err.message : err}`)
   }
@@ -531,18 +538,22 @@ async function runPhase(
   dataset: TestDataset,
   stopMetadata: boolean,
   uploadPDF: boolean,
-  cache: ResultsCache
+  cache: ResultsCache,
+  runIndex: number
 ): Promise<TestRun> {
   const phase = stopMetadata ? 'no-metadata' : uploadPDF ? 'with-pdf' : 'base-metadata'
-  const cached = cache[dataset.name]?.[phase as keyof typeof cache[string]]
   
-  if (cached) {
-    console.log(`   [${sessionId}] Phase: ${phase} - CACHED (${((Date.now() - cached.timestamp) / 1000 / 60).toFixed(1)}min old)`)
+  // Check if this exact run+phase is cached
+  const runs = cache[dataset.name] as CachedRun[] | undefined
+  const cachedRun = runs?.[runIndex]?.[phase as keyof CachedRun] as CachedPhaseResult | undefined
+  
+  if (cachedRun) {
+    console.log(`   [${sessionId}] Phase: ${phase} (run ${runIndex + 1}/5) - CACHED (${((Date.now() - cachedRun.timestamp) / 1000 / 60).toFixed(1)}min old)`)
     return {
-      descriptionSimilarity: cached.descriptionSimilarity,
-      descriptionConfidence: cached.descriptionConfidence,
-      keywordsSimilarity: cached.keywordsSimilarity,
-      keywordsConfidence: cached.keywordsConfidence
+      descriptionSimilarity: cachedRun.descriptionSimilarity,
+      descriptionConfidence: cachedRun.descriptionConfidence,
+      keywordsSimilarity: cachedRun.keywordsSimilarity,
+      keywordsConfidence: cachedRun.keywordsConfidence
     }
   }
   
@@ -551,7 +562,7 @@ async function runPhase(
     await new Promise(resolve => setTimeout(resolve, 2000))
   }
   
-  console.log(`   [${sessionId}] Phase: ${phase} - Starting download...`)
+  console.log(`   [${sessionId}] Phase: ${phase} (run ${runIndex + 1}/5) - Starting download...`)
   
   await startDownload(sessionId, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
   await waitForDownloadCompletion(sessionId)
@@ -593,9 +604,11 @@ async function runPhase(
     keywordsConfidence: results?.dataset?.['dataset.theme']?.result?.confidence
   }
   
-  // Cache this result with similarities
-  if (!cache[dataset.name]) cache[dataset.name] = {}
-  cache[dataset.name][phase as keyof typeof cache[string]] = {
+  // Cache this result
+  if (!cache[dataset.name]) cache[dataset.name] = []
+  const runsArray = cache[dataset.name] as CachedRun[]
+  if (!runsArray[runIndex]) runsArray[runIndex] = {}
+  runsArray[runIndex][phase as keyof CachedRun] = {
     description,
     descriptionConfidence: result.descriptionConfidence,
     descriptionSimilarity: result.descriptionSimilarity,
@@ -606,8 +619,8 @@ async function runPhase(
   }
   
   // Save cache to file immediately
-  console.log(`   [${sessionId}] Phase: ${phase} - Saving to cache...`)
   await saveCache(cache)
+  console.log(`   [${sessionId}] Phase: ${phase} (run ${runIndex + 1}/5) - Cached ✓`)
   
   return result
 }
@@ -643,54 +656,121 @@ async function computeSimilarities(
   return cosineSimilarity(embeddings[0], embeddings[1])
 }
 
+function calculateStats(values: number[]): DistStats {
+  const filtered = values.filter(v => v !== undefined)
+  if (filtered.length === 0) {
+    return { values: [], mean: 0, sigma: 0 }
+  }
+  const mean = filtered.reduce((a, b) => a + b) / filtered.length
+  const variance = filtered.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / filtered.length
+  const sigma = Math.sqrt(variance)
+  return { values: filtered, mean, sigma }
+}
+
+function extractPhaseValues(runs: CachedRun[] | undefined, phase: 'no-metadata' | 'base-metadata' | 'with-pdf', key: 'descriptionSimilarity' | 'keywordsSimilarity'): number[] {
+  if (!Array.isArray(runs)) return []
+  return runs.map(run => run[phase]?.[key]).filter(v => v !== undefined) as number[]
+}
+
 async function main() {
   const results: TestResult[] = []
   const cache = await loadCache()
   console.log(`\n${'='.repeat(100)}`)
-  console.log('Dataset Extraction Test Runner (3 Metadata Scenarios)')
+  console.log('Dataset Extraction Test Runner (5 Runs × 3 Metadata Scenarios with Stats)')
   console.log(`${'='.repeat(100)}\n`)
-  console.log(`📂 Cache file: ${CACHE_FILE}\n`)
+  console.log(`📂 Cache file: ${CACHE_FILE}`)
+  if (Object.keys(cache).length > 0) {
+    const datasetNames = Object.keys(cache).filter(k => !k.includes('.__stats__'))
+    console.log(`📂 Loaded cache with: ${datasetNames.join(', ')}\n`)
+  } else {
+    console.log(`📂 Starting fresh (no cache found)\n`)
+  }
 
+  const NUM_RUNS = 5
   const unDoneDatasets = TEST_DATASETS.filter(x => !x.processed)
-  for (let i = 0; i < unDoneDatasets.length; i++) {
-    const dataset = unDoneDatasets[i]
-    const startTime = Date.now()
-    
-    console.log(`\n[${'█'.repeat(i + 1)}${'░'.repeat(unDoneDatasets.length - i - 1)}] Testing ${i + 1}/${unDoneDatasets.length}: ${dataset.name}`)
+  
+  for (let datasetIdx = 0; datasetIdx < unDoneDatasets.length; datasetIdx++) {
+    const dataset = unDoneDatasets[datasetIdx]
+    console.log(`\n[${'█'.repeat(datasetIdx + 1)}${'░'.repeat(unDoneDatasets.length - datasetIdx - 1)}] Testing ${datasetIdx + 1}/${unDoneDatasets.length}: ${dataset.name}`)
     console.log('─'.repeat(100))
 
-    try {
-      // Run 3 phases sequentially
-      const noMetadata = await runPhase(await createSession(), dataset, true, false, cache)    // No metadata
-      const baseMetadata = await runPhase(await createSession(), dataset, false, false, cache)   // Base metadata only
-      const withPDF = await runPhase(await createSession(), dataset, false, true, cache)    // Base + PDF metadata
+    const runsData: TestResult[] = []
+    
+    // Run 5 times, each with 3 phases
+    for (let runIdx = 0; runIdx < NUM_RUNS; runIdx++) {
+      const startTime = Date.now()
+      console.log(`\n  Run ${runIdx + 1}/${NUM_RUNS}`)
+      
+      try {
+        // Run 3 phases sequentially
+        const noMetadata = await runPhase(await createSession(), dataset, true, false, cache, runIdx)
+        const baseMetadata = await runPhase(await createSession(), dataset, false, false, cache, runIdx)
+        const withPDF = await runPhase(await createSession(), dataset, false, true, cache, runIdx)
 
-      const duration = Date.now() - startTime
-      const result: TestResult = {
-        datasetName: dataset.name,
-        noMetadata,
-        baseMetadata,
-        withPDF,
-        status: 'success',
-        duration
-      }
+        const duration = Date.now() - startTime
+        const result: TestResult = {
+          datasetName: dataset.name,
+          noMetadata,
+          baseMetadata,
+          withPDF,
+          status: 'success',
+          duration
+        }
 
-      results.push(result)
-      console.log(`✅ Completed in ${(duration / 1000).toFixed(2)}s`)
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const result: TestResult = {
-        datasetName: dataset.name,
-        noMetadata: {},
-        baseMetadata: {},
-        withPDF: {},
-        status: 'failed',
-        error: error instanceof Error ? error.message : String(error),
-        duration
+        runsData.push(result)
+        console.log(`  ✅ Run ${runIdx + 1} completed in ${(duration / 1000).toFixed(2)}s`)
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const result: TestResult = {
+          datasetName: dataset.name,
+          noMetadata: {},
+          baseMetadata: {},
+          withPDF: {},
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+          duration
+        }
+        runsData.push(result)
+        console.log(`  ❌ Run ${runIdx + 1} failed: ${result.error}`)
       }
-      results.push(result)
-      console.log(`❌ Failed: ${result.error} - Partial results saved to cache`)
     }
+    
+    results.push(...runsData)
+    
+    // Calculate and save stats for this dataset
+    const successful = runsData.filter(r => r.status === 'success')
+    if (successful.length > 0) {
+      console.log(`\n  📊 Calculating statistics for ${dataset.name}...`)
+      
+      const stats = {
+        'no-metadata.descriptionSimilarity': calculateStats(successful.map(r => r.noMetadata.descriptionSimilarity).filter(v => v !== undefined) as number[]),
+        'base-metadata.descriptionSimilarity': calculateStats(successful.map(r => r.baseMetadata.descriptionSimilarity).filter(v => v !== undefined) as number[]),
+        'with-pdf.descriptionSimilarity': calculateStats(successful.map(r => r.withPDF.descriptionSimilarity).filter(v => v !== undefined) as number[]),
+        'no-metadata.keywordsSimilarity': calculateStats(successful.map(r => r.noMetadata.keywordsSimilarity).filter(v => v !== undefined) as number[]),
+        'base-metadata.keywordsSimilarity': calculateStats(successful.map(r => r.baseMetadata.keywordsSimilarity).filter(v => v !== undefined) as number[]),
+        'with-pdf.keywordsSimilarity': calculateStats(successful.map(r => r.withPDF.keywordsSimilarity).filter(v => v !== undefined) as number[])
+      }
+      
+      // Store stats in cache
+      if (!cache[`${dataset.name}.__stats__`]) {
+        cache[`${dataset.name}.__stats__`] = []
+      }
+      ;(cache[`${dataset.name}.__stats__`] as any) = stats
+      
+      // Print stats
+      console.log(`\n  Statistics for ${dataset.name}:`)
+      console.log(`    Description Similarity:`)
+      console.log(`      • No Metadata:   mean=${stats['no-metadata.descriptionSimilarity'].mean.toFixed(4)}, σ=${stats['no-metadata.descriptionSimilarity'].sigma.toFixed(4)}`)
+      console.log(`      • Base Metadata: mean=${stats['base-metadata.descriptionSimilarity'].mean.toFixed(4)}, σ=${stats['base-metadata.descriptionSimilarity'].sigma.toFixed(4)}`)
+      console.log(`      • With PDF:      mean=${stats['with-pdf.descriptionSimilarity'].mean.toFixed(4)}, σ=${stats['with-pdf.descriptionSimilarity'].sigma.toFixed(4)}`)
+      
+      console.log(`    Keywords Similarity:`)
+      console.log(`      • No Metadata:   mean=${stats['no-metadata.keywordsSimilarity'].mean.toFixed(4)}, σ=${stats['no-metadata.keywordsSimilarity'].sigma.toFixed(4)}`)
+      console.log(`      • Base Metadata: mean=${stats['base-metadata.keywordsSimilarity'].mean.toFixed(4)}, σ=${stats['base-metadata.keywordsSimilarity'].sigma.toFixed(4)}`)
+      console.log(`      • With PDF:      mean=${stats['with-pdf.keywordsSimilarity'].mean.toFixed(4)}, σ=${stats['with-pdf.keywordsSimilarity'].sigma.toFixed(4)}`)
+      
+      await saveCache(cache)
+      console.log(`\n  💾 Intermediate results saved to ${CACHE_FILE}`)
   }
 
   printResultsSummary(results)
@@ -704,13 +784,13 @@ function printResultsSummary(results: TestResult[]) {
   const successful = results.filter(r => r.status === 'success')
   const failed = results.filter(r => r.status === 'failed')
 
-  console.log(`Total: ${results.length} | ✅ Successful: ${successful.length} | ❌ Failed: ${failed.length}\n`)
+  console.log(`Total runs: ${results.length} | ✅ Successful: ${successful.length} | ❌ Failed: ${failed.length}\n`)
 
   console.log('Detailed Results:')
   console.log('─'.repeat(100))
   
   for (const result of results) {
-    console.log(`\n📊 ${result.datasetName}`)
+    console.log(`\n📊 ${result.datasetName} - Run`)
     console.log(`   Duration: ${(result.duration / 1000).toFixed(2)}s`)
     
     if (result.status === 'success') {
@@ -729,35 +809,6 @@ function printResultsSummary(results: TestResult[]) {
       console.log(`     • Keywords:    ${fmt(result.withPDF.keywordsSimilarity)} (conf: ${fmt(result.withPDF.keywordsConfidence)})`)
     } else {
       console.log(`   ❌ Error: ${result.error}`)
-    }
-  }
-
-  // Aggregate statistics
-  if (successful.length > 0) {
-    console.log(`\n${'─'.repeat(100)}`)
-    console.log('Aggregate Statistics:')
-    
-    const scenarios = [
-      { name: 'No Metadata', data: successful.map(r => ({ desc: r.noMetadata.descriptionSimilarity, descConf: r.noMetadata.descriptionConfidence, kw: r.noMetadata.keywordsSimilarity, kwConf: r.noMetadata.keywordsConfidence })) },
-      { name: 'Base Metadata', data: successful.map(r => ({ desc: r.baseMetadata.descriptionSimilarity, descConf: r.baseMetadata.descriptionConfidence, kw: r.baseMetadata.keywordsSimilarity, kwConf: r.baseMetadata.keywordsConfidence })) },
-      { name: 'With PDF', data: successful.map(r => ({ desc: r.withPDF.descriptionSimilarity, descConf: r.withPDF.descriptionConfidence, kw: r.withPDF.keywordsSimilarity, kwConf: r.withPDF.keywordsConfidence })) }
-    ]
-
-    for (const scenario of scenarios) {
-      const descScores = scenario.data.map(d => d.desc).filter(v => v !== undefined) as number[]
-      const descConfs = scenario.data.map(d => d.descConf).filter(v => v !== undefined) as number[]
-      const kwScores = scenario.data.map(d => d.kw).filter(v => v !== undefined) as number[]
-      const kwConfs = scenario.data.map(d => d.kwConf).filter(v => v !== undefined) as number[]
-      
-      if (descScores.length > 0) {
-        const avgDesc = descScores.reduce((a, b) => a + b) / descScores.length
-        const avgDescConf = descConfs.length > 0 ? descConfs.reduce((a, b) => a + b) / descConfs.length : NaN
-        const avgKw = kwScores.length > 0 ? kwScores.reduce((a, b) => a + b) / kwScores.length : NaN
-        const avgKwConf = kwConfs.length > 0 ? kwConfs.reduce((a, b) => a + b) / kwConfs.length : NaN
-        console.log(`\n  ${scenario.name}:`)
-        console.log(`    • Description (avg): ${avgDesc.toFixed(4)} (conf: ${avgDescConf.toFixed(4)})`)
-        if (kwScores.length > 0) console.log(`    • Keywords (avg):    ${avgKw.toFixed(4)} (conf: ${avgKwConf.toFixed(4)})`)
-      }
     }
   }
 
