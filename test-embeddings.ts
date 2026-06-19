@@ -182,6 +182,7 @@ const TEST_DATASETS: TestDataset[] = [
     publicationUrl: 'https://www.sciencedirect.com/science/article/pii/S2352340923002020#refdata001',
     publicationPdfPath: './publications/freiburg.pdf',
     groundTruth: {
+      description: `Dataset compiled for the purpose of long-term climate, land, energy and water systems (CLEWs) modelling in Laos. The set includes energy-specific data on Laos' energy generation technologies and future potential reserves, electricity generation and demand, electricity exports, emissions, and power transmission and distribution for the years 2020 to 2070. There is also land-specific data on annual crop demand, crop imports, and current and projected land cover changes. Water-specific data focuses on the water supply required for the energy and agriculture sectors, and the output activity ratios for evapotranspiration, groundwater recharge, and surface water run-off for different crop and land cover types. The original data sources are included in the file. `,
       keywords: ['research data management', 'research data services', 'user needs', 'technical infrastructure', 'experimental study', 'survey', 'employee demands', 'theory of planned behavior', 'unversity research']
     }
   },

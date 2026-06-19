@@ -1486,5 +1486,749 @@
       "sigma": 0.015587854910607789,
       "sem": 0.007793927455303894
     }
+  },
+  "Karakalpak": [
+    {
+      "no-metadata": {
+        "description": "Karakalpak language corpus and stopwords resources including URLs, bigrams, unigrams, and collocations",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9100390393830305,
+        "keywords": "Linguistics, Language Processing, Corpus Linguistics",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.5579643513554551,
+        "timestamp": 1781881179495
+      },
+      "base-metadata": {
+        "description": "Karakalpak language stopwords bigram list, Karakalpak stopwords bigrams with collocations, List of URLs for Karakalpak school corpus including Mother Tongue, Reading, and Literature books for grades 1-11, Karakalpak stopwords unigrams",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.7763590653675767,
+        "keywords": "Linguistics, Natural Language Processing, Educational Resources",
+        "keywordsConfidence": 0.65,
+        "keywordsSimilarity": 0.5400840678872141,
+        "timestamp": 1781881329875
+      },
+      "with-pdf": {
+        "description": "Collection of Karakalpak language stopwords and corpus URLs for educational materials including Mother Tongue, Reading, and Literature books across grades 1-11",
+        "descriptionConfidence": 0.85,
+        "descriptionSimilarity": 0.8514545801754698,
+        "keywords": "Linguistics, Natural Language Processing, Corpus Linguistics, Language Resources",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.5503068566188976,
+        "timestamp": 1781881465241
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Karakalpak stopwords unigrams, bigrams with collocations, and URLs for Karakalpak school corpus including Mother Tongue, Reading, and Literature books for grades 1-11",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.8209511382335707,
+        "keywords": "Language Processing,Educational Resources,Linguistics",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.5527579138084946,
+        "timestamp": 1781881573541
+      },
+      "base-metadata": {
+        "description": "Karakalpak language resources including stopwords lists, bigrams, unigrams, and URLs for educational materials",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8557908187028153,
+        "keywords": "Linguistics, Natural Language Processing, Educational Resources",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.5400840678872141,
+        "timestamp": 1781881703948
+      },
+      "with-pdf": {
+        "description": "Karakalpak language stopwords resources including bigrams, unigrams, collocations, and a school corpus URL list for educational materials",
+        "descriptionConfidence": 0.85,
+        "descriptionSimilarity": 0.8864550245626573,
+        "keywords": "Language processing, Natural language processing, Linguistic resources, Educational materials",
+        "keywordsConfidence": 0.65,
+        "keywordsSimilarity": 0.5327672699732895,
+        "timestamp": 1781881834303
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Karakalpak stopwords bigrams with collocations, Karakalpak stopwords unigrams, Karakalpak language stopwords bigram list, List of URLs for Karakalpak school corpus including Mother Tongue, Reading, and Literature books for grades 1-11",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7656768835845901,
+        "keywords": "Language Studies, Education, Corpus Linguistics, Literary Analysis",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.52102376410664,
+        "timestamp": 1781881982786
+      },
+      "base-metadata": {
+        "description": "List of URLs for Karakalpak school corpus including Mother Tongue, Reading, and Literature books for grades 1-11",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.6526082532673342,
+        "keywords": "Linguistics, Natural Language Processing, Educational Resources",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.5400840678872141,
+        "timestamp": 1781882133100
+      },
+      "with-pdf": {
+        "description": "Karakalpak language stopwords and corpus resources including bigrams, unigrams, and school corpus URLs",
+        "descriptionConfidence": 0.85,
+        "descriptionSimilarity": 0.8991353375196196,
+        "keywords": "Language processing, Corpus linguistics, Natural language resources",
+        "keywordsConfidence": 0.65,
+        "keywordsSimilarity": 0.5453274232725099,
+        "timestamp": 1781882283527
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Karakalpak language resources including school corpus URLs, stopwords unigrams, bigrams, and collocations for linguistic analysis",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.8677903678867194,
+        "keywords": "Linguistics, Language Resources, Natural Language Processing, Educational Materials",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.5398855421132964,
+        "timestamp": 1781882431905
+      },
+      "base-metadata": {
+        "description": "Karakalpak language stopwords and corpus resources including bigrams, unigrams, collocations, and school curriculum materials",
+        "descriptionConfidence": 0.85,
+        "descriptionSimilarity": 0.8862496138254027,
+        "keywords": "Linguistics, Natural Language Processing, Educational Resources, Language Corpora",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.5370359970497414,
+        "timestamp": 1781882582193
+      },
+      "with-pdf": {
+        "description": "Collection of Karakalpak language resources including school corpus URLs, stopwords lists (unigrams, bigrams), and collocation data",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.8677901591281099,
+        "keywords": "Natural Language Processing, Linguistics, Text Analysis",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.5084893297064338,
+        "timestamp": 1781882732658
+      }
+    }
+  ],
+  "Karakalpak.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.9100390393830305,
+        0.8209511382335707,
+        0.7656768835845901,
+        0.8677903678867194
+      ],
+      "mean": 0.8411143572719777,
+      "sigma": 0.0537577649850549,
+      "sem": 0.02687888249252745
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.7763590653675767,
+        0.8557908187028153,
+        0.6526082532673342,
+        0.8862496138254027
+      ],
+      "mean": 0.7927519377907822,
+      "sigma": 0.09031153651196444,
+      "sem": 0.04515576825598222
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.8514545801754698,
+        0.8864550245626573,
+        0.8991353375196196,
+        0.8677901591281099
+      ],
+      "mean": 0.8762087753464642,
+      "sigma": 0.01812633549338861,
+      "sem": 0.009063167746694306
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.5579643513554551,
+        0.5527579138084946,
+        0.52102376410664,
+        0.5398855421132964
+      ],
+      "mean": 0.5429078928459715,
+      "sigma": 0.01424578490677929,
+      "sem": 0.007122892453389645
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.5400840678872141,
+        0.5400840678872141,
+        0.5400840678872141,
+        0.5370359970497414
+      ],
+      "mean": 0.539322050177846,
+      "sigma": 0.0013198533888929406,
+      "sem": 0.0006599266944464703
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.5503068566188976,
+        0.5327672699732895,
+        0.5453274232725099,
+        0.5084893297064338
+      ],
+      "mean": 0.5342227198927827,
+      "sigma": 0.016173586463174405,
+      "sem": 0.008086793231587203
+    }
+  },
+  "Systems": [
+    {
+      "no-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Environmental Modeling",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.577465877282211,
+        "timestamp": 1781882880918
+      },
+      "base-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Geospatial Modeling, Data Configuration",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5415065175897376,
+        "timestamp": 1781883036181
+      },
+      "with-pdf": {
+        "description": "Techno-economic inputs for climate, land, energy, and water (CLEW) systems modeling in Lao PDR (Laos), supporting integrated resource system assessments and long-term decarbonization planning",
+        "descriptionConfidence": 1,
+        "descriptionSimilarity": 0.8761853820262835,
+        "keywords": "Climate, Land, Energy, Water, Integrated Resource Assessments, Decarbonization Planning",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.6802130650232318,
+        "timestamp": 1781883186600
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Data Modeling, Geographic Information Systems",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.49912119482822453,
+        "timestamp": 1781883314852
+      },
+      "base-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Geospatial Modeling, Data Configuration",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5415065175897376,
+        "timestamp": 1781883465123
+      },
+      "with-pdf": {
+        "description": "Techno-economic data for climate, land, energy, and water (CLEW) systems modeling in Lao PDR to support nexus-thinking approaches for integrated resource system assessments and decarbonization planning.",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8649268350671595,
+        "keywords": "Climate Change, Energy Systems, Water Resources, Land Use Planning, Decarbonization Strategies",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.6957576346907054,
+        "timestamp": 1781883635525
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Environmental Modeling, Data Configuration, Geographic Information Systems",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5660807053283642,
+        "timestamp": 1781883763826
+      },
+      "base-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Environmental Modeling, Data Inputs",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5537153503043106,
+        "timestamp": 1781883914160
+      },
+      "with-pdf": {
+        "description": "Integrated resource system modeling data for climate, land, energy, and water (CLEW) systems in Lao PDR (Laos), supporting decarbonization strategies using OSeMOSYS framework",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8776676391215723,
+        "keywords": "Climate change, Energy systems, Land use, Water resources, Policy analysis",
+        "keywordsConfidence": 0.85,
+        "keywordsSimilarity": 0.6573341475530224,
+        "timestamp": 1781884064578
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Geospatial Modeling, Data Configuration",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5415065175897376,
+        "timestamp": 1781884213059
+      },
+      "base-metadata": {
+        "description": "Model Configuration and Inputs for Laos",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7962413187213166,
+        "keywords": "Geospatial Modeling, Data Configuration",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5415065175897376,
+        "timestamp": 1781884368538
+      },
+      "with-pdf": {
+        "description": "Techno-economic inputs for climate, land, energy, and water (CLEW) systems modeling in Lao PDR (Laos), supporting integrated resource system assessments and long-term decarbonization planning",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8761853820262835,
+        "keywords": "Climate change mitigation, Energy systems, Land use planning, Water resource management, Sustainable development policy",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.6899882526831379,
+        "timestamp": 1781884538994
+      }
+    }
+  ],
+  "Systems.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.7962413187213166,
+        0.7962413187213166,
+        0.7962413187213166,
+        0.7962413187213166
+      ],
+      "mean": 0.7962413187213166,
+      "sigma": 0,
+      "sem": 0
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.7962413187213166,
+        0.7962413187213166,
+        0.7962413187213166,
+        0.7962413187213166
+      ],
+      "mean": 0.7962413187213166,
+      "sigma": 0,
+      "sem": 0
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.8761853820262835,
+        0.8649268350671595,
+        0.8776676391215723,
+        0.8761853820262835
+      ],
+      "mean": 0.8737413095603247,
+      "sigma": 0.005124890361068771,
+      "sem": 0.0025624451805343856
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.577465877282211,
+        0.49912119482822453,
+        0.5660807053283642,
+        0.5415065175897376
+      ],
+      "mean": 0.5460435737571343,
+      "sigma": 0.030046390479719576,
+      "sem": 0.015023195239859788
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.5415065175897376,
+        0.5415065175897376,
+        0.5537153503043106,
+        0.5415065175897376
+      ],
+      "mean": 0.5445587257683808,
+      "sigma": 0.005286579640687404,
+      "sem": 0.002643289820343702
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.6802130650232318,
+        0.6957576346907054,
+        0.6573341475530224,
+        0.6899882526831379
+      ],
+      "mean": 0.6808232749875244,
+      "sigma": 0.01465557385212094,
+      "sem": 0.00732778692606047
+    }
+  },
+  "Freiburg": [
+    {
+      "no-metadata": {
+        "description": "BE-KONFORM dataset including group A data, questionnaire, and codebook for data publication agreement",
+        "descriptionConfidence": 0.7,
+        "keywords": "Data Management, Research Data",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.7796810097314792,
+        "timestamp": 1781884687381,
+        "descriptionSimilarity": 0.5617789752899943
+      },
+      "base-metadata": {
+        "description": "Research data definition and survey on data publication agreement",
+        "descriptionConfidence": 0.9,
+        "keywords": "Data compliance, Survey research",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.728754636062395,
+        "timestamp": 1781884837708,
+        "descriptionSimilarity": 0.4981133100056514
+      },
+      "with-pdf": {
+        "description": "Research data management needs assessment evaluating employees' preferences for data publication (Group A) versus non-publication (Group B), including survey responses and qualitative interview insights from the Medical Faculty of the University of Freiburg",
+        "descriptionConfidence": 0.95,
+        "keywords": "Research Data Management, User Preferences, Data Publication, Qualitative Research, Survey Analysis",
+        "keywordsConfidence": 0.85,
+        "keywordsSimilarity": 0.8357677160247802,
+        "timestamp": 1781885108044,
+        "descriptionSimilarity": 0.45650666019378056
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "BE-KONFORM dataset codebook and questionnaire on research data definition and publication agreement",
+        "descriptionConfidence": 0.7,
+        "keywords": "Research Data Management",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.7426027225778684,
+        "timestamp": 1781885276389,
+        "descriptionSimilarity": 0.5672225830848933
+      },
+      "base-metadata": {
+        "description": "Questionnaire on research data definition and publication agreement",
+        "descriptionConfidence": 0.9,
+        "keywords": "Research Data Management",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.7426027225778684,
+        "timestamp": 1781885446680,
+        "descriptionSimilarity": 0.47863735466767104
+      },
+      "with-pdf": {
+        "description": "Assess research data management needs, including preferences for data publication, digital infrastructure, and user behavior in academic settings",
+        "descriptionConfidence": 0.95,
+        "keywords": "Academic research, Data management practices, Behavioral studies, Survey methodology",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.8157068900792236,
+        "timestamp": 1781885697050,
+        "descriptionSimilarity": 0.45863889747795417
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "BE-KONFORM dataset group A",
+        "descriptionConfidence": 0.15,
+        "keywords": "Research Data Management, Data Collection, Dataset Documentation",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.7843621985254383,
+        "timestamp": 1781885845430,
+        "descriptionSimilarity": 0.5132519521501826
+      },
+      "base-metadata": {
+        "description": "Codebook for BE-KONFORM dataset",
+        "descriptionConfidence": 0.45,
+        "keywords": "Research Data Management",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.7426027225778684,
+        "timestamp": 1781885995850,
+        "descriptionSimilarity": 0.5366033971748716
+      },
+      "with-pdf": {
+        "description": "Assess research data management needs of medical faculty employees; evaluate preferences for data publication and digital infrastructure",
+        "descriptionConfidence": 0.9,
+        "keywords": "Research Data Management, Survey on Medical Faculty, Data Publication Evaluation, Digital Infrastructure",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.7299724733098392,
+        "timestamp": 1781886286162,
+        "descriptionSimilarity": 0.43105224767075645
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "BE-KONFORM dataset group A including survey on research data practices and codebook",
+        "descriptionConfidence": 0.6,
+        "keywords": "Research Data Practices,Scientific Data Collection,Data Management",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.7823675117691437,
+        "timestamp": 1781886454367,
+        "descriptionSimilarity": 0.5668684642716456
+      },
+      "base-metadata": {
+        "description": "Codebook for BE-KONFORM dataset; Survey on research data practices and definitions of research data",
+        "descriptionConfidence": 0.65,
+        "keywords": "Research Data Management, Data Definitions, Survey Research",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.822364948745933,
+        "timestamp": 1781886604628,
+        "descriptionSimilarity": 0.5399770784966866
+      },
+      "with-pdf": {
+        "description": "BE-KONFORM study assessing research data management needs through surveys and interviews; includes survey responses, qualitative interviews, and preferences for data publication (group A vs. group B)",
+        "descriptionConfidence": 0.95,
+        "keywords": "Research Data Management, Survey Research, Qualitative Analysis, Data Publication Policies, Digital Infrastructure Needs, Behavioral Theories",
+        "keywordsConfidence": 0.85,
+        "keywordsSimilarity": 0.8786877560904515,
+        "timestamp": 1781886875036,
+        "descriptionSimilarity": 0.48005962618719017
+      }
+    }
+  ],
+  "Freiburg.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.5617789752899943,
+        0.5672225830848933,
+        0.5132519521501826,
+        0.5668684642716456
+      ],
+      "mean": 0.552280493699179,
+      "sigma": 0.022635829610413126,
+      "sem": 0.011317914805206563
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.4981133100056514,
+        0.47863735466767104,
+        0.5366033971748716,
+        0.5399770784966866
+      ],
+      "mean": 0.5133327850862202,
+      "sigma": 0.025917393155851703,
+      "sem": 0.012958696577925852
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.45650666019378056,
+        0.45863889747795417,
+        0.43105224767075645,
+        0.48005962618719017
+      ],
+      "mean": 0.4565643578824203,
+      "sigma": 0.01737240947394689,
+      "sem": 0.008686204736973445
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.7796810097314792,
+        0.7426027225778684,
+        0.7843621985254383,
+        0.7823675117691437
+      ],
+      "mean": 0.7722533606509824,
+      "sigma": 0.01719920286319008,
+      "sem": 0.00859960143159504
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.728754636062395,
+        0.7426027225778684,
+        0.7426027225778684,
+        0.822364948745933
+      ],
+      "mean": 0.7590812574910162,
+      "sigma": 0.036971657292749954,
+      "sem": 0.018485828646374977
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.8357677160247802,
+        0.8157068900792236,
+        0.7299724733098392,
+        0.8786877560904515
+      ],
+      "mean": 0.8150337088760736,
+      "sigma": 0.05412394051665021,
+      "sem": 0.027061970258325106
+    }
+  },
+  "Flows": [
+    {
+      "no-metadata": {
+        "description": "Steel, Glass, Plastic, and Lead Particles Data",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6426471425174106,
+        "keywords": "Materials Science, Particle Analysis",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6225037634102855,
+        "timestamp": 1781887083449
+      },
+      "base-metadata": {
+        "description": "Data on various particle materials including steel, lead, glass, and plastic",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.6487132635484402,
+        "keywords": "Material science, industrial data, particle analysis",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.5982167753105028,
+        "timestamp": 1781887397922
+      },
+      "with-pdf": {
+        "description": "Experimental data on temperature rise during granular flows in a small-scale rotating drum, focusing on heat generation from mechanical energy conversion (friction, collisions). Includes tables of temperature increases at specific times, averages, and standard deviations for different experimental setups.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9017756923459396,
+        "keywords": "Experimental physics, thermal analysis, granular materials science, mechanical engineering",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.6927544517335752,
+        "timestamp": 1781887628528
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Dataset containing steel, plastic, glass, and lead particles data in XLSX format",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6835781983761366,
+        "keywords": "Material Science, Environmental Data, Particle Analysis",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.5892437861732996,
+        "timestamp": 1781887796979
+      },
+      "base-metadata": {
+        "description": "Data on particles composed of various materials",
+        "descriptionConfidence": 0.5,
+        "descriptionSimilarity": 0.6829036167712794,
+        "keywords": "Materials Science",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5593413347394235,
+        "timestamp": 1781887967373
+      },
+      "with-pdf": {
+        "description": "Experimental data on temperature rise during granular flows in a rotating drum, focusing on heat generation from mechanical energy conversion (friction, collisions). Includes temperature measurements, rotation speeds, particle types, fill amounts, averages, and standard deviations for repeated experiments.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9050372280880851,
+        "keywords": "Material Science, Thermal Analysis, Mechanical Engineering, Experimental Physics, Granular Dynamics",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.6815611624954202,
+        "timestamp": 1781888217836
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Plastic, Glass, Steel, and Lead Particles Data",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.6426586655946345,
+        "keywords": "Environmental Science, Material Analysis",
+        "keywordsConfidence": 0.15,
+        "keywordsSimilarity": 0.5446063142094846,
+        "timestamp": 1781888406521
+      },
+      "base-metadata": {
+        "description": "Plastic particles data",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6699946184743629,
+        "keywords": "Particle analysis",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.6283471934553685,
+        "timestamp": 1781888576825
+      },
+      "with-pdf": {
+        "description": "Temperature rise during granular flows in a rotating drum, focusing on heat generation mechanisms (friction, collisions) and their impact on energy dissipation. Includes tables of temperature measurements, averages, standard deviations across varying particle types, rotation speeds, and drum fill levels.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8884088377339138,
+        "keywords": "Thermal analysis of granular materials, Mechanical energy conversion studies, Numerical modeling calibration, Chemical engineering simulations, Experimental data analysis",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.732553739130742,
+        "timestamp": 1781888847507
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Steel, Plastic, Lead, and Glass particles data",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6632900850901328,
+        "keywords": "Materials Science, Environmental Data",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5484101036698312,
+        "timestamp": 1781889075961
+      },
+      "base-metadata": {
+        "description": "Data on particles of various materials",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.6899877462089687,
+        "keywords": "Environmental Science, Materials Analysis",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.5453639377985724,
+        "timestamp": 1781889266424
+      },
+      "with-pdf": {
+        "description": "Experimental data on temperature rise during granular flows in a rotating drum, focusing on heat generation from mechanical energy conversion (friction, collisions). Includes tables of temperature increases, averages, and standard deviations across particle materials, rotation speeds, and drum fill levels.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8976656376033905,
+        "keywords": "Physical sciences, Thermal analysis, Mechanical engineering, Experimental physics, Materials science",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.6086486252266993,
+        "timestamp": 1781889577006
+      }
+    }
+  ],
+  "Flows.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.6426471425174106,
+        0.6835781983761366,
+        0.6426586655946345,
+        0.6632900850901328
+      ],
+      "mean": 0.6580435228945786,
+      "sigma": 0.01698005027729885,
+      "sem": 0.008490025138649425
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.6487132635484402,
+        0.6829036167712794,
+        0.6699946184743629,
+        0.6899877462089687
+      ],
+      "mean": 0.6728998112507628,
+      "sigma": 0.015696360094405407,
+      "sem": 0.007848180047202703
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.9017756923459396,
+        0.9050372280880851,
+        0.8884088377339138,
+        0.8976656376033905
+      ],
+      "mean": 0.8982218489428322,
+      "sigma": 0.0062386648384858715,
+      "sem": 0.0031193324192429358
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.6225037634102855,
+        0.5892437861732996,
+        0.5446063142094846,
+        0.5484101036698312
+      ],
+      "mean": 0.5761909918657253,
+      "sigma": 0.03195550758075932,
+      "sem": 0.01597775379037966
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.5982167753105028,
+        0.5593413347394235,
+        0.6283471934553685,
+        0.5453639377985724
+      ],
+      "mean": 0.5828173103259668,
+      "sigma": 0.03264961838598839,
+      "sem": 0.016324809192994196
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.6927544517335752,
+        0.6815611624954202,
+        0.732553739130742,
+        0.6086486252266993
+      ],
+      "mean": 0.6788794946466092,
+      "sigma": 0.04475769575457217,
+      "sem": 0.022378847877286084
+    }
   }
 }
