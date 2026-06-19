@@ -1,10 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import * as XLSX from "xlsx";
 import type { Distribution } from "../../../shared/types/dcat3.js";
 
 function baseDistribution(filePath: string): Distribution {
-    return { accessURL: filePath };
+    return { accessURL: [filePath] };
 }
 
 function inspectCsv(filePath: string): Distribution {
@@ -93,6 +94,34 @@ function inspectXml(filePath: string): Distribution {
     } catch { return baseDistribution(filePath); }
 }
 
+function inspectXlsx(filePath: string): Distribution {
+    try {
+        const workbook = XLSX.readFile(filePath);
+        const sheetNames = workbook.SheetNames;
+        if (sheetNames.length === 0) return baseDistribution(filePath);
+
+        const firstSheetName = sheetNames[0];
+        if (!firstSheetName) return baseDistribution(filePath);
+        const firstSheet = workbook.Sheets[firstSheetName]!;
+        const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
+        
+        const headers = (data[0] as string[])?.map(h => String(h).trim()) ?? [];
+        const rowCount = Math.max(0, data.length - 1);
+
+        const descriptionParts = [
+            `Sheets: ${sheetNames.join(", ")}`,
+            `Active sheet: ${firstSheetName}`,
+            `Columns: ${headers.join(", ")}`,
+            `Row count: ${rowCount}`,
+        ];
+
+        return {
+            ...baseDistribution(filePath),
+            description: descriptionParts.join("; "),
+        };
+    } catch { return baseDistribution(filePath); }
+}
+
 
 export function inspectFile(filePath: string): Distribution {
     const ext = path.extname(filePath).toLowerCase();
@@ -101,7 +130,7 @@ export function inspectFile(filePath: string): Distribution {
         case ".json": return inspectJson(filePath);
         case ".xml":return inspectXml(filePath);
         case ".pdf": return inspectPdf(filePath);
-        case ".xlsx": // TODO:!
+        case ".xlsx": return inspectXlsx(filePath);
         default: return baseDistribution(filePath);
     }
 }

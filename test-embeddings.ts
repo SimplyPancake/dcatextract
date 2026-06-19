@@ -10,19 +10,46 @@ const client = new OpenAI({
   apiKey: process.env.NUXT_LLM_TOKEN,
 })
 
-// Helper function to extract kaggleId from Kaggle URL
-function extractKaggleId(url: string): string {
-  const match = url.match(/\/datasets\/(.+)$/)
-  if (!match) {
-    throw new Error(`Invalid Kaggle URL format: ${url}`)
+// Helper functions to detect provider and extract identifiers
+function detectProvider(url: string): 'GitHub' | 'HuggingFace' | 'Zenodo' | 'Kaggle' {
+  if (url.includes('github.com')) return 'GitHub'
+  if (url.includes('huggingface.co')) return 'HuggingFace'
+  if (url.includes('zenodo.org')) return 'Zenodo'
+  if (url.includes('kaggle.com')) return 'Kaggle'
+  throw new Error(`Unknown provider in URL: ${url}`)
+}
+
+function extractIdentifier(url: string, provider: 'GitHub' | 'HuggingFace' | 'Zenodo' | 'Kaggle'): string {
+  switch (provider) {
+    case 'GitHub': {
+      const match = url.match(/github\.com\/([^\/]+)\/([^\/]+?)(?:\.git|\/)?$/)
+      if (!match) throw new Error(`Invalid GitHub URL format: ${url}`)
+      return `${match[1]}/${match[2]}`
+    }
+    case 'HuggingFace': {
+      const match = url.match(/huggingface\.co\/datasets\/(.+?)(?:\/|$)/)
+      if (!match) throw new Error(`Invalid HuggingFace URL format: ${url}`)
+      return match[1]
+    }
+    case 'Zenodo': {
+      const match = url.match(/zenodo\.org\/records?\/(\d+)/)
+      if (!match) throw new Error(`Invalid Zenodo URL format: ${url}`)
+      return match[1]
+    }
+    case 'Kaggle': {
+      const match = url.match(/kaggle\.com\/datasets\/(.+)$/)
+      if (!match) throw new Error(`Invalid Kaggle URL format: ${url}`)
+      return match[1]
+    }
+    default:
+      throw new Error(`Unknown provider: ${provider}`)
   }
-  return match[1]
 }
 
 // Test datasets configuration
 interface TestDataset {
   name: string
-  kaggleUrl: string
+  url: string  // Supports GitHub, HuggingFace, Zenodo, or Kaggle URLs
   publicationUrl?: string
   publicationPdfPath?: string  // Local path to publication PDF for testing
   groundTruth?: {
@@ -38,166 +65,31 @@ interface TestDataset {
 
 const TEST_DATASETS: TestDataset[] = [
   {
-    name: 'HTTPS',
-    kaggleUrl: "https://www.kaggle.com/datasets/inhngcn/https-traffic-classification",
-    publicationUrl: "https://www.nature.com/articles/s41598-025-21261-6",
-    publicationPdfPath: "./publications/https.pdf",
+    name: 'ArmourTraits',
+    url: "https://zenodo.org/records/20407495",
+    publicationUrl: "https://www.sciencedirect.com/science/article/pii/S2352340926004567",
+    publicationPdfPath: "./publications/armour.pdf",
     groundTruth: {
-      description: 'Network Traffic Data to classify web activities',
-      keywords: ['business', 'internet', 'https']
+      description: 'ArmourTraits is a comparative dataset quantifying variation in defensive morphology across 131 squamate species belonging to two distantly related lineages, Cordyliformes and Anguimorpha, which independently evolved osteoderm-based body armour. The dataset integrates micro-computed tomography–derived morphological measurements of osteoderm expression and hindlimb skeletal traits with species-level ecological, life-history, and environmental variables. It also includes estimates of predation risk and a time-calibrated phylogeny for all included taxa. By combining quantitative metrics of armour development with locomotor morphology and ecological context, ArmourTraits provides a standardized framework for comparative analyses of defensive trait evolution. The dataset is designed to facilitate phylogenetic comparative studies addressing ecological correlates of armour variation, functional trade-offs between defence and locomotion, convergent evolution, and macroevolutionary diversification of defensive traits in squamates.',
+      keywords: ['Predator-Prey Interactions', 'Squamata']
     }
   },
-  {
-    name: 'SHAAD',
-    kaggleUrl: 'https://www.kaggle.com/datasets/emnard1/stroke-based-handwritingdata-for-alzheimer-disease',
-    publicationPdfPath: "./publications/shaad.pdf",
-    groundTruth: {
-      description: "Stroke-Level Handwriting Dynamics for Early Alzheimer's Detection",
-      keywords: ['tabular', 'artificial intelligence', 'europe', 'diseases']
-    }
-  },
-  // {
-  //   name: 'Credit card fraud',
-  //   kaggleUrl: 'https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud',
-  //   publicationUrl: 'https://arxiv.org/pdf/1904.10604',
-  //   publicationPdfPath: './publications/creditcard.pdf',
-  //   groundTruth: {
-  //     description: 'Archive containing all the contents of the Credit Card Fraud Detection dataset',
-  //     keywords: ['finance', 'government', 'crime']
-  //   },
-  //   processed: false
-  // },
-  {
-    name: 'MedCost',
-    kaggleUrl: 'https://www.kaggle.com/datasets/mirichoi0218/insurance',
-    publicationUrl: 'https://arxiv.org/pdf/2304.12605',
-    publicationPdfPath: './publications/medcost.pdf',
-    groundTruth: {
-      description: 'Medical Cost Personal Datasets Insurance Forecast by using Linear Regression',
-      keywords: ['healthcare', 'finance', 'insurance', 'education', 'health']
-    },
-    processed: false,
-  },
-  {
-    name: 'AES-data',
-    kaggleUrl: 'https://www.kaggle.com/datasets/jaytonde/aes-dataset',
-    publicationUrl: 'https://arxiv.org/pdf/1909.09482',
-    publicationPdfPath: './publications/automatedessay.pdf',
-    groundTruth: {
-      description: 'Archive containing all the contents of the AES-DATASET dataset',
-      keywords: []
-    },
-    processed: false,
-  },
-  {
-    name: 'NoShows',
-    kaggleUrl: 'https://www.kaggle.com/datasets/joniarroba/noshowappointments',
-    publicationUrl: 'https://arxiv.org/pdf/2010.00509',
-    publicationPdfPath: './publications/noShows.pdf',
-    groundTruth: {
-      description: '10.527 medical appointments its 14 associated variables (characteristics). The most important one if the patient show-up or no-show to the appointment.',
-      keywords: ['health', 'public health', 'healthcare']
-    },
-    processed: false
-  }
 ]
 
 // Schema keys to process: dataset description and keywords
 const SCHEMA_KEYS = {
-  "dataset.versionNotes": true,
-  "dataset.hasCurrentVersion": true,
-  "dataset.hasVersion": true,
-  "dataset.previousVersion": true,
-  "dataset.version": true,
-  "dataset.creator": true,
   "dataset.description": true,
   "distribution.description": true,
   "dataService.description": true,
-  "catalogRecord.description": true,
-  "dataset.license": true,
-  "distribution.license": true,
-  "dataset.modified": true,
-  "distribution.modified": true,
-  "catalogRecord.modified": true,
-  "dataset.publisher": true,
-  "dataset.title": true,
   "distribution.title": true,
-  "dataService.title": true,
-  "catalogRecord.title": true,
-  "distribution.accessService": true,
-  "distribution.accessURL": true,
-  "distribution.byteSize": true,
   "dataset.catalog": true,
-  "dataService.catalog": true,
-  "distribution.compressFormat": true,
-  "dataset.contactPoint": true,
-  "dataset.dataset": true,
-  "dataService.dataset": true,
-  "dataset.distribution": true,
-  "dataService.distribution": true,
-  "distribution.downloadURL": true,
-  "dataset.endpointDescription": true,
-  "dataService.endpointDescription": true,
-  "dataset.endpointURL": true,
   "dataService.endpointURL": true,
-  "dataset.first": true,
-  "dataset.inSeries": true,
   "dataset.keyword": true,
-  "dataset.landingPage": true,
-  "dataset.last": true,
-  "distribution.mediaType": true,
-  "distribution.packageFormat": true,
-  "dataset.prev": true,
-  "dataset.qualifiedRelation": true,
-  "dataService.qualifiedRelation": true,
-  "dataset.record": true,
-  "dataService.record": true,
-  "dataset.resource": true,
-  "dataService.resource": true,
-  "dataset.servesDataset": true,
-  "dataService.servesDataset": true,
-  "dataset.service": true,
-  "dataService.service": true,
-  "dataset.spatialResolutionInMeters": true,
-  "distribution.spatialResolutionInMeters": true,
-  "dataset.temporalResolution": true,
-  "distribution.temporalResolution": true,
   "dataset.theme": true,
-  "dataset.themeTaxonomy": true,
-  "dataService.themeTaxonomy": true,
-  "dataset.uri": true,
   "distribution.uri": true,
-  "catalogRecord.uri": true,
-  "distribution.issued": true,
-  "distribution.rights": true,
-  "distribution.conformsTo": true,
   "distribution.language": true,
   "distribution.format": true,
-  "distribution.spatial": true,
-  "distribution.temporal": true,
-  "dataset.identifier": true,
-  "dataset.issued": true,
   "dataset.language": true,
-  "dataset.wasAttributedTo": true,
-  "dataset.rightsHolder": true,
-  "dataset.rights": true,
-  "dataset.accessRights": true,
-  "dataset.conformsTo": true,
-  "dataset.type": true,
-  "dataset.isVersionOf": true,
-  "dataset.nextVersion": true,
-  "dataset.qualifiedAttribution": true,
-  "dataset.inCatalog": true,
-  "dataset.spatial": true,
-  "dataset.temporal": true,
-  "dataset.accrualPeriodicity": true,
-  "dataset.next": true,
-  "catalogRecord.primaryTopic": true,
-  "catalogRecord.issued": true,
-  "catalogRecord.language": true,
-  "catalogRecord.conformsTo": true,
-  "catalogRecord.status": true,
-  "catalogRecord.source": true
 }
 
 const INFERENCE_PERCENTAGE = 60
@@ -318,6 +210,11 @@ async function waitForDownloadCompletion(sessionId: string, maxWaitSeconds: numb
       throw new Error(`Download failed: ${data.errorMessage || 'Unknown error'}`)
     }
 
+    // Log progress message if available
+    if (data.job?.progress?.message) {
+      console.log(`   [${sessionId}] ⏳ ${data.job.progress.message}`)
+    }
+
     // Wait 5 seconds before polling again
     await new Promise(resolve => setTimeout(resolve, 5000))
   }
@@ -356,7 +253,8 @@ async function startProcessing(
     schemas,
     customProperties: [],
     inferencePercentage,
-    stopMetadata
+    stopMetadata,
+    useInheritedMetadata: false
   }
 
   const response = await fetch(`${API_BASE}/api/job/process/start`, {
@@ -410,7 +308,12 @@ async function waitForProcessingCompletion(sessionId: string, maxWaitSeconds: nu
         await new Promise(resolve => setTimeout(resolve, 20000))
         continue
       }
-      console.log(`   [${sessionId}] Poll #${pollCount}: ${JSON.stringify(data).substring(0, 120)}...`)
+      // Log progress message if available
+      if (data.progress?.message) {
+        console.log(`   [${sessionId}] ⏳ ${data.progress.message}`)
+      } else {
+        console.log(`   [${sessionId}] Poll #${pollCount}: ${JSON.stringify(data).substring(0, 120)}...`)
+      }
 
       // If job has a returnvalue, it's definitely done
       if (data?.returnvalue) {
@@ -564,7 +467,9 @@ async function runPhase(
   
   console.log(`   [${sessionId}] Phase: ${phase} (run ${runIndex + 1}/5) - Starting download...`)
   
-  await startDownload(sessionId, dataset.kaggleUrl, 'Kaggle', extractKaggleId(dataset.kaggleUrl))
+  const provider = detectProvider(dataset.url)
+  const identifier = extractIdentifier(dataset.url, provider)
+  await startDownload(sessionId, dataset.url, provider, identifier)
   await waitForDownloadCompletion(sessionId)
   console.log(`   [${sessionId}] Download complete`)
   
@@ -771,6 +676,7 @@ async function main() {
       
       await saveCache(cache)
       console.log(`\n  💾 Intermediate results saved to ${CACHE_FILE}`)
+    }
   }
 
   printResultsSummary(results)

@@ -19,7 +19,9 @@ Confidence rubric (guideline):
 - 0.40-0.70: partial but meaningful evidence.
 - 0.80-1.00: direct, explicit evidence (e.g., text appears verbatim in content or metadata).
 
-If you cannot derive a value, return null with a low zero confidence.
+If you cannot derive a value, return null with a LOW confidence (e.g., 0.05-0.15).
+NEVER return undefined, empty strings, or missing fields.
+NEVER omit a required field.
 FOCUS ON GIVING ANSWER WITH LOW CONFIDENCE RATHER THAN RETURNING NON-DERIVABLE.
 
 Heuristics:
@@ -34,14 +36,20 @@ Examples:
     Output: { "distribution.description": { "value": "Monthly rainfall measurements for 1990-2000", "confidence": 0.9 } }
 
 2) Content: "Random binary data with no textual cues"
-    Output: { "distribution.description": { "value": "incoherent binary data", "confidence": 0.10 } }
+    Output: { "distribution.description": { "value": null, "confidence": 0.05 } }
 
 FOCUS ON GIVING ANSWER WITH LOW CONFIDENCE RATHER THAN RETURNING NON-DERIVABLE.
 
 Output format requirements:
 - Each property key maps to an object with fields: { "value": <string|null>, "confidence": <number 0..1> }
-- Confidence is required even when value is null.`;
-
+- Confidence is required even when value is null.
+- ALL property keys MUST be present in output (missing keys will cause validation failure).
+- Ensure all strings are double-quoted and properly escaped.
+- Return ONLY the JSON object, no markdown or text.
+- NEVER return undefined, empty arrays, or skip fields. Every key must have { "value": ..., "confidence": ... }
+- IMPORTANT: All values MUST be strings or null. NO ARRAYS. If multiple items (e.g., keywords), join them with ", " in a single string.
+- For multi-value fields like "keyword" or "theme": return as single string with comma-separated values, NOT an array.
+`
 type DerivationKey = {
     key: string;
     description?: string;
@@ -96,6 +104,7 @@ function normalizeResults(
         ) {
             normalized[item.outputKey] = candidate;
         } else {
+            // Fallback: ensure no undefined values
             normalized[item.outputKey] = { value: null, confidence: 0 };
         }
     }
@@ -210,7 +219,7 @@ Context class: ${contextType}.`;
     const raw = await queryContextualResults(
         contextType,
         systemPrompt,
-        `${hints}\n\nContent:\n${content}`.trim(),
+        `${hints}\n\nREQUIRED: Include all of the following keys in your JSON response (use null with confidence 0 if you cannot derive):\n${preparedKeys.map(k => `- ${k.modelKey}`).join('\n')}\n\nContent:\n${content}`.trim(),
         schema
     );
 
@@ -253,7 +262,7 @@ If evidence is direct, confidence should be high. If evidence is weak, use a low
     const raw = await queryContextualResults(
         contextType,
         systemPrompt,
-        `${hints}\n\nContent:\n${content}`.trim(),
+        `${hints}\n\nREQUIRED: Include all of the following keys in your JSON response (use null with confidence 0 if you cannot derive):\n${preparedKeys.map(k => `- ${k.modelKey}`).join('\n')}\n\nContent:\n${content}`.trim(),
         schema
     );
 

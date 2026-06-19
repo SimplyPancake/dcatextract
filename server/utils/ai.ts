@@ -129,11 +129,11 @@ export async function queryModelNoSchema(
 			return response.output_text
 		} catch (error) {
 			lastError = error
+			const errorMsg = error instanceof Error ? error.message : String(error)
 
-			// Retry hint
 			if (attempt < maxRetries) {
 				console.warn(
-					`Retry ${attempt}/${maxRetries} failed for model ${modelName}`
+					`Retry ${attempt}/${maxRetries} failed for model ${modelName}: ${errorMsg}`
 				)
 			}
 		}
@@ -167,22 +167,20 @@ export async function queryModel<T extends z.ZodTypeAny>(
 	let systemPrompt = system
 	if (useJSONOutput) {
 		
-		systemPrompt += `		
-		You are also a JSON generation engine.
-		
-		STRICT RULES:
-		- Return ONLY valid JSON
-		- No markdown
-		- Do NOT begin output with backticks
-		- No explanations
-		- No text before or after JSON
-		- Do not use code blocks.
-		- Do not wrap output in \`\`\` or any formatting.
-		- Output must start with { and end with }.
-		- All required fields must exist
-		- No extra keys
-		- Required keys: ${schemaKeys}
-		- Return ONLY valid JSON
+		systemPrompt += `
+
+You MUST respond with ONLY a valid JSON object, nothing else.
+
+JSON Rules:
+- Begin with { and end with }
+- Include all required fields: ${schemaKeys}
+- No extra fields
+- No markdown, backticks, or formatting
+- No text before or after JSON
+- Ensure all values are properly escaped
+- Double-check the JSON is valid before responding
+- DO NOT RETURN UNDEFINED VALUES. RATHER EMPTY STRING.
+- ALWAYS RETURN STRING TYPE.
 		`
 	}
 
@@ -191,6 +189,8 @@ export async function queryModel<T extends z.ZodTypeAny>(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
+			console.debug(`[queryModel] Attempt ${attempt}/${maxRetries} for schema keys: ${schemaKeys}`)
+			
 			const response = await getAI().responses.parse({
 				model: modelName,
 				input: [
@@ -209,6 +209,8 @@ export async function queryModel<T extends z.ZodTypeAny>(
 				temperature: 0
 			})
 
+			console.debug(`[queryModel] Response received, output_parsed:`, JSON.stringify(response.output_parsed).slice(0, 200))
+
 			if (!response.output_parsed) {
 				throw new Error("Model returned empty parsed output")
 			}
@@ -216,11 +218,16 @@ export async function queryModel<T extends z.ZodTypeAny>(
 			return response.output_parsed
 		} catch (error) {
 			lastError = error
+			const errorMsg = error instanceof Error ? error.message : String(error)
+			
+			console.debug(`[queryModel] Error on attempt ${attempt}:`, errorMsg)
+			if (error instanceof Error && 'cause' in error) {
+				console.debug(`[queryModel] Error cause:`, error.cause)
+			}
 
-			// Retry hint
 			if (attempt < maxRetries) {
 				console.warn(
-					`Retry ${attempt}/${maxRetries} failed for model ${modelName}`
+					`Retry ${attempt}/${maxRetries} failed for model ${modelName}: ${errorMsg}`
 				)
 			}
 		}
