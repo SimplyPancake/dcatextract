@@ -1,0 +1,33 @@
+{
+  "ArmourTraits": [
+    {
+      "no-metadata": {
+        "description": "Predation risk analysis across birds, mammals, snakes, and armour traits with outgroups",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.7873486294201689,
+        "keywords": "ecology,evolutionary biology,animal behavior,predation analysis",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.6942381858265446,
+        "timestamp": 1781859585013
+      },
+      "base-metadata": {
+        "description": "Predation Risk – Mammals, Predation Risk – Snakes, Predation Risk – Birds, Armour Traits, Armour Traits W Outgroups",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.7089714799594847,
+        "keywords": "Ecology, Biology, Zoology",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.6214059243370105,
+        "timestamp": 1781859740324
+      },
+      "with-pdf": {
+        "description": "ArmourTraits dataset is a comparative resource analyzing ecological and evolutionary correlates of dermal armor in squamates (lizards and snakes). It includes morphological data from 131 species across two lineages (Cordyliformes and Anguimorpha), integrating osteoderm measurements, hindlimb skeletal traits, ecological variables, predation risk estimates, and a time-calibrated phylogeny.",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.9243910628968164,
+        "keywords": "Ecological and evolutionary analysis of defensive traits in reptiles, Phylogenetic comparative studies, Morphological adaptation in squamates",
+        "keywordsConfidence": 0.85,
+        "keywordsSimilarity": 0.8032713175024214,
+        "timestamp": 1781860050688
+      }
+    }
+  ]
+}

@@ -5,7 +5,26 @@ import * as XLSX from "xlsx";
 import type { Distribution } from "../../../shared/types/dcat3.js";
 
 function baseDistribution(filePath: string): Distribution {
-    return { accessURL: [filePath] };
+    const fileName = path.basename(filePath);
+    const ext = path.extname(fileName).toLowerCase().slice(1) || "unknown";
+    const stats = fs.statSync(filePath);
+    
+    let preview = "";
+    try {
+        const head = fs.readFileSync(filePath, "utf8").slice(0, 500);
+        // Extract printable strings, truncate to 200 chars
+        preview = head.replace(/[^\x20-\x7E\n\t]/g, "").trim().slice(0, 200);
+    } catch {
+        // Binary file or read error, skip preview
+    }
+    
+    return {
+        accessURL: [filePath],
+        title: fileName,
+        format: ext,
+        byteSize: stats.size,
+        ...(preview && { description: preview }),
+    };
 }
 
 function inspectCsv(filePath: string): Distribution {

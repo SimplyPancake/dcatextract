@@ -74,6 +74,48 @@ const TEST_DATASETS: TestDataset[] = [
       keywords: ['Predator-Prey Interactions', 'Squamata']
     }
   },
+  {
+    name: 'HoneyPot',
+    url: 'https://zenodo.org/records/20435481',
+    publicationPdfPath: './publications/honeypot.pdf',
+    publicationUrl: 'https://www.sciencedirect.com/science/article/pii/S2352340926004129#refdata001',
+    groundTruth: {
+      // 'Overview' part of the DCAT description was taken since it's description had multiple headers in it (like Overview, Research Context, Affiliation etc)
+      description: 'This dataset contains 145,425 security events collected by a custom multi-threaded SSH Honeypot. The data reflects real-world automated and manual attack patterns against Linux-based systems, captured over a focused 4-month observation window from July 27, 2025, to November 14, 2025.',
+      keyword: ['Cybersecurity', 'SSH Honeypot', 'Botnet Analysis', 'Threat Intelligence', 'Intrusion Detection', 'Open Data']
+    }
+  },
+  {
+    name: 'Occupancy',
+    url: 'https://zenodo.org/records/20548374',
+    publicationUrl: 'https://www.sciencedirect.com/science/article/pii/S2352340926004981#refdata001',
+    publicationPdfPath: './publications/occupancy.pdf',
+    groundTruth: {
+      description: 'This dataset presents a multimodal dataset collected in a real smart environment located at the Pontifical Catholic University of Rio Grande do Sul (PUCRS), Brazil. The dataset documents environmental, electrical, and device-interaction measurements collected from a heterogeneous Internet of Things (IoT) deployment composed of commercial smart devices and a custom ESP32-based sensing node. Environmental variables include carbon dioxide concentration, temperature, relative humidity, light intensity, and sound pressure level. Electrical measurements include instantaneous power, voltage, current, and device-state measurements collected from smart sockets, switches, and a dedicated server. Data were collected continuously under routine academic workspace operation, reflecting natural occupancy fluctuations, restricted-access conditions, and heterogeneous network behavior. The custom sensing node was programmed in Arduino C++ and exposed measurements via HTTP requests, while commercial Tuya-based devices were polled locally through the Tuya LAN protocol using the TuyAPI library. Records were stored in structured JSON format, with a common timestamp assigned at the end of each acquisition cycle. Each record therefore represents the aggregation of values collected within the same 10-second polling window rather than perfectly simultaneous measurements acquired at the exact same instant. These data can support research in occupancy detection, energy usage analysis, anomaly detection, and smart-building experimentation. The dataset also provides a documented example of a real-world IoT deployment suitable for replication or comparative studies.',
+      keyword: ['Internet of Things', 'Dataset', 'Occupancy Estimation', 'IoT']
+    }
+  },
+  {
+    name: 'CannabisUse',
+    url: 'https://zenodo.org/records/20214862',
+    publicationUrl: 'https://www.sciencedirect.com/science/article/pii/S2352340926004592#refdata001',
+    publicationPdfPath: './publications/cannabis.pdf',
+    groundTruth: {
+      keyword: ['natural language processing', 'sentiment analysis', 'cannabis', 'pain management', 'autoimmune rheumatic disease'],
+      description: 'Abstract Using publicly accessible Reddit posts, we developed a manually annotated dataset for traditional and aspect-based sentiment analysis (ABSA) of cannabis-related discussions in the context of pain management. The dataset consists of 479 post-aspect pairs extracted from specific Reddit communities associated with autoimmune rheumatic diseases (ARDs). We filtered posts using a structured list of cannabis-related terms and extracted context using rule-based sentence segmentation. Subsequently, we manually annotated each post for both traditional and aspect-specific sentiment (positive, negative, neutral). Inter-annotator reliability was assessed using Krippendorff’s ⍺, yielding ⍺ = 0.604 for traditional sentiment and ⍺ = 0.526 for aspect-based sentiment. The dataset offers valuable resources for training, benchmarking, and evaluating machine learning models for ABSA in health-related social media contexts. This dataset can support research in natural language processing, public health informatics, pain medicine, digital epidemiology, and social media-based health monitoring.   File structure cannabis_reddit_absa.csv: Dataset containing Reddit post IDs, matched aspect terms, final traditional and aspect-based sentiment labels, and individual annotator labels for each post–aspect pair. reddit_data_pipeline.ipynb: Jupyter Notebook containing functions for sentence segmentation with spaCy, and matching posts to the cannabis term list to generate post–aspect pairs for annotation. cannabis_lexicon.csv: Complete list of cannabis-related terms used to filter and match relevant content in Reddit posts, including abbreviations, synonyms, and common spellings. annotation_guidelines.pdf: Detailed instructions for annotators, including definitions of sentiment labels (neutral, positive, negative, blank), rules for assigning traditional vs. aspect-based labels, guidance for handling personal experience vs. general commentary, and illustrative examples. top_subreddits_weekly_extraction.py: Python script implementing a data extraction and processing workflow for Reddit using PRAW, with outputs stored in MongoDB. Compatibility with newer versions of PRAW is not guaranteed, and the script may require updates to run.'
+    }
+  },
+  {
+    name: 'ANEST',
+    url: 'https://zenodo.org/records/18680687',
+    publicationUrl: 'https://www.sciencedirect.com/science/article/pii/S2352340926001964#refdata001',
+    publicationPdfPath: './publications/anest.pdf',
+    groundTruth: {
+      // Description was very long, only describing part was taken from reference description
+      description: 'ANEST Narrative–Affect Representations (ANAD v1) is a large-scale, fully curated research resource designed to quantify narrative–affect discrepancy using derived, non-identifiable feature representations of human-generated text.',
+      keyword: ['narrative-affect discrepancy', 'affective computing', 'NADI', 'Length-of-Context', 'VADER sentiment', 'derived feature dataset', 'computational psychology', 'emotion AI', 'ANEST']
+    }
+  }
 ]
 
 // Schema keys to process: dataset description and keywords
