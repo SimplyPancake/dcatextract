@@ -48,6 +48,15 @@ export default defineEventHandler(async (event) => {
 
 
 	const redis = getRedis()
+	
+	// Mark session as active to prevent cleanup worker from cleaning it up
+	await redis.set(
+		`session:${sessionId}`,
+		JSON.stringify({ connected: true, lastSeen: Date.now() }),
+		'EX',
+		15 * 60  // 15 minutes
+	)
+	
 	queueData.metadataFiles = await redis.smembers(`session:${sessionId}:metadata:queued`)
 	queueData.filePaths = await redis.smembers(`session:${sessionId}:files:unprocessed`)
 	queueData.originalNames = await redis.hgetall(`session:${sessionId}:files:original-names`)

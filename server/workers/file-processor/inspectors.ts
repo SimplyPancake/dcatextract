@@ -141,6 +141,25 @@ function inspectXlsx(filePath: string): Distribution {
     } catch { return baseDistribution(filePath); }
 }
 
+function inspectTxt(filePath: string): Distribution {
+    try {
+        const content = fs.readFileSync(filePath, "utf8");
+        const lineCount = content.split(/\r?\n/).length - 1;
+        const charCount = content.length;
+        
+        return {
+            ...baseDistribution(filePath),
+            description: `Lines: ${lineCount}; Characters: ${charCount}`,
+        };
+    } catch { return baseDistribution(filePath); }
+}
+
+function inspectImage(filePath: string): Distribution {
+    return {
+        ...baseDistribution(filePath),
+        description: "Image file",
+    };
+}
 
 export function inspectFile(filePath: string): Distribution {
     const ext = path.extname(filePath).toLowerCase();
@@ -150,6 +169,14 @@ export function inspectFile(filePath: string): Distribution {
         case ".xml":return inspectXml(filePath);
         case ".pdf": return inspectPdf(filePath);
         case ".xlsx": return inspectXlsx(filePath);
+        case ".txt": return inspectTxt(filePath);
+        case ".jpg":
+        case ".jpeg":
+        case ".png":
+        case ".gif":
+        case ".bmp":
+        case ".svg":
+        case ".webp": return inspectImage(filePath);
         default: return baseDistribution(filePath);
     }
 }

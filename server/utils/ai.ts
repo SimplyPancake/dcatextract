@@ -170,7 +170,7 @@ export async function queryModel<T extends z.ZodTypeAny>(
 		systemPrompt += `
 
 You MUST respond with ONLY a valid JSON object, nothing else.
-
+IF ASKED FOR DESCRIPTION, YOU MUST GIVE A DESCRIPTION.
 JSON Rules:
 - Begin with { and end with }
 - Include all required fields: ${schemaKeys}

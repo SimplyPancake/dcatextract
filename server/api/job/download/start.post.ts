@@ -33,6 +33,16 @@ export default defineEventHandler(async (event) => {
 
   const redis = getRedis()
   
+  const expire = 5 * 60
+
+  // Mark session as active to prevent cleanup worker from cleaning it up
+  await redis.set(
+    `session:${sessionId}`,
+    JSON.stringify({ connected: true, lastSeen: Date.now() }),
+    'EX',
+    expire  // 5 minutes
+  )
+  
   // Move previously queued data to stopped to prevent processing old files
   const queuedMetadata = await redis.smembers(`session:${sessionId}:metadata:queued`)
   for (const file of queuedMetadata) {
@@ -52,8 +62,8 @@ export default defineEventHandler(async (event) => {
   const jobId = `download:${sessionId}:${Date.now()}`
   const job = await downloadQueue.add('download-dataset', jobData, { jobId })
 
-  await redis.set(`session:${sessionId}:download:jobId`, job.id!, 'EX', 12 * 3600)
-  await redis.set(`session:${sessionId}:download:status`, 'running', 'EX', 12 * 3600)
+  await redis.set(`session:${sessionId}:download:jobId`, job.id!, 'EX', expire)
+  await redis.set(`session:${sessionId}:download:status`, 'running', 'EX', expire)
   await redis.del(`session:${sessionId}:download:error`)
 
   setResponseStatus(event, 200)

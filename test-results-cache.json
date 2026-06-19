@@ -28,6 +28,1463 @@
         "keywordsSimilarity": 0.8032713175024214,
         "timestamp": 1781860050688
       }
+    },
+    {
+      "no-metadata": {
+        "description": "Predation risk analysis for Birds, Mammals, Snakes, and Armour Traits data",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.7717638243835826,
+        "keywords": "Ecology, Evolutionary Biology, Zoology",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.6332224294157258,
+        "timestamp": 1781861866650
+      },
+      "base-metadata": {
+        "description": "Predation risk analysis for mammals, birds, and snakes; armour traits with outgroups",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.7904767683532571,
+        "keywords": "Ecology, Biology, Animal Behavior, Evolutionary Traits",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6485836385132194,
+        "timestamp": 1781862036979
+      },
+      "with-pdf": {
+        "description": "Ecological and evolutionary analysis of dermal armor (osteoderms) in squamates (lizards/snakes), integrating morphological, ecological, and phylogenetic data from 131 species across two lineages (Cordyliformes and Anguimorpha) to study defensive traits, locomotor adaptations, predator-prey dynamics, and evolutionary trade-offs",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9258999124050337,
+        "keywords": "Ecological Evolution, Phylogenetic Analysis, Defensive Traits in Reptiles, Comparative Morphology, Predator-Prey Dynamics",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.791139195864603,
+        "timestamp": 1781862327398
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Predation risk analysis across mammals, birds, and snakes; armour traits with outgroups",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.8166765245847093,
+        "keywords": "Ecology, Biological Sciences, Animal Behavior",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.6298529291096062,
+        "timestamp": 1781862535907
+      },
+      "base-metadata": {
+        "description": "Predation Risk – Snakes, Mammals, Birds",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.6401100107518283,
+        "keywords": "Ecology, Biology, Animal Behavior",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.6599306929354984,
+        "timestamp": 1781862691432
+      },
+      "with-pdf": {
+        "description": "Standardized quantitative metrics of defensive morphology (e.g., osteoderm expression, hindlimb skeletal traits) for 131 squamate species (Cordyliformes and Anguimorpha). Integrates morphological data from micro-CT scans, ecological/life-history variables, environmental factors, predation risk estimates, and a time-calibrated phylogeny.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9221186863659343,
+        "keywords": "Comparative anatomy, evolutionary biology, ecology, phylogenetics, morphometrics, conservation science",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.5840403343459736,
+        "timestamp": 1781862961834
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Predation risk analysis across mammals, birds, snakes, and armour traits phylogenetic data",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.8242841327655697,
+        "keywords": "Ecology, Biology, Taxonomy, Evolutionary Biology",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.6033653806399311,
+        "timestamp": 1781863155201
+      },
+      "base-metadata": {
+        "description": "Predation risk analysis for birds, mammals, snakes, and related genetic traits",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.7105091989436659,
+        "keywords": "Ecology, Biology, Phylogenetics",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.6440289842137255,
+        "timestamp": 1781863305945
+      },
+      "with-pdf": {
+        "description": "Comparative ecological and evolutionary data on dermal armor (osteoderms) in squamates (lizards and snakes), focusing on convergent evolution across two lineages: Cordyliformes and Anguimorpha. Integrates morphological, ecological, and phylogenetic data to analyze defensive traits, locomotion, predation risk, and evolutionary trade-offs.",
+        "descriptionConfidence": 1,
+        "descriptionSimilarity": 0.9222671389383226,
+        "keywords": "ecological evolution, comparative morphology, evolutionary biology, phylogenetics, predator-prey dynamics",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.7117505703864814,
+        "timestamp": 1781863601544
+      }
     }
-  ]
+  ],
+  "HoneyPot": [
+    {
+      "no-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) collected from July 27, 2025 – November 14, 2025 using a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8834389789275845,
+        "keywords": "Cybersecurity, Network Security, Geospatial Analysis",
+        "keywordsConfidence": 0.4,
+        "timestamp": 1781865096188,
+        "keywordsSimilarity": 0.7828256673616716
+      },
+      "base-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) collected from July 27, 2025 – November 14, 2025 using a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8834389789275845,
+        "keywords": "Cybersecurity, network security, attack analysis, honeypot technology",
+        "keywordsConfidence": 0.5,
+        "timestamp": 1781865266504,
+        "keywordsSimilarity": 0.8727778424054559
+      },
+      "with-pdf": {
+        "description": "4-month collection of interactive SSH honeypot logs and command payloads (July–November 2025) designed for cybersecurity research, particularly in botnet behavior analysis, intrusion detection, and machine learning model training. Includes detailed telemetry such as source IPs, credentials, and command-line payloads with rare instances of file-less exploitation via bash sockets.",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8510171001673525,
+        "keywords": "Cybersecurity research; Botnet analysis; Intrusion detection; Machine learning; Threat intelligence",
+        "keywordsConfidence": 0.9,
+        "timestamp": 1781865481860,
+        "keywordsSimilarity": 0.8534314372888188
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing session metadata, authentication attempts, and post-authentication command payloads collected from a custom multi-threaded SSH honeypot framework between July 27, 2025 – November 14, 2025",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8686121415729001,
+        "keywords": "Cybersecurity, Network Security, Geospatial Analysis",
+        "keywordsConfidence": 0.35,
+        "timestamp": 1781865825715,
+        "keywordsSimilarity": 0.7828256673616716
+      },
+      "base-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing session metadata, authentication attempts, and post-authentication command payloads collected from a custom multi-threaded SSH honeypot framework between July 27, 2025 – November 14, 2025",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8686121415729001,
+        "keywords": "Cybersecurity, Network Security, Attack Analysis, Honeypot Frameworks",
+        "keywordsConfidence": 0.7,
+        "timestamp": 1781865941115,
+        "keywordsSimilarity": 0.8478314967589907
+      },
+      "with-pdf": {
+        "description": "4-month collection of interactive SSH honeypot logs and command payloads (July–November 2025) designed for cybersecurity research. Captures botnet interactions, brute-force attempts, and post-authentication command execution to support machine learning training, SIEM rule development, and empirical analysis of intrusion tactics",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8624728975006586,
+        "keywords": "Cybersecurity, Intrusion Analysis, Threat Intelligence, Machine Learning, SIEM Tools, Network Security",
+        "keywordsConfidence": 0.7,
+        "timestamp": 1781866151543,
+        "keywordsSimilarity": 0.8298827789572145
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing session metadata, authentication attempts, and post-authentication command payloads collected via a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8252367860286826,
+        "keywords": "Cybersecurity, Network Security, Data Analysis",
+        "keywordsConfidence": 0.4,
+        "timestamp": 1781866284870,
+        "keywordsSimilarity": 0.832667997698182
+      },
+      "base-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing session metadata, authentication attempts, and post-authentication command payloads collected via a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8252367860286826,
+        "keywords": "Cybersecurity, Network Security, Data Analysis, Geospatial Analysis",
+        "keywordsConfidence": 0.65,
+        "timestamp": 1781866395367,
+        "keywordsSimilarity": 0.8077394762394281
+      },
+      "with-pdf": {
+        "description": "4-month collection of interactive SSH honeypot logs and command payloads (July–November 2025) designed for cybersecurity research, anomaly detection training, SIEM rule enhancement, and analysis of botnet behavior and intrusion tactics",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8514753330516965,
+        "keywords": "Cybersecurity, Threat Intelligence, Network Security, Incident Response, Malware Analysis",
+        "keywordsConfidence": 0.85,
+        "timestamp": 1781866944010,
+        "keywordsSimilarity": 0.8461256073849729
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing 145,425 events collected from July 27, 2025 – November 14, 2025 via a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.902355331517355,
+        "keywords": "Cybersecurity, Honeypot Technology, Network Security, Data Analysis",
+        "keywordsConfidence": 0.4,
+        "timestamp": 1781867092412,
+        "keywordsSimilarity": 0.888155210126856
+      },
+      "base-metadata": {
+        "description": "Interactive SSH Attack & Payload Dataset (honey.db) containing 145,425 events collected from July 27, 2025 – November 14, 2025 via a custom multi-threaded SSH honeypot framework",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.902355331517355,
+        "keywords": "Cybersecurity, Network Monitoring, Honeypot Technology, Attack Analysis",
+        "keywordsConfidence": 0.3,
+        "timestamp": 1781867222776,
+        "keywordsSimilarity": 0.8759665260514905
+      },
+      "with-pdf": {
+        "description": "SSH honeypot dataset capturing interactive logs and command payloads for studying botnet behavior, intrusion tactics, and training anomaly detection models. Contains structured security events with session identifiers, source IPv4 addresses, credential pairs, command-line payloads, and file-less exploitation via bash sockets.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8541634968903575,
+        "keywords": "Cybersecurity, network security, threat analysis, data analysis",
+        "keywordsConfidence": 0.7,
+        "timestamp": 1781867453371,
+        "keywordsSimilarity": 0.8340934551472282
+      }
+    }
+  ],
+  "ArmourTraits.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.7873486294201689,
+        0.7717638243835826,
+        0.8166765245847093,
+        0.8242841327655697
+      ],
+      "mean": 0.8000182777885076,
+      "sigma": 0.021360963409215634,
+      "sem": 0.010680481704607817
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.7089714799594847,
+        0.7904767683532571,
+        0.6401100107518283,
+        0.7105091989436659
+      ],
+      "mean": 0.712516864502059,
+      "sigma": 0.053237908371395554,
+      "sem": 0.026618954185697777
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.9243910628968164,
+        0.9258999124050337,
+        0.9221186863659343,
+        0.9222671389383226
+      ],
+      "mean": 0.9236692001515268,
+      "sigma": 0.001570591578503684,
+      "sem": 0.000785295789251842
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.6942381858265446,
+        0.6332224294157258,
+        0.6298529291096062,
+        0.6033653806399311
+      ],
+      "mean": 0.640169731247952,
+      "sigma": 0.0332891101311874,
+      "sem": 0.0166445550655937
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.6214059243370105,
+        0.6485836385132194,
+        0.6599306929354984,
+        0.6440289842137255
+      ],
+      "mean": 0.6434873099998635,
+      "sigma": 0.014002128502745476,
+      "sem": 0.007001064251372738
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.8032713175024214,
+        0.791139195864603,
+        0.5840403343459736,
+        0.7117505703864814
+      ],
+      "mean": 0.7225503545248698,
+      "sigma": 0.08735268176728231,
+      "sem": 0.043676340883641154
+    }
+  },
+  "HoneyPot.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.8834389789275845,
+        0.8686121415729001,
+        0.8252367860286826,
+        0.902355331517355
+      ],
+      "mean": 0.8699108095116305,
+      "sigma": 0.028430236054668837,
+      "sem": 0.014215118027334418
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.8834389789275845,
+        0.8686121415729001,
+        0.8252367860286826,
+        0.902355331517355
+      ],
+      "mean": 0.8699108095116305,
+      "sigma": 0.028430236054668837,
+      "sem": 0.014215118027334418
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.8510171001673525,
+        0.8624728975006586,
+        0.8514753330516965,
+        0.8541634968903575
+      ],
+      "mean": 0.8547822069025163,
+      "sigma": 0.0046000262865529004,
+      "sem": 0.0023000131432764502
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.7828256673616716,
+        0.7828256673616716,
+        0.832667997698182,
+        0.888155210126856
+      ],
+      "mean": 0.8216186356370954,
+      "sigma": 0.04347123451785251,
+      "sem": 0.021735617258926254
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.8727778424054559,
+        0.8478314967589907,
+        0.8077394762394281,
+        0.8759665260514905
+      ],
+      "mean": 0.8510788353638412,
+      "sigma": 0.027290517179441424,
+      "sem": 0.013645258589720712
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.8534314372888188,
+        0.8298827789572145,
+        0.8461256073849729,
+        0.8340934551472282
+      ],
+      "mean": 0.8408833196945585,
+      "sigma": 0.009381510972033122,
+      "sem": 0.004690755486016561
+    }
+  },
+  "Occupancy": [
+    {
+      "no-metadata": {
+        "description": "Final Dataset",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.5033323368109568,
+        "keywords": "Data Management",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.6076604437176055,
+        "timestamp": 1781868346435
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "keywords": "dataset keywords",
+        "keywordsConfidence": 0.1,
+        "timestamp": 1781868483303,
+        "descriptionSimilarity": 0.5761721780855412,
+        "keywordsSimilarity": 0.5967434905703065
+      },
+      "with-pdf": {
+        "description": "Multimodal environmental occupancy detection dataset from a smart office environment at Pontifical Catholic University of Rio Grande do Sul (PUCRS), Brazil. Includes CO₂, temperature, humidity, light, sound sensors; electrical metrics; device-state indicators; and human-verified ground_truth occupancy counts.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8590229809299197,
+        "keywords": "Environmental Science, IoT Technology, Data Analysis",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.7330828599779244,
+        "timestamp": 1781868683719
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Final dataset in CSV and JSON formats",
+        "descriptionConfidence": 0.2,
+        "descriptionSimilarity": 0.49813763638674086,
+        "keywords": "Data Collection",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6326586322193389,
+        "timestamp": 1781868817107
+      },
+      "base-metadata": {
+        "description": "Final dataset in JSON and CSV formats",
+        "descriptionConfidence": 0.6,
+        "descriptionSimilarity": 0.5045570430162305,
+        "keywords": "data management, dataset formats",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.6436917779023635,
+        "timestamp": 1781868953500
+      },
+      "with-pdf": {
+        "description": "Multimodal environmental occupancy detection dataset collected from a smart office environment at PUCRS, Brazil. Includes CO₂, temperature, humidity, light, sound metrics, electrical data (power/voltage/current), device-state indicators, and human-verified ground truth occupancy counts for IoT analysis and environmental monitoring",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.891731821462124,
+        "keywords": "Environmental Monitoring, IoT Systems, Occupancy Estimation, Smart Spaces, Data Science",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.8521364944840139,
+        "timestamp": 1781869098860
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Final dataset in JSON and CSV formats",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.5045570430162305,
+        "keywords": "Data Formats,Data Collection",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.6293820649569276,
+        "timestamp": 1781869213850
+      },
+      "base-metadata": {
+        "description": "Final dataset in JSON and CSV formats",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.5045570430162305,
+        "keywords": "Data Management",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6076604437176055,
+        "timestamp": 1781869350137
+      },
+      "with-pdf": {
+        "description": "Multimodal IoT sensor data for environmental occupancy detection in smart office environments, including CO₂ levels, temperature, humidity, light intensity, sound pressure, electrical metrics (power/voltage/current), device states, and validated ground truth occupancy labels.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8752555743759632,
+        "keywords": "Environmental science, Building automation, IoT data analytics, Human-computer interaction, Urban sensing",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.7334476779532448,
+        "timestamp": 1781869506601
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Sensor data for environmental and system metrics",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.7667526597403678,
+        "keywords": "Environmental metrics, System metrics",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6256169962540971,
+        "timestamp": 1781869696185
+      },
+      "base-metadata": {
+        "description": "Sensor data for environmental and system metrics",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.7667526597403678,
+        "keywords": "Environmental Science, System Monitoring",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.6001994525942955,
+        "timestamp": 1781869832416
+      },
+      "with-pdf": {
+        "description": "Multimodal IoT dataset for environmental occupancy detection in smart office environments, including CO₂, temperature, humidity, light, sound sensors, electrical metrics, device-state data, and ground_truth labels for occupant counting",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8646486226853317,
+        "keywords": "Environmental monitoring; IoT applications; Smart building systems; Occupancy detection; Computer vision (YOLO26m); Data annotation",
+        "keywordsConfidence": 0.85,
+        "keywordsSimilarity": 0.8006850598909869,
+        "timestamp": 1781869969625
+      }
+    }
+  ],
+  "Occupancy.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.5033323368109568,
+        0.49813763638674086,
+        0.5045570430162305,
+        0.7667526597403678
+      ],
+      "mean": 0.568194918988574,
+      "sigma": 0.11466269345675295,
+      "sem": 0.057331346728376475
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.5761721780855412,
+        0.5045570430162305,
+        0.5045570430162305,
+        0.7667526597403678
+      ],
+      "mean": 0.5880097309645925,
+      "sigma": 0.10725887433811662,
+      "sem": 0.05362943716905831
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.8590229809299197,
+        0.891731821462124,
+        0.8752555743759632,
+        0.8646486226853317
+      ],
+      "mean": 0.8726647498633346,
+      "sigma": 0.01245614050955593,
+      "sem": 0.006228070254777965
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.6076604437176055,
+        0.6326586322193389,
+        0.6293820649569276,
+        0.6256169962540971
+      ],
+      "mean": 0.6238295342869923,
+      "sigma": 0.0096620142473557,
+      "sem": 0.00483100712367785
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.5967434905703065,
+        0.6436917779023635,
+        0.6076604437176055,
+        0.6001994525942955
+      ],
+      "mean": 0.6120737911961427,
+      "sigma": 0.018676139549107167,
+      "sem": 0.009338069774553584
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.7330828599779244,
+        0.8521364944840139,
+        0.7334476779532448,
+        0.8006850598909869
+      ],
+      "mean": 0.7798380230765425,
+      "sigma": 0.0499994432689925,
+      "sem": 0.02499972163449625
+    }
+  },
+  "CannabisUse": [
+    {
+      "no-metadata": {
+        "description": "Annotated Reddit data related to cannabis with sentiment analysis guidelines and processing pipelines",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.886649802337919,
+        "keywords": "Cannabis research,Social media analysis,Natural language processing,Data annotation",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.8546243989415158,
+        "timestamp": 1781870137947
+      },
+      "base-metadata": {
+        "description": "Reddit data analysis and annotation resources including lexicon matching, sentiment analysis, and extraction scripts",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.7600495036955734,
+        "keywords": "Data Analysis, Sentiment Analysis, Reddit Data, Cannabis Research, Annotation Guidelines",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8252814717044918,
+        "timestamp": 1781870308399
+      },
+      "with-pdf": {
+        "description": "Manually annotated dataset for aspect-based sentiment analysis (ABSA) of cannabis-related discussions on Reddit, focusing on pain management and autoimmune rheumatic diseases (ARDs). Includes 479 post-aspect pairs with traditional and aspect-specific sentiment annotations.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9374300460647322,
+        "keywords": "Sentiment Analysis,Cannabis Research,Reddit Data Analysis,Pain Management,Autoimmune Diseases",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.9334819053539029,
+        "timestamp": 1781870498764
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Reddit data analysis involving lexicon matching, natural language processing, sentiment labeling for cannabis-related topics, and extraction of subreddits' posts, authors, and metadata",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.8614623509804207,
+        "keywords": "Social Media Analysis, Natural Language Processing, Sentiment Analysis, Cannabis Research, Data Extraction",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.8520372987228282,
+        "timestamp": 1781870647141
+      },
+      "base-metadata": {
+        "description": "Reddit dataset with annotations, extraction pipelines, and sentiment analysis focusing on cannabis-related content",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.8869574247943156,
+        "keywords": "Social Media Analysis,Natural Language Processing,Sentiment Analysis,Cannabis Research",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8670974747713203,
+        "timestamp": 1781870797570
+      },
+      "with-pdf": {
+        "description": "Manually annotated Reddit collection focused on cannabis use discussions related to pain management and autoimmune rheumatic diseases (ARDs), supporting aspect-based sentiment analysis (ABSA) and traditional sentiment analysis for health-related social media research",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.946381528046516,
+        "keywords": "Health Informatics, Social Media Analysis, NLP Techniques, Public Health Research",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.7576680261827611,
+        "timestamp": 1781871028071
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Reddit dataset containing cannabis-related posts, annotations, sentiment analysis guidelines, lexicon resources, and data processing pipelines for subreddits",
+        "descriptionConfidence": 0.8,
+        "descriptionSimilarity": 0.892462278251635,
+        "keywords": "Social Media Analysis, Sentiment Analysis, Cannabis Research, Natural Language Processing, Data Annotation",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.8614416508155869,
+        "timestamp": 1781871196485
+      },
+      "base-metadata": {
+        "description": "Cannabis-related Reddit data analysis dataset including sentiment annotation guidelines, lexicon files, subreddits extraction scripts, and natural language processing pipelines",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.8840956940581791,
+        "keywords": "Cannabis research,Social media analysis,Natural language processing,Sentiment analysis",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.860067645417856,
+        "timestamp": 1781871346846
+      },
+      "with-pdf": {
+        "description": "Manually annotated Reddit collection focused on cannabis use discussions related to pain management and autoimmune rheumatic diseases (ARDs) for aspect-based sentiment analysis (ABSA) and traditional sentiment analysis",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.9359581948916126,
+        "keywords": "health informatics, social media analysis, natural language processing (NLP), sentiment analysis, health data mining",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.7957020122674782,
+        "timestamp": 1781871557119
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Reddit dataset with annotation guidelines and extraction pipelines for cannabis-related sentiment analysis",
+        "descriptionConfidence": 0.7,
+        "descriptionSimilarity": 0.8832110686209119,
+        "keywords": "Reddit Data Analysis,Cannabis Research,Sentiment Analysis,Data Annotation",
+        "keywordsConfidence": 0.5,
+        "keywordsSimilarity": 0.8192419069943522,
+        "timestamp": 1781871785832
+      },
+      "base-metadata": {
+        "description": "Cannabis-related Reddit data analysis including sentiment annotation, lexicon matching, and subreddits extraction pipelines",
+        "descriptionConfidence": 0.75,
+        "descriptionSimilarity": 0.867045385588296,
+        "keywords": "Social Media Analysis, Natural Language Processing, Cannabis Research, Data Science",
+        "keywordsConfidence": 0.55,
+        "keywordsSimilarity": 0.8335298425162784,
+        "timestamp": 1781871936202
+      },
+      "with-pdf": {
+        "description": "Manually annotated Reddit collection focused on cannabis use discussions in pain management and autoimmune rheumatic diseases (ARDs), supporting aspect-based sentiment analysis (ABSA) and natural language processing (NLP) research with 479 post-aspect pairs",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9527707246060353,
+        "keywords": "Cannabis use in pain management, Autoimmune rheumatic diseases (ARDs) research, Aspect-based sentiment analysis (ABSA), Natural language processing (NLP) research",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.9212918038179634,
+        "timestamp": 1781872166655
+      }
+    }
+  ],
+  "CannabisUse.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.886649802337919,
+        0.8614623509804207,
+        0.892462278251635,
+        0.8832110686209119
+      ],
+      "mean": 0.8809463750477217,
+      "sigma": 0.011724985504171035,
+      "sem": 0.0058624927520855175
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.7600495036955734,
+        0.8869574247943156,
+        0.8840956940581791,
+        0.867045385588296
+      ],
+      "mean": 0.8495370020340911,
+      "sigma": 0.05222343125345424,
+      "sem": 0.02611171562672712
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.9374300460647322,
+        0.946381528046516,
+        0.9359581948916126,
+        0.9527707246060353
+      ],
+      "mean": 0.943135123402224,
+      "sigma": 0.006845439429769269,
+      "sem": 0.0034227197148846344
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.8546243989415158,
+        0.8520372987228282,
+        0.8614416508155869,
+        0.8192419069943522
+      ],
+      "mean": 0.8468363138685708,
+      "sigma": 0.01629778873523522,
+      "sem": 0.00814889436761761
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.8252814717044918,
+        0.8670974747713203,
+        0.860067645417856,
+        0.8335298425162784
+      ],
+      "mean": 0.8464941086024866,
+      "sigma": 0.01751276504785441,
+      "sem": 0.008756382523927205
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.9334819053539029,
+        0.7576680261827611,
+        0.7957020122674782,
+        0.9212918038179634
+      ],
+      "mean": 0.8520359369055264,
+      "sigma": 0.07666262863610962,
+      "sem": 0.03833131431805481
+    }
+  },
+  "ANEST": [
+    {
+      "with-pdf": {
+        "description": "Derived features quantifying narrative-affective discrepancy (NADI) with structural descriptors, Level of Complexity (LoC), affective polarity scores, and NADI (0–10 scale)",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.7854020554136105,
+        "keywords": "computational psychology, affective computing, narrative analysis",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.8095000367871484,
+        "timestamp": 1781872485646
+      },
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "keywords": "Data Formats",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5182720271511718,
+        "timestamp": 1781874099780,
+        "descriptionSimilarity": 0.611373931810877
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.05,
+        "keywords": "Data Standards",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.474691649827874,
+        "timestamp": 1781874189993,
+        "descriptionSimilarity": 0.611373931810877
+      }
+    },
+    {
+      "base-metadata": {
+        "description": "Anad Canonical V1",
+        "descriptionConfidence": 0.2,
+        "descriptionSimilarity": 0.6259360797270651,
+        "keywords": "Data Management",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.4600702435965484,
+        "timestamp": 1781872649167
+      },
+      "with-pdf": {
+        "description": "ANEST Narrative–Affect Dataset (ANAD v1): A large-scale derived feature resource quantifying narrative-affective discrepancy, containing 351,734 English-language personal narratives from public online discussions about romantic and relational life. Includes structural descriptors, narrative complexity index (LoC), and affective polarity scores via VADER.",
+        "descriptionConfidence": 1,
+        "descriptionSimilarity": 0.8862634965148651,
+        "keywords": "computational narrative psychology, affective computing, emotion AI research, text analysis, psychological measurement",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.8400730892960021,
+        "timestamp": 1781872764982
+      },
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.05,
+        "keywords": "Data Standards",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.474691649827874,
+        "timestamp": 1781874258296,
+        "descriptionSimilarity": 0.611373931810877
+      }
+    },
+    {
+      "with-pdf": {
+        "description": "Derived features for analyzing narrative-affective discrepancy, including structural descriptors, narrative complexity metrics (Level of Complexity; Lo, affective polarity scores (VADER sentiment model), and the Narrative–Affect Discrepancy Index (NADI) quantifying the gap between narrative complexity and expressed affect on a 0–10 scale.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.779811009437831,
+        "keywords": "Computational psychology, affective computing, narrative analysis",
+        "keywordsConfidence": 0.95,
+        "keywordsSimilarity": 0.8095000367871484,
+        "timestamp": 1781873099121
+      },
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.05,
+        "keywords": "Data Standards",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.474691649827874,
+        "timestamp": 1781874326436,
+        "descriptionSimilarity": 0.611373931810877
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "keywords": "Data Sets",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.5495469509528994,
+        "timestamp": 1781874421833,
+        "descriptionSimilarity": 0.611373931810877
+      }
+    },
+    {
+      "with-pdf": {
+        "description": "ANEST Narrative–Affect Dataset (ANAD v1): 351,734 English-language personal narratives from public online discussions (e.g., Reddit) focused on romantic and relational life, structured into three layers of annotations (basic structural descriptors, Level of Complexity; LoC index, normalized affective polarity score) with a Narrative–Affect Discrepancy Index (NADI) metric quantifying discrepancy between narrative complexity and affect on a 0–10 scale",
+        "descriptionConfidence": 0.85,
+        "descriptionSimilarity": 0.8749877630381601,
+        "keywords": "Affective Computing, Narrative Analysis, Computational Psychology, Text Mining, Social Media Research",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.7811959376342335,
+        "timestamp": 1781873412870
+      },
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.05,
+        "keywords": "Data Standards",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.474691649827874,
+        "timestamp": 1781874495011,
+        "descriptionSimilarity": 0.611373931810877
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "keywords": "data format",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.4925949455688548,
+        "timestamp": 1781874590277,
+        "descriptionSimilarity": 0.611373931810877
+      }
+    }
+  ],
+  "ANEST.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.611373931810877,
+        0.611373931810877,
+        0.611373931810877,
+        0.611373931810877
+      ],
+      "mean": 0.611373931810877,
+      "sigma": 0,
+      "sem": 0
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.611373931810877,
+        0.6259360797270651,
+        0.611373931810877,
+        0.611373931810877
+      ],
+      "mean": 0.6150144687899239,
+      "sigma": 0.006305595014542782,
+      "sem": 0.003152797507271391
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.7854020554136105,
+        0.8862634965148651,
+        0.779811009437831,
+        0.8749877630381601
+      ],
+      "mean": 0.8316160811011167,
+      "sigma": 0.04921113803229532,
+      "sem": 0.02460556901614766
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.5182720271511718,
+        0.474691649827874,
+        0.474691649827874,
+        0.474691649827874
+      ],
+      "mean": 0.4855867441586984,
+      "sigma": 0.018870856934243598,
+      "sem": 0.009435428467121799
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.474691649827874,
+        0.4600702435965484,
+        0.5495469509528994,
+        0.4925949455688548
+      ],
+      "mean": 0.49422594748654414,
+      "sigma": 0.03395318278533911,
+      "sem": 0.016976591392669556
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.8095000367871484,
+        0.8400730892960021,
+        0.8095000367871484,
+        0.7811959376342335
+      ],
+      "mean": 0.8100672751261331,
+      "sigma": 0.020823943738124573,
+      "sem": 0.010411971869062286
+    }
+  },
+  "LisbonSoil": [
+    {
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "keywords": "Geotechnical Engineering, Soil Mechanics",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.7934536746881027,
+        "timestamp": 1781873629757,
+        "descriptionSimilarity": 0.4361210154657833
+      },
+      "base-metadata": {
+        "description": "Geotechnical engineering test data",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.7123719304583567,
+        "keywords": "Geotechnical Engineering",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.753955453513545,
+        "timestamp": 1781874740805
+      },
+      "with-pdf": {
+        "description": "The dataset focuses on the mechanical behavior of the Areolas da Estefania geomaterial in Lisbon, Portugal, critical for underground infrastructure development. It includes experimental and computational data to model soil behavior under various stress conditions.",
+        "descriptionConfidence": 1,
+        "descriptionSimilarity": 0.7979134483701666,
+        "keywords": "Geotechnical Engineering, Soil Mechanics, Underground Infrastructure, Material Science, Computational Modeling",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.7668466408180578,
+        "timestamp": 1781874931372
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.15,
+        "descriptionSimilarity": 0.4361210154657833,
+        "keywords": "Engineering,Geotechnical Testing,Mechanical Engineering",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.7759689218205664,
+        "timestamp": 1781875208298
+      },
+      "base-metadata": {
+        "description": "Technical data files containing Bender Elements, Triaxial tests, and PSD analysis in Excel format",
+        "descriptionConfidence": 0.35,
+        "descriptionSimilarity": 0.705343605023004,
+        "keywords": "Engineering, Materials Science, Geotechnical Analysis",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.78711717682529,
+        "timestamp": 1781875338581
+      },
+      "with-pdf": {
+        "description": "Experimental and computational data on the mechanical behavior of Areolas da Estefania, including strain-controlled triaxial compression tests, bender element tests, and state-dependent soil model simulations for geotechnical analysis",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.8343972857166566,
+        "keywords": "Geotechnical engineering, Soil mechanics, Computational geomechanics, Mechanical behavior of geomaterials",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8107568402835816,
+        "timestamp": 1781875548986
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Acoustic emission data from triaxial tests, PSD analysis, and Bender elements measurements",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.7418601381355384,
+        "keywords": "Materials Science, Geotechnical Engineering",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.7795885231238626,
+        "timestamp": 1781875677396
+      },
+      "base-metadata": {
+        "description": "Engineering data files containing Bender Elements, Triaxial test results, and PSD analysis in Excel format",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.7098200648692606,
+        "keywords": "Engineering, Materials Science, Data Analysis",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.678800993859862,
+        "timestamp": 1781875807816
+      },
+      "with-pdf": {
+        "description": "Experimental and computational data on the mechanical behavior of *Areolas da Estefania* under triaxial compression, particle size distribution analysis, small-strain stiffness characterization, and geotechnical engineering applications for Lisbon's underground infrastructure.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8472779197651472,
+        "keywords": "Geotechnical engineering; Material science; Computational mechanics; Soil mechanics; Underground infrastructure",
+        "keywordsConfidence": 0.9,
+        "keywordsSimilarity": 0.7537355741817033,
+        "timestamp": 1781876023130
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "AE data related to Triaxial, PSD, and Bender Elements measurements",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.7239317455581564,
+        "keywords": "Engineering data, Geotechnical analysis",
+        "keywordsConfidence": 0.2,
+        "keywordsSimilarity": 0.7532678384593761,
+        "timestamp": 1781876151443
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "descriptionSimilarity": 0.4361210154657833,
+        "keywords": "dataset keywords",
+        "keywordsConfidence": 0.1,
+        "keywordsSimilarity": 0.4786480197180804,
+        "timestamp": 1781876241826
+      },
+      "with-pdf": {
+        "description": "Experimental and computational data on the mechanical behavior of Areolas da Estefania geomaterial, including strain-controlled triaxial compression tests, particle size distribution, small-strain characterization via bender element tests, and state-dependent soil modeling for geotechnical engineering applications",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.8485995908663644,
+        "keywords": "Geotechnical Engineering, Geomaterials, Computational Modeling, Soil Mechanics",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.8025210383393757,
+        "timestamp": 1781876432256
+      }
+    }
+  ],
+  "LisbonSoil.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.4361210154657833,
+        0.4361210154657833,
+        0.7418601381355384,
+        0.7239317455581564
+      ],
+      "mean": 0.5845084786563154,
+      "sigma": 0.1485227849175762,
+      "sem": 0.0742613924587881
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.7123719304583567,
+        0.705343605023004,
+        0.7098200648692606,
+        0.4361210154657833
+      ],
+      "mean": 0.6409141539541011,
+      "sigma": 0.11826413458749392,
+      "sem": 0.05913206729374696
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.7979134483701666,
+        0.8343972857166566,
+        0.8472779197651472,
+        0.8485995908663644
+      ],
+      "mean": 0.8320470611795837,
+      "sigma": 0.020473106573521332,
+      "sem": 0.010236553286760666
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.7934536746881027,
+        0.7759689218205664,
+        0.7795885231238626,
+        0.7532678384593761
+      ],
+      "mean": 0.7755697395229768,
+      "sigma": 0.014435372320956253,
+      "sem": 0.0072176861604781265
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.753955453513545,
+        0.78711717682529,
+        0.678800993859862,
+        0.4786480197180804
+      ],
+      "mean": 0.6746304109791943,
+      "sigma": 0.11976250071451806,
+      "sem": 0.05988125035725903
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.7668466408180578,
+        0.8107568402835816,
+        0.7537355741817033,
+        0.8025210383393757
+      ],
+      "mean": 0.7834650234056796,
+      "sigma": 0.023811687070846868,
+      "sem": 0.011905843535423434
+    }
+  },
+  "Mining": [
+    {
+      "no-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "geography, software engineering",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781876560778
+      },
+      "base-metadata": {
+        "description": "Geographical data about continents with multilingual names and attributes",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6683737281700515,
+        "keywords": "Geography, Software Engineering",
+        "keywordsConfidence": 0.15,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781876671364
+      },
+      "with-pdf": {
+        "description": "Geospatial compilation of site-specific information on mining and metallurgical residues for resource management and circular economy initiatives",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.7259465754979081,
+        "keywords": "environmental science, mining engineering, sustainable resource management, geospatial analysis, circular economy",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8096528761290677,
+        "timestamp": 1781876801719
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "Geography, Software Engineering",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781877442337
+      },
+      "base-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "geography, software engineering",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781877567927
+      },
+      "with-pdf": {
+        "description": "Geospatial database compiling site-specific resource assessments of mining and metallurgical residues for supporting resource management and circular economy initiatives. Includes location, target material, geological knowledge, extractability, resource classification, and stakeholder perspectives.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.7418842770620581,
+        "keywords": "Environmental management, Resource sustainability, Geospatial analysis, Circular economy initiatives, Mining industry",
+        "keywordsConfidence": 0.6,
+        "keywordsSimilarity": 0.8555932390762617,
+        "timestamp": 1781877718406
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "geography, software engineering",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781878024635
+      },
+      "base-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "geography, software engineering",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5774255762036152,
+        "timestamp": 1781878140196
+      },
+      "with-pdf": {
+        "description": "Geospatial compilation of site-specific resource assessments for mining and metallurgical residues, supporting resource management and circular economy initiatives through data aggregation from public reports, academic literature, and databases.",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.7489105322319279,
+        "keywords": "Resource Management, Circular Economy, Geospatial Data",
+        "keywordsConfidence": 0.45,
+        "keywordsSimilarity": 0.846663343668606,
+        "timestamp": 1781878275770
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Geographical data about continents with multilingual names and attributes",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.6683737281700515,
+        "keywords": "Geography, Mapping, Multilingual Data",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.6341858842974742,
+        "timestamp": 1781878384493
+      },
+      "base-metadata": {
+        "description": "Geographic data about continents",
+        "descriptionConfidence": 0.4,
+        "descriptionSimilarity": 0.643170836648428,
+        "keywords": "geography, spatial analysis",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.5882551482243735,
+        "timestamp": 1781878499729
+      },
+      "with-pdf": {
+        "description": "Geospatial compilation of site-specific resource assessments for mining and metallurgical residues supporting circular economy strategies",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.6906627644378156,
+        "keywords": "Resource assessment, Circular economy strategies, Geospatial analysis, Mining industry, Environmental management",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8878933300268418,
+        "timestamp": 1781878695211
+      }
+    }
+  ],
+  "Mining.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.643170836648428,
+        0.643170836648428,
+        0.643170836648428,
+        0.6683737281700515
+      ],
+      "mean": 0.6494715595288338,
+      "sigma": 0.010913172153274687,
+      "sem": 0.005456586076637343
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.6683737281700515,
+        0.643170836648428,
+        0.643170836648428,
+        0.643170836648428
+      ],
+      "mean": 0.6494715595288338,
+      "sigma": 0.010913172153274687,
+      "sem": 0.005456586076637343
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.7259465754979081,
+        0.7418842770620581,
+        0.7489105322319279,
+        0.6906627644378156
+      ],
+      "mean": 0.7268510373074275,
+      "sigma": 0.022489045990740877,
+      "sem": 0.011244522995370439
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.5774255762036152,
+        0.5774255762036152,
+        0.5774255762036152,
+        0.6341858842974742
+      ],
+      "mean": 0.59161565322708,
+      "sigma": 0.024577934367956696,
+      "sem": 0.012288967183978348
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.5774255762036152,
+        0.5774255762036152,
+        0.5774255762036152,
+        0.5882551482243735
+      ],
+      "mean": 0.5801329692088047,
+      "sigma": 0.0046893422410449305,
+      "sem": 0.0023446711205224653
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.8096528761290677,
+        0.8555932390762617,
+        0.846663343668606,
+        0.8878933300268418
+      ],
+      "mean": 0.8499506972251943,
+      "sigma": 0.02786665902545166,
+      "sem": 0.01393332951272583
+    }
+  },
+  "News": [
+    {
+      "no-metadata": {
+        "description": "News articles from ABSA and SA",
+        "descriptionConfidence": 0.2,
+        "descriptionSimilarity": 0.5745987191072012,
+        "keywords": "News Media, South Africa",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.5627186929914655,
+        "timestamp": 1781878848608
+      },
+      "base-metadata": {
+        "description": "News articles related to South Africa (SA) and ABSA",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.5669081177632511,
+        "keywords": "News Media, Journalism",
+        "keywordsConfidence": 0.35,
+        "keywordsSimilarity": 0.4679701788435744,
+        "timestamp": 1781878958838
+      },
+      "with-pdf": {
+        "description": "Sesotho news headlines annotated for Sentiment Analysis (SA) and Aspect-Based Sentiment Analysis (ABSA), supporting NLP research in low-resource African languages",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9280479596705965,
+        "keywords": "Natural Language Processing, Sentiment Analysis, Language Research, African Languages, Text Mining",
+        "keywordsConfidence": 0.8,
+        "keywordsSimilarity": 0.7825900958135789,
+        "timestamp": 1781879109119
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "Collection of news articles in text format from South Africa and ABSA",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.7680924315007945,
+        "keywords": "News Media",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.4677827086411425,
+        "timestamp": 1781879237481
+      },
+      "base-metadata": {
+        "description": "News articles in text format from SA and ABSA",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.724760497360547,
+        "keywords": "media,news,text_documents",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.5810304541021389,
+        "timestamp": 1781879347810
+      },
+      "with-pdf": {
+        "description": "Annotated Sesotho news headlines for Sentiment Analysis (SA) and Aspect-Based Sentiment Analysis (ABSA) tasks",
+        "descriptionConfidence": 1,
+        "descriptionSimilarity": 0.9318683953342626,
+        "keywords": "Sentiment Analysis, Aspect-Based Sentiment Analysis, Natural Language Processing",
+        "keywordsConfidence": 0.95,
+        "keywordsSimilarity": 0.7807939792336294,
+        "timestamp": 1781879498338
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "News articles from ABSA and South Africa",
+        "descriptionConfidence": 0.3,
+        "descriptionSimilarity": 0.5598128867755907,
+        "keywords": "News Media",
+        "keywordsConfidence": 0.3,
+        "keywordsSimilarity": 0.4677827086411425,
+        "timestamp": 1781879646684
+      },
+      "base-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "descriptionSimilarity": 0.6631592456486739,
+        "keywords": "News",
+        "keywordsConfidence": 0.25,
+        "keywordsSimilarity": 0.3946228821917776,
+        "timestamp": 1781879756915
+      },
+      "with-pdf": {
+        "description": "Sesotho news headlines annotated for sentiment analysis (SA) and aspect-based sentiment analysis (ABSA) tasks, supporting NLP research in low-resource African languages",
+        "descriptionConfidence": 0.95,
+        "descriptionSimilarity": 0.9280676073661779,
+        "keywords": "Natural Language Processing,Sentiment Analysis,Aspect-Based Sentiment Analysis,Linguistic Resources,Low-Resource Languages",
+        "keywordsConfidence": 0.75,
+        "keywordsSimilarity": 0.7840346804944563,
+        "timestamp": 1781879867238
+      }
+    },
+    {
+      "no-metadata": {
+        "description": "dataset description",
+        "descriptionConfidence": 0.1,
+        "descriptionSimilarity": 0.6631592456486739,
+        "keywords": "dataset keywords",
+        "keywordsConfidence": 0.1,
+        "keywordsSimilarity": 0.6408471213909385,
+        "timestamp": 1781879995465
+      },
+      "base-metadata": {
+        "description": "News articles from ABSA and SA",
+        "descriptionConfidence": 0.2,
+        "descriptionSimilarity": 0.5745987191072012,
+        "keywords": "news, journalism",
+        "keywordsConfidence": 0.4,
+        "keywordsSimilarity": 0.4508267588122449,
+        "timestamp": 1781880105766
+      },
+      "with-pdf": {
+        "description": "Sesotho news headlines corpus for sentiment analysis (SA) and aspect-based sentiment analysis (ABSA) tasks",
+        "descriptionConfidence": 0.9,
+        "descriptionSimilarity": 0.921215283817545,
+        "keywords": "Natural Language Processing (NLP), Sentiment Analysis, Aspect-Based Sentiment Analysis, Low-Resource Languages, African Linguistics",
+        "keywordsConfidence": 0.7,
+        "keywordsSimilarity": 0.8183737674313596,
+        "timestamp": 1781880236100
+      }
+    }
+  ],
+  "News.__stats__": {
+    "no-metadata.descriptionSimilarity": {
+      "values": [
+        0.5745987191072012,
+        0.7680924315007945,
+        0.5598128867755907,
+        0.6631592456486739
+      ],
+      "mean": 0.6414158207580651,
+      "sigma": 0.08313137816554061,
+      "sem": 0.04156568908277031
+    },
+    "base-metadata.descriptionSimilarity": {
+      "values": [
+        0.5669081177632511,
+        0.724760497360547,
+        0.6631592456486739,
+        0.5745987191072012
+      ],
+      "mean": 0.6323566449699183,
+      "sigma": 0.065396406359006,
+      "sem": 0.032698203179503
+    },
+    "with-pdf.descriptionSimilarity": {
+      "values": [
+        0.9280479596705965,
+        0.9318683953342626,
+        0.9280676073661779,
+        0.921215283817545
+      ],
+      "mean": 0.9272998115471455,
+      "sigma": 0.0038419614634497886,
+      "sem": 0.0019209807317248943
+    },
+    "no-metadata.keywordsSimilarity": {
+      "values": [
+        0.5627186929914655,
+        0.4677827086411425,
+        0.4677827086411425,
+        0.6408471213909385
+      ],
+      "mean": 0.5347828079161723,
+      "sigma": 0.07247081977172112,
+      "sem": 0.03623540988586056
+    },
+    "base-metadata.keywordsSimilarity": {
+      "values": [
+        0.4679701788435744,
+        0.5810304541021389,
+        0.3946228821917776,
+        0.4508267588122449
+      ],
+      "mean": 0.47361256848743394,
+      "sigma": 0.06769232300354878,
+      "sem": 0.03384616150177439
+    },
+    "with-pdf.keywordsSimilarity": {
+      "values": [
+        0.7825900958135789,
+        0.7807939792336294,
+        0.7840346804944563,
+        0.8183737674313596
+      ],
+      "mean": 0.791448130743256,
+      "sigma": 0.015587854910607789,
+      "sem": 0.007793927455303894
+    }
+  }
 }

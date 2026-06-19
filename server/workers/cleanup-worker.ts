@@ -14,8 +14,10 @@ export function startCleanupWorker() {
         return
       }
 
-      // Find all file-related keys in Redis
-      const keys = await redis.keys('session:*:files:*')
+      // Find all file and metadata-related keys in Redis
+      const fileKeys = await redis.keys('session:*:files:*')
+      const metadataKeys = await redis.keys('session:*:metadata:*')
+      const keys = [...fileKeys, ...metadataKeys]
       const sessionIds = new Set<string>()
 
       for (const key of keys) {
@@ -29,7 +31,14 @@ export function startCleanupWorker() {
       // Check if the main session key still exists
       for (const sessionId of sessionIds) {
         const exists = await redis.exists(`session:${sessionId}`)
-        if (!exists) {
+        const sessionKeys = await redis.keys(`session:${sessionId}:*`)
+        
+        // Clean up if:
+        // 1. No main session marker exists, OR
+        // 2. Only has metadata:queued with no actual files to process
+        const hasOnlyQueuedMetadata = sessionKeys.length === 1 && sessionKeys[0]?.includes('metadata:queued')
+        
+        if (!exists || hasOnlyQueuedMetadata) {
           await cleanupSession(sessionId)
         }
       }
@@ -56,9 +65,10 @@ export function startCleanupWorker() {
 
 
 async function cleanupSession(sessionId: string) {
-  const exists = await redis.exists(
-    `session:${sessionId}`
-  )
+  const sessionKeys = await redis.keys(`session:${sessionId}:*`)
+  
+  // Check if session still has any active keys or if the main session marker exists
+  const exists = sessionKeys.length > 0 || await redis.exists(`session:${sessionId}`)
 
   if (exists) {
     console.log(
